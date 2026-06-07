@@ -41,12 +41,14 @@
         .metric-label { font-size: 0.9rem; color: #666; font-weight: bold; }
         .metric-value { font-size: 1.8rem; font-weight: bold; margin-top: 5px; color: #007bff; }
 
-        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-        td, th { padding: 12px; border-bottom: 1px solid #eee; text-align: left; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; table-layout: fixed; }
+        td, th { padding: 12px; border-bottom: 1px solid #eee; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         
-        /* 💡 1. 정렬 화살표 영역의 너비를 고정하여 꿀렁거림 원천 차단 */
-        th { background: #fafafa; font-size: 0.85rem; color: #666; cursor: pointer; user-select: none; transition: background 0.2s; white-space: nowrap; }
-        th:hover { background: #e2e6ea; }
+        th { background: #fafafa; font-size: 0.85rem; color: #666; user-select: none; transition: background 0.2s; }
+        
+        /* 검색탭의 정렬 가능 헤더에만 호버 스타일 적용 */
+        th.sortable { cursor: pointer; }
+        th.sortable:hover { background: #e2e6ea; }
         th span[id^="sort-"] { display: inline-block; width: 1.5em; text-align: center; color: #888; }
         
         table tbody tr { cursor: pointer; transition: background 0.1s; }
@@ -60,20 +62,25 @@
         .modal-content { background: white; margin: 5% auto; padding: 25px; border-radius: 10px; width: 90%; max-width: 700px; }
         #chart-container { width: 100%; height: 350px; }
 
-        .btn-search { background: var(--primary-color); color: white; border: 1px solid var(--primary-color); padding: 10px 20px; border-radius: 5px; cursor: pointer; font-weight: bold; }
+        .btn-search { background: var(--primary-color); color: white; border: 1px solid var(--primary-color); padding: 10px 40px; border-radius: 5px; cursor: pointer; font-weight: bold; font-size: 14px; }
         .btn-search:hover { background: #000; }
         
         .btn-star-filter { background: white; border: 1px solid #ddd; padding: 9px 15px; border-radius: 5px; cursor: pointer; font-size: 14px; transition: all 0.2s; }
         .btn-star-filter:hover { border-color: #aaa; background: #fafafa; }
         .btn-star-filter.active { background: #fffacd; border-color: #ffda44; font-weight: bold; }
 
-        /* 💡 2. 다중 선택용 유저 타입 토글 버튼 스타일 */
+        /* 💡 랭킹 탭 전용 버튼 스타일 */
+        .btn-rank { background: white; border: 1px solid #ddd; padding: 7px 15px; border-radius: 5px; cursor: pointer; font-size: 13px; font-weight: bold; color: #666; transition: all 0.2s; }
+        .btn-rank:hover { background: #eee; }
+        .btn-rank.active { background: var(--primary-color); color: white; border-color: var(--primary-color); }
+
         .btn-type { background: white; border: 1px solid #ddd; padding: 9px 12px; border-radius: 5px; cursor: pointer; font-size: 13px; font-weight: bold; color: #888; transition: all 0.2s; }
         .btn-type.active.gonic { background: #17a2b8; color: white; border-color: #17a2b8; }
         .btn-type.active.ban { background: #6c757d; color: white; border-color: #6c757d; }
         .btn-type.active.udong { background: #dc3545; color: white; border-color: #dc3545; }
 
         .status-msg { font-size: 0.85rem; margin-bottom: 1rem; font-weight: bold; }
+        .rank-number { font-weight: bold; color: #666; font-size: 14px; }
     </style>
 </head>
 <body>
@@ -108,20 +115,38 @@
 
     <div id="section-ranking" class="content-section">
         <div class="st-card">
-            <div style="display:flex; justify-content: space-between; align-items:center; margin-bottom:15px;">
-                <h3 style="margin:0;">🏆 Top 50 일일 랭킹</h3>
+            <div style="display:flex; justify-content: space-between; align-items:center; margin-bottom:15px; flex-wrap: wrap; gap: 10px;">
+                <div style="display:flex; gap: 15px; align-items:center;">
+                    <h3 style="margin:0;">🏆 Top 50 일일 랭킹</h3>
+                    <div style="display:flex; gap: 5px;">
+                        <button id="btn-rank-total" class="btn-rank active" onclick="setRankingMode('total')">총합 순</button>
+                        <button id="btn-rank-post" class="btn-rank" onclick="setRankingMode('post')">게시글 순</button>
+                        <button id="btn-rank-comment" class="btn-rank" onclick="setRankingMode('comment')">댓글 순</button>
+                    </div>
+                </div>
                 <button id="ranking-star-filter" class="btn-star-filter" onclick="toggleStarFilter('ranking')">⭐ 즐겨찾기만</button>
             </div>
             <table>
+                <colgroup>
+                    <col style="width: 60px;">
+                    <col style="width: 50px;">
+                    <col style="width: 20%;">
+                    <col style="width: 20%;">
+                    <col style="width: 12%;">
+                    <col style="width: 12%;">
+                    <col style="width: 12%;">
+                    <col style="width: 12%;">
+                </colgroup>
                 <thead>
                     <tr>
-                        <th style="width:50px;" onclick="handleHeaderSort('ranking', 'bookmark')">⭐<span id="sort-ranking-bookmark"></span></th>
-                        <th onclick="handleHeaderSort('ranking', 'nickname')">닉네임<span id="sort-ranking-nickname"></span></th>
-                        <th onclick="handleHeaderSort('ranking', 'id')">ID (IP)<span id="sort-ranking-id"></span></th>
-                        <th onclick="handleHeaderSort('ranking', 'type')">타입<span id="sort-ranking-type"></span></th>
-                        <th onclick="handleHeaderSort('ranking', 'post')">글<span id="sort-ranking-post"></span></th>
-                        <th onclick="handleHeaderSort('ranking', 'comment')">댓글<span id="sort-ranking-comment"></span></th>
-                        <th onclick="handleHeaderSort('ranking', 'total')">총합<span id="sort-ranking-total">▼</span></th>
+                        <th>순위</th>
+                        <th>⭐</th>
+                        <th>닉네임</th>
+                        <th>ID (IP)</th>
+                        <th>타입</th>
+                        <th>글</th>
+                        <th>댓글</th>
+                        <th>총합</th>
                     </tr>
                 </thead>
                 <tbody id="ranking-body"></tbody>
@@ -132,27 +157,34 @@
     <div id="section-search" class="content-section">
         <div class="st-card">
             <div style="display:flex; gap:10px; align-items:center; margin-bottom: 20px; flex-wrap: wrap;">
+                <button id="search-star-filter" class="btn-star-filter" onclick="toggleStarFilter('search')" title="즐겨찾기 유저만 보기">⭐</button>
                 <input type="text" id="search-input" placeholder="검색할 닉네임 또는 ID 입력..." style="flex: 1; box-sizing: border-box; margin:0; min-width: 200px;">
-                
                 <div style="display:flex; gap:5px;">
                     <button id="btn-type-gonic" class="btn-type gonic active" onclick="toggleSearchType('고닉')">고닉</button>
                     <button id="btn-type-ban" class="btn-type ban active" onclick="toggleSearchType('반고닉')">반고닉</button>
                     <button id="btn-type-udong" class="btn-type udong active" onclick="toggleSearchType('유동')">유동</button>
                 </div>
-
-                <button id="search-star-filter" class="btn-star-filter" onclick="toggleStarFilter('search')" title="즐겨찾기 유저만 보기">⭐</button>
                 <button class="btn-search" onclick="executeSearch()">검색</button>
             </div>
             <table>
+                <colgroup>
+                    <col style="width: 50px;">
+                    <col style="width: 22%;">
+                    <col style="width: 22%;">
+                    <col style="width: 12%;">
+                    <col style="width: 12%;">
+                    <col style="width: 12%;">
+                    <col style="width: 12%;">
+                </colgroup>
                 <thead>
                     <tr>
-                        <th style="width:50px;" onclick="handleHeaderSort('search', 'bookmark')">⭐<span id="sort-search-bookmark"></span></th>
-                        <th onclick="handleHeaderSort('search', 'nickname')">닉네임<span id="sort-search-nickname"></span></th>
-                        <th onclick="handleHeaderSort('search', 'id')">ID (IP)<span id="sort-search-id"></span></th>
-                        <th onclick="handleHeaderSort('search', 'type')">타입<span id="sort-search-type"></span></th>
-                        <th onclick="handleHeaderSort('search', 'post')">글<span id="sort-search-post"></span></th>
-                        <th onclick="handleHeaderSort('search', 'comment')">댓글<span id="sort-search-comment"></span></th>
-                        <th onclick="handleHeaderSort('search', 'total')">총합<span id="sort-search-total">▼</span></th>
+                        <th class="sortable" onclick="handleHeaderSort('search', 'bookmark')">⭐<span id="sort-search-bookmark"></span></th>
+                        <th class="sortable" onclick="handleHeaderSort('search', 'nickname')">닉네임<span id="sort-search-nickname"></span></th>
+                        <th class="sortable" onclick="handleHeaderSort('search', 'id')">ID (IP)<span id="sort-search-id"></span></th>
+                        <th class="sortable" onclick="handleHeaderSort('search', 'type')">타입<span id="sort-search-type"></span></th>
+                        <th class="sortable" onclick="handleHeaderSort('search', 'post')">글<span id="sort-search-post"></span></th>
+                        <th class="sortable" onclick="handleHeaderSort('search', 'comment')">댓글<span id="sort-search-comment"></span></th>
+                        <th class="sortable" onclick="handleHeaderSort('search', 'total')">총합<span id="sort-search-total">▼</span></th>
                     </tr>
                 </thead>
                 <tbody id="search-body"></tbody>
@@ -182,14 +214,14 @@
     let activeTab = 'trends';
     let dailyTrendData = null;
 
+    // 💡 랭킹 전용 모드 상태 추가 (기본: 총합)
+    let currentRankingMode = 'total'; 
+
     let sortStates = {
-        ranking: { key: 'total', order: 'desc' },
         search: { key: 'total', order: 'desc' }
     };
 
     let filterOnlyBookmarks = { ranking: false, search: false };
-    
-    // 💡 검색 탭의 다중 선택 유저 타입 상태 (기본값: 3개 모두 켜짐)
     let searchTypes = { '고닉': true, '반고닉': true, '유동': true };
 
     const todayKst = new Date(new Date().getTime() + (9 * 60 * 60 * 1000)).toISOString().split('T')[0];
@@ -274,8 +306,8 @@
             statusText.innerText = `❌ ${dateStr} 에는 수집된 데이터가 전혀 없습니다.`;
             statusText.style.color = "red";
             updateMetrics(true);
-            renderTable('ranking-body', []);
-            renderTable('search-body', []);
+            renderRankingTable([]);
+            renderSearchTable([]);
             if (activeTab === 'trends') renderTrendChart();
             return;
         }
@@ -323,6 +355,14 @@
         document.getElementById('m-users').innerText = currentData.length.toLocaleString();
     }
 
+    // 💡 랭킹 모드 변경 트리거 (버튼 클릭 시)
+    function setRankingMode(mode) {
+        currentRankingMode = mode;
+        document.querySelectorAll('.btn-rank').forEach(btn => btn.classList.remove('active'));
+        document.getElementById(`btn-rank-${mode}`).classList.add('active');
+        sortAndRenderRanking();
+    }
+
     function toggleStarFilter(tab) {
         filterOnlyBookmarks[tab] = !filterOnlyBookmarks[tab];
         const btn = document.getElementById(`${tab}-star-filter`);
@@ -337,10 +377,8 @@
         if (tab === 'search') executeSearch();
     }
 
-    // 💡 다중 유저 타입 토글 로직
     function toggleSearchType(type) {
-        searchTypes[type] = !searchTypes[type]; // 상태 반전 (true <-> false)
-        
+        searchTypes[type] = !searchTypes[type]; 
         let btnId = type === '고닉' ? 'btn-type-gonic' : (type === '반고닉' ? 'btn-type-ban' : 'btn-type-udong');
         const btn = document.getElementById(btnId);
         
@@ -352,25 +390,25 @@
     }
 
     function handleHeaderSort(tab, key) {
-        if (sortStates[tab].key === key) {
-            sortStates[tab].order = sortStates[tab].order === 'desc' ? 'asc' : 'desc';
+        if (tab !== 'search') return; // 검색탭만 헤더 정렬 허용
+        if (sortStates.search.key === key) {
+            sortStates.search.order = sortStates.search.order === 'desc' ? 'asc' : 'desc';
         } else {
-            sortStates[tab].key = key;
-            sortStates[tab].order = 'desc';
+            sortStates.search.key = key;
+            sortStates.search.order = 'desc';
         }
-        
-        updateSortIndicators(tab);
-        if (tab === 'ranking') sortAndRenderRanking();
-        if (tab === 'search') executeSearch();
+        updateSortIndicators('search');
+        executeSearch();
     }
 
     function updateSortIndicators(tab) {
+        if (tab !== 'search') return;
         const columns = ['bookmark', 'nickname', 'id', 'type', 'post', 'comment', 'total'];
         columns.forEach(col => {
-            const span = document.getElementById(`sort-${tab}-${col}`);
+            const span = document.getElementById(`sort-search-${col}`);
             if (span) {
-                if (sortStates[tab].key === col) {
-                    span.innerText = sortStates[tab].order === 'desc' ? '▼' : '▲';
+                if (sortStates.search.key === col) {
+                    span.innerText = sortStates.search.order === 'desc' ? '▼' : '▲';
                 } else {
                     span.innerText = '';
                 }
@@ -397,53 +435,95 @@
         });
     }
 
+    // 💡 랭킹 탭 렌더링 (순위 계산 + 즐겨찾기 상단 고정 통합)
     function sortAndRenderRanking() {
         let displayData = [...currentData];
+        
+        // 1. 선택된 기준(총합/글/댓글)에 맞춰 전체 데이터 정렬
+        displayData.sort((a, b) => b[currentRankingMode] - a[currentRankingMode]);
+        
+        // 2. 전체 유저에게 본인의 진짜 순위(Rank) 부여
+        displayData.forEach((u, index) => { u.rank = index + 1; });
+        
+        // 3. 즐겨찾기 필터 버튼 활성화 시 해당 유저만 추출
         if (filterOnlyBookmarks.ranking) {
             displayData = displayData.filter(r => bookmarks.includes(r.id));
         }
         
-        displayData = sortData(displayData, sortStates.ranking.key, sortStates.ranking.order);
-        renderTable('ranking-body', displayData.slice(0, 50));
+        // 4. 상위 50명만 표시
+        displayData = displayData.slice(0, 50);
+
+        // 5. 즐겨찾기한 유저와 일반 유저를 분리하여, 즐겨찾기 유저를 맨 위로 강제 고정
+        const bookmarkedUsers = displayData.filter(r => bookmarks.includes(r.id));
+        const normalUsers = displayData.filter(r => !bookmarks.includes(r.id));
+        
+        renderRankingTable([...bookmarkedUsers, ...normalUsers]);
     }
 
+    // 💡 검색 탭 렌더링 (헤더 정렬 후 즐겨찾기 상단 고정)
     function executeSearch() {
         const kw = document.getElementById('search-input').value.toLowerCase();
-        
         let filtered = [...currentData];
         
-        // 1. 키워드 필터
         if (kw) {
             filtered = filtered.filter(r => r.nickname.toLowerCase().includes(kw) || r.id.toLowerCase().includes(kw));
         }
-        
-        // 2. 다중 토글 타입 필터 (켜져있는 타입의 유저만 통과)
         filtered = filtered.filter(r => searchTypes[r.type]);
-        
-        // 3. 즐겨찾기 필터
         if (filterOnlyBookmarks.search) {
             filtered = filtered.filter(r => bookmarks.includes(r.id));
         }
         
         filtered = sortData(filtered, sortStates.search.key, sortStates.search.order);
-        renderTable('search-body', filtered);
+
+        // 검색탭도 즐겨찾기한 유저를 정렬 결과와 상관없이 항상 상단에 고정
+        const bookmarkedUsers = filtered.filter(r => bookmarks.includes(r.id));
+        const normalUsers = filtered.filter(r => !bookmarks.includes(r.id));
+        
+        renderSearchTable([...bookmarkedUsers, ...normalUsers]);
     }
 
-    function renderTable(targetId, data) {
-        const tbody = document.getElementById(targetId);
+    // 💡 랭킹 테이블 렌더링 전용 함수 (순위 칼럼 포함)
+    function renderRankingTable(data) {
+        const tbody = document.getElementById('ranking-body');
         tbody.innerHTML = '';
         data.forEach(row => {
             const isBookmarked = bookmarks.includes(row.id);
             const tr = document.createElement('tr');
-            if (isBookmarked) tr.style.background = "#fffacd";
+            if (isBookmarked) tr.style.background = "#fffacd"; // 즐겨찾기 배경색
+            
+            tr.onclick = () => openModal(row.nickname, row.id);
+            let bType = (row.type === "고닉") ? "bg-gonic" : (row.type === "반고닉" ? "bg-ban" : "bg-udong");
+            
+            tr.innerHTML = `
+                <td class="rank-number">${row.rank}위</td>
+                <td><input type="checkbox" class="star-checkbox" ${isBookmarked ? 'checked' : ''} onchange="toggleBookmark('${row.id}')" onclick="event.stopPropagation()"></td>
+                <td title="${row.nickname}"><b>${row.nickname}</b></td>
+                <td title="${row.id}">${row.id}</td>
+                <td><span class="badge ${bType}">${row.type}</span></td>
+                <td>${row.post}</td>
+                <td>${row.comment}</td>
+                <td style="color:#ff4b4b; font-weight:bold;">${row.total}</td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+
+    // 💡 검색 테이블 렌더링 전용 함수 (기존 구조)
+    function renderSearchTable(data) {
+        const tbody = document.getElementById('search-body');
+        tbody.innerHTML = '';
+        data.forEach(row => {
+            const isBookmarked = bookmarks.includes(row.id);
+            const tr = document.createElement('tr');
+            if (isBookmarked) tr.style.background = "#fffacd"; 
             
             tr.onclick = () => openModal(row.nickname, row.id);
             let bType = (row.type === "고닉") ? "bg-gonic" : (row.type === "반고닉" ? "bg-ban" : "bg-udong");
             
             tr.innerHTML = `
                 <td><input type="checkbox" class="star-checkbox" ${isBookmarked ? 'checked' : ''} onchange="toggleBookmark('${row.id}')" onclick="event.stopPropagation()"></td>
-                <td><b>${row.nickname}</b></td>
-                <td>${row.id}</td>
+                <td title="${row.nickname}"><b>${row.nickname}</b></td>
+                <td title="${row.id}">${row.id}</td>
                 <td><span class="badge ${bType}">${row.type}</span></td>
                 <td>${row.post}</td>
                 <td>${row.comment}</td>
