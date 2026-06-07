@@ -3,30 +3,38 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ProjectMX Dashboard (Static Version)</title>
+    <title>ProjectMX Dashboard</title>
     <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
     <style>
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 20px; background-color: #f0f2f6; }
         .container { max-width: 1200px; margin: 0 auto; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-        .header-controls { display: flex; justify-content: space-between; margin-bottom: 20px; align-items: center; }
-        input[type="text"], input[type="date"] { padding: 8px; border: 1px solid #ccc; border-radius: 5px; }
+        .header-controls { display: flex; justify-content: space-between; margin-bottom: 20px; align-items: center; background: #fff; padding: 15px; border-radius: 8px; border: 1px solid #ddd; }
+        input[type="text"], input[type="date"], input[type="number"] { padding: 8px; border: 1px solid #ccc; border-radius: 5px; margin-right: 5px;}
+        button { padding: 8px 15px; background-color: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; }
+        button:hover { background-color: #0056b3; }
+        .btn-latest { background-color: #28a745; }
+        .btn-latest:hover { background-color: #1e7e34; }
         
-        /* 데이터 테이블 스타일 */
-        table { width: 100%; border-collapse: collapse; text-align: left; }
+        table { width: 100%; border-collapse: collapse; text-align: left; font-size: 14px; }
         th, td { padding: 12px; border-bottom: 1px solid #ddd; }
-        th { background-color: #f8f9fa; cursor: pointer; }
+        th { background-color: #f8f9fa; cursor: pointer; white-space: nowrap; }
         th:hover { background-color: #e2e6ea; }
         
-        .btn-graph { background-color: #ff4b4b; color: white; border: none; padding: 6px 12px; border-radius: 5px; cursor: pointer; }
+        .btn-graph { background-color: #ff4b4b; color: white; border: none; padding: 6px 10px; border-radius: 5px; cursor: pointer; font-size: 12px; }
         .btn-graph:hover { background-color: #ff3333; }
         .star-checkbox { cursor: pointer; transform: scale(1.5); }
+        .badge { padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; color: white; }
+        .bg-gonic { background-color: #17a2b8; }
+        .bg-ban { background-color: #6c757d; }
+        .bg-udong { background-color: #dc3545; }
 
-        /* 모달 팝업 스타일 */
         .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); }
-        .modal-content { background-color: white; margin: 5% auto; padding: 20px; border-radius: 10px; width: 80%; max-width: 800px; box-shadow: 0 4px 8px rgba(0,0,0,0.2); }
+        .modal-content { background-color: white; margin: 5% auto; padding: 20px; border-radius: 10px; width: 80%; max-width: 700px; box-shadow: 0 4px 8px rgba(0,0,0,0.2); }
         .close-btn { color: #aaa; float: right; font-size: 28px; font-weight: bold; cursor: pointer; }
         .close-btn:hover { color: black; }
-        #chart-container { width: 100%; height: 400px; }
+        #chart-container { width: 100%; height: 350px; }
+        
+        .status-msg { margin-top: 10px; font-size: 14px; color: #666; font-weight: bold; }
     </style>
 </head>
 <body>
@@ -36,13 +44,19 @@
     
     <div class="header-controls">
         <div>
-            <label>날짜 선택: </label>
-            <input type="date" id="date-picker" value="2026-06-06"> 
+            <button class="btn-latest" onclick="fetchData('latest')">⚡ 최신 데이터 불러오기 (Latest)</button>
+            <span style="margin: 0 15px; color: #ccc;">|</span>
+            <label>과거 데이터 검색: </label>
+            <input type="date" id="date-picker"> 
+            <input type="number" id="hour-picker" min="0" max="23" placeholder="시간(0~23)" style="width: 80px;">
+            <button onclick="fetchData('specific')">검색</button>
         </div>
         <div>
             <input type="text" id="search-input" placeholder="닉네임 또는 ID 검색...">
         </div>
     </div>
+    
+    <div id="status-text" class="status-msg">데이터를 불러오는 중입니다...</div>
 
     <table>
         <thead>
@@ -51,6 +65,9 @@
                 <th>닉네임</th>
                 <th>ID (IP)</th>
                 <th>계정타입</th>
+                <th>작성글 수</th>
+                <th>댓글 수</th>
+                <th>총 활동수</th>
                 <th>상세 분석</th>
             </tr>
         </thead>
@@ -62,92 +79,155 @@
 <div id="graph-modal" class="modal">
     <div class="modal-content">
         <span class="close-btn" onclick="closeModal()">&times;</span>
-        <h3 id="modal-title">유저 상세 그래프</h3>
+        <h3 id="modal-title">유저 활동 비율</h3>
+        <p style="color: #666; font-size: 14px;">해당 시간대의 게시글/댓글 작성 비율입니다.</p>
         <div id="chart-container"></div>
     </div>
 </div>
 
 <script>
-    // 1. 샘플 데이터 (실제로는 R2에서 fetch('https://도메인/2026/06/06/data.json') 으로 가져옴)
-    const mockData = [
-        { nickname: "유저A", id: "123.45.xx", type: "일반", history: [10, 25, 15, 40, 30] },
-        { nickname: "유저B", id: "67.89.xx", type: "프리미엄", history: [5, 10, 8, 15, 12] },
-        { nickname: "유저C", id: "211.33.xx", type: "일반", history: [50, 45, 60, 55, 70] }
-    ];
+    // ==========================================
+    // 💡 아래 주소를 본인의 R2 퍼블릭 도메인으로 반드시 변경하세요!
+    // 예시: "https://pub-1234abcd.r2.dev" (끝에 슬래시 / 없이)
+    // ==========================================
+    const R2_DOMAIN = "https://pub-여기에-본인의-주소를-넣으세요.r2.dev"; 
 
-    // 2. 브라우저 localStorage에서 북마크 불러오기 (Streamlit의 cookie_manager 대체)
+    let currentData = [];
     let bookmarks = JSON.parse(localStorage.getItem('user_bookmarks')) || [];
 
-    // 3. 테이블 렌더링 함수
+    // 오늘 날짜 세팅 (KST 기준)
+    const today = new Date(new Date().getTime() + (9 * 60 * 60 * 1000)).toISOString().split('T')[0];
+    document.getElementById('date-picker').value = today;
+
+    // R2에서 데이터 가져오기
+    async function fetchData(mode) {
+        const statusText = document.getElementById('status-text');
+        let targetUrl = '';
+
+        if (mode === 'latest') {
+            targetUrl = `${R2_DOMAIN}/latest_data.json`;
+            statusText.innerText = "⏳ 최신 데이터를 R2에서 불러오는 중...";
+        } else {
+            const dateVal = document.getElementById('date-picker').value;
+            let hourVal = document.getElementById('hour-picker').value;
+            if(!dateVal || hourVal === "") {
+                alert("날짜와 시간(0~23)을 모두 입력해주세요!");
+                return;
+            }
+            hourVal = hourVal.padStart(2, '0'); // 9 -> 09
+            targetUrl = `${R2_DOMAIN}/${dateVal}/${hourVal}h.json`;
+            statusText.innerText = `⏳ ${dateVal} ${hourVal}시 데이터를 불러오는 중...`;
+        }
+
+        try {
+            // 캐시 무시 (항상 최신 데이터를 가져오기 위함)
+            const response = await fetch(targetUrl, { cache: "no-store" });
+            if (!response.ok) throw new Error('데이터가 없거나 URL이 잘못되었습니다.');
+            
+            currentData = await response.json();
+            
+            // 데이터 총 활동수 기준으로 내림차순 정렬
+            currentData.sort((a, b) => b.total - a.total);
+            
+            renderTable(currentData);
+            statusText.innerText = `✅ 데이터 로드 완료! (총 ${currentData.length}명의 유저)`;
+            statusText.style.color = "green";
+        } catch (error) {
+            console.error(error);
+            statusText.innerText = `❌ 오류: 해당 시간의 데이터를 찾을 수 없습니다. (${targetUrl})`;
+            statusText.style.color = "red";
+            renderTable([]);
+        }
+    }
+
+    // 테이블 렌더링
     function renderTable(data) {
         const tbody = document.getElementById('table-body');
-        tbody.innerHTML = ''; // 초기화
+        tbody.innerHTML = ''; 
 
-        data.forEach(row => {
+        // 북마크 된 유저를 위로 올리기 위한 분리 작업
+        const bookmarkedRows = data.filter(row => bookmarks.includes(row.id));
+        const normalRows = data.filter(row => !bookmarks.includes(row.id));
+        const sortedData = [...bookmarkedRows, ...normalRows];
+
+        sortedData.forEach(row => {
             const isBookmarked = bookmarks.includes(row.id);
             const tr = document.createElement('tr');
             
+            // 뱃지 색상 결정
+            let badgeClass = "bg-udong";
+            if (row.type === "고닉") badgeClass = "bg-gonic";
+            if (row.type === "반고닉") badgeClass = "bg-ban";
+
             tr.innerHTML = `
                 <td>
                     <input type="checkbox" class="star-checkbox" 
                            ${isBookmarked ? 'checked' : ''} 
                            onchange="toggleBookmark('${row.id}')">
                 </td>
-                <td>${row.nickname}</td>
+                <td style="font-weight:bold;">${row.nickname}</td>
                 <td>${row.id}</td>
-                <td>${row.type}</td>
-                <td><button class="btn-graph" onclick="openModal('${row.nickname}', '${row.id}')">그래프 보기</button></td>
+                <td><span class="badge ${badgeClass}">${row.type}</span></td>
+                <td>${row.post}</td>
+                <td>${row.comment}</td>
+                <td style="color: #ff4b4b; font-weight: bold;">${row.total}</td>
+                <td><button class="btn-graph" onclick="openModal('${row.nickname}', '${row.id}')">분석</button></td>
             `;
             tbody.appendChild(tr);
         });
     }
 
-    // 4. 북마크 토글 기능 (체크/해제 시 브라우저에 영구 저장)
+    // 북마크 토글 기능
     function toggleBookmark(id) {
         if (bookmarks.includes(id)) {
-            bookmarks = bookmarks.filter(b => b !== id); // 제거
+            bookmarks = bookmarks.filter(b => b !== id); 
         } else {
-            bookmarks.push(id); // 추가
+            bookmarks.push(id); 
         }
         localStorage.setItem('user_bookmarks', JSON.stringify(bookmarks));
-        // 실제로는 여기서 테이블을 정렬하여 북마크된 유저를 최상단으로 올리는 로직을 추가할 수 있습니다.
+        renderTable(currentData); // 클릭 시 즉시 위로 정렬되도록 리렌더링
     }
 
-    // 5. 검색 기능
+    // 검색 기능
     document.getElementById('search-input').addEventListener('input', function(e) {
         const keyword = e.target.value.toLowerCase();
-        const filtered = mockData.filter(row => 
+        const filtered = currentData.filter(row => 
             row.nickname.toLowerCase().includes(keyword) || 
             row.id.toLowerCase().includes(keyword)
         );
         renderTable(filtered);
     });
 
-    // 6. 모달 & ECharts 그래프 기능 (Streamlit @st.dialog 대체)
+    // ECharts 모달 (파이 차트)
     let myChart = null;
 
     function openModal(nickname, id) {
         document.getElementById('graph-modal').style.display = "block";
-        document.getElementById('modal-title').innerText = `${nickname} (${id}) 활동 상세 그래프`;
+        document.getElementById('modal-title').innerText = `${nickname} (${id}) 활동 상세`;
         
-        // 해당 유저의 데이터 찾기
-        const userData = mockData.find(u => u.id === id);
+        const userData = currentData.find(u => u.id === id);
 
-        // 차트 초기화 및 렌더링
-        if (myChart != null) { myChart.dispose(); } // 기존 차트 파기
+        if (myChart != null) { myChart.dispose(); } 
         myChart = echarts.init(document.getElementById('chart-container'));
 
         const option = {
-            tooltip: { trigger: 'axis' },
-            xAxis: { type: 'category', data: ['00시', '06시', '12시', '18시', '24시'] },
-            yAxis: { type: 'value' },
-            series: [{
-                data: userData.history,
-                type: 'line',
-                smooth: true,
-                areaStyle: { opacity: 0.2 },
-                itemStyle: { color: '#ff4b4b' }
-            }]
+            tooltip: { trigger: 'item' },
+            legend: { top: '5%', left: 'center' },
+            color: ['#007bff', '#ff4b4b'],
+            series: [
+                {
+                    name: '활동 비율',
+                    type: 'pie',
+                    radius: ['40%', '70%'],
+                    avoidLabelOverlap: false,
+                    itemStyle: { borderRadius: 10, borderColor: '#fff', borderWidth: 2 },
+                    label: { show: true, formatter: '{b}: {c}회 ({d}%)' },
+                    data: [
+                        { value: userData.post, name: '게시글 작성' },
+                        { value: userData.comment, name: '댓글 작성' }
+                    ]
+                }
+            ]
         };
         myChart.setOption(option);
     }
@@ -156,8 +236,10 @@
         document.getElementById('graph-modal').style.display = "none";
     }
 
-    // 초기 화면 렌더링
-    renderTable(mockData);
+    // 페이지 접속 시 자동으로 최신 데이터 로드
+    window.onload = () => {
+        fetchData('latest');
+    };
 </script>
 
 </body>
