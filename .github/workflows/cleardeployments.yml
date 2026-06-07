@@ -1,13 +1,15 @@
-name: Clear Deployments
+name: Auto Clear Deployments
 
 on: 
-  workflow_dispatch:
-  
+  workflow_dispatch: 
+  deployment_status: 
+
 permissions:
   deployments: write
 
 jobs:
   cleanup:
+    if: github.event_name == 'workflow_dispatch' || (github.event.deployment.environment == 'github-pages' && github.event.deployment_status.state == 'success')
     runs-on: ubuntu-latest
     steps:
       - name: 배포(Deployments) 기록 싹 지우기
