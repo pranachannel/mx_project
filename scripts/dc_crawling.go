@@ -528,7 +528,7 @@ func main() {
 	for t := lastTime.Add(time.Hour); t.Before(limitTime); t = t.Add(time.Hour) {
 		targetStart := time.Date(t.Year(), t.Month(), t.Day(), t.Hour(), 0, 0, 0, kstLoc)
 		targetEnd := targetStart.Add(time.Hour)
-		scanStart := targetStart.Add(-1 * time.Hour)
+		scanStart := targetStart.Add(-2 * time.Hour)
 
 		collectionTimeStr := targetStart.Format("2006-01-02 15:04")
 		jsonFilename := fmt.Sprintf("%s_%02dh.json", targetStart.Format("2006-01-02"), targetStart.Hour())
