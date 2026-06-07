@@ -1,4 +1,4 @@
-name: Delete Old Workflow Runs
+name: Clean Workspaces
 
 on:
   schedule:
