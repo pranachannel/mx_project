@@ -1,10 +1,9 @@
-name: ProjectMX Crawler & R2 Upload
+name: ProjectMX Crawler
 
 on:
   schedule:
-    # 매시간 5분에 실행 (정각 접속을 피해 서버 차단 방지)
     - cron: '5 * * * *' 
-  workflow_dispatch: # 수동으로 즉시 실행할 수 있는 버튼 활성화
+  workflow_dispatch:
 
 jobs:
   run-crawler:
@@ -14,23 +13,22 @@ jobs:
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
     
     steps:
-    - name: 📥 코드 가져오기
+    - name: 코드 가져오기
       uses: actions/checkout@v4
 
-    - name: 🐹 Go 언어 환경 셋업
+    - name: Go 언어 환경 셋업
       uses: actions/setup-go@v5
       with:
         go-version: '1.25'
         cache: false
 
-    - name: 🚀 크롤러 실행 및 R2 자동 업로드
+    - name: 크롤러 실행 및 R2 자동 업로드
       env:
-        # 1단계에서 등록한 Secrets를 Go 코드의 환경 변수로 주입
         CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
         CF_ACCESS_KEY_ID: ${{ secrets.CF_ACCESS_KEY_ID }}
         CF_SECRET_ACCESS_KEY: ${{ secrets.CF_SECRET_ACCESS_KEY }}
         CF_BUCKET_NAME: ${{ secrets.CF_BUCKET_NAME }}
-        TZ: Asia/Seoul # 컨테이너 시간대를 한국 시간으로 고정
+        TZ: Asia/Seoul
       run: |
         cd scripts 
         
