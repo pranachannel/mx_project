@@ -155,11 +155,11 @@
 
 <script>
     // 💡 R2 주소 설정
-    const R2_DOMAIN = "https://pub-fca2435a027e41bf954b4bc4f46e560a.r2.dev"; 
-
+    const R2_DOMAIN = "https://pub-fca2435a027e41bf954b4bc4f46e560a.r2.dev";
     let currentData = [];
     let bookmarks = JSON.parse(localStorage.getItem('user_bookmarks')) || [];
     let activeTab = 'trends';
+    let dailyTrendData = null; // 해당 일자의 24시간치 집계 데이터 저장용
 
     // 초기 날짜 설정
     const todayKst = new Date(new Date().getTime() + (9 * 60 * 60 * 1000)).toISOString().split('T')[0];
@@ -174,32 +174,132 @@
         document.getElementById(`section-${tabId}`).classList.add('active');
         activeTab = tabId;
         
-        if (tabId === 'trends') renderTrendChart();
+        if (tabId === 'trends' && dailyTrendData) renderTrendChart();
     }
 
-    // 데이터 가져오기
+    // 데이터 가져오기 (특정 시간 데이터 + 하루 전체 추이 동시 로드)
     async function fetchData(mode) {
         const statusText = document.getElementById('status-text');
-        const dateVal = document.getElementById('date-picker').value;
+        const dateVal = mode === 'latest' ? todayKst : document.getElementById('date-picker').value;
         let hourVal = document.getElementById('hour-picker').value;
-        let targetUrl = (mode === 'latest') ? `${R2_DOMAIN}/latest_data.json` : `${R2_DOMAIN}/${dateVal}/${hourVal.padStart(2, '0')}h.json`;
+        
+        let targetUrl = (mode === 'latest') ? 
+            `${R2_DOMAIN}/latest_data.json` : 
+            `${R2_DOMAIN}/${dateVal}/${hourVal.padStart(2, '0')}h.json`;
 
         statusText.innerText = "⏳ 데이터를 불러오는 중...";
+        
         try {
+            // 1. 하단 표와 메트릭에 쓰일 특정 시간(또는 최신) 데이터 로드
             const response = await fetch(targetUrl, { cache: "no-store" });
             if (!response.ok) throw new Error();
             currentData = await response.json();
             
             updateMetrics();
             sortAndRender();
-            if (activeTab === 'trends') renderTrendChart();
+            
+            // 2. 상단 그래프에 쓰일 '해당 날짜 전체'의 24시간치 트렌드 비동기 로드
+            await loadDailyTrend(dateVal);
 
-            statusText.innerText = `✅ 성공: ${currentData.length}명의 데이터를 표시합니다.`;
+            statusText.innerText = `✅ 성공: ${dateVal} 기준 통계가 갱신되었습니다.`;
             statusText.style.color = "green";
         } catch (e) {
             statusText.innerText = "❌ 해당 시간의 데이터를 찾을 수 없습니다.";
             statusText.style.color = "red";
         }
+    }
+
+    // 하루치(0~23시) 트렌드 데이터 집계 함수
+    async function loadDailyTrend(dateStr) {
+        const hours = Array.from({length: 24}, (_, i) => i);
+        const promises = hours.map(h => {
+            const hh = String(h).padStart(2, '0');
+            const url = `${R2_DOMAIN}/${dateStr}/${hh}h.json`;
+            return fetch(url, { cache: "no-store" }).then(r => r.ok ? r.json() : null).catch(() => null);
+        });
+
+        // 24개 파일 병렬 요청 (R2는 속도가 매우 빠름)
+        const results = await Promise.all(promises);
+        
+        const trendPosts = [];
+        const trendComments = [];
+        const trendUsers = [];
+        const xAxisLabels = [];
+
+        hours.forEach((h, index) => {
+            const data = results[index];
+            xAxisLabels.push(`${h}시`);
+            
+            if (data && data.length > 0) {
+                const posts = data.reduce((sum, u) => sum + u.post, 0);
+                const comments = data.reduce((sum, u) => sum + u.comment, 0);
+                const users = data.length;
+                trendPosts.push(posts);
+                trendComments.push(comments);
+                trendUsers.push(users);
+            } else {
+                // 미래 시간이거나 데이터가 없는 시간은 0으로 처리
+                trendPosts.push(0);
+                trendComments.push(0);
+                trendUsers.push(0);
+            }
+        });
+
+        dailyTrendData = { labels: xAxisLabels, posts: trendPosts, comments: trendComments, users: trendUsers };
+        
+        if (activeTab === 'trends') renderTrendChart();
+    }
+
+    // 시간대 선 그래프 렌더링
+    function renderTrendChart() {
+        if (!dailyTrendData) return;
+
+        const chartDom = document.getElementById('main-trend-chart');
+        const myChart = echarts.init(chartDom);
+        
+        const option = {
+            tooltip: { 
+                trigger: 'axis' 
+            },
+            legend: { 
+                data: ['총 게시글', '총 댓글', '활동 유저 수'],
+                top: '0%'
+            },
+            grid: { left: '3%', right: '4%', bottom: '5%', containLabel: true },
+            xAxis: { 
+                type: 'category', 
+                boundaryGap: false,
+                data: dailyTrendData.labels
+            },
+            yAxis: { type: 'value' },
+            series: [
+                {
+                    name: '활동 유저 수',
+                    type: 'line',
+                    smooth: true,
+                    data: dailyTrendData.users,
+                    itemStyle: { color: '#28a745' }, // 초록색
+                    areaStyle: { opacity: 0.1 }
+                },
+                {
+                    name: '총 게시글',
+                    type: 'line',
+                    smooth: true,
+                    data: dailyTrendData.posts,
+                    itemStyle: { color: '#007bff' }, // 파란색
+                    areaStyle: { opacity: 0.1 }
+                },
+                {
+                    name: '총 댓글',
+                    type: 'line',
+                    smooth: true,
+                    data: dailyTrendData.comments,
+                    itemStyle: { color: '#ff4b4b' }, // 빨간색
+                    areaStyle: { opacity: 0.1 }
+                }
+            ]
+        };
+        myChart.setOption(option);
     }
 
     // 상단 지표 업데이트
@@ -222,7 +322,7 @@
         displayData.sort((a, b) => b[sortKey] - a[sortKey]);
         
         renderTable('ranking-body', displayData.slice(0, 50));
-        renderTable('search-body', currentData); // 검색탭은 전체 데이터 기준
+        renderTable('search-body', currentData);
     }
 
     function renderTable(targetId, data) {
@@ -249,69 +349,6 @@
         });
     }
 
-    // 시간대 그래프 (섹션 1)
-    // 시간대 그래프 (섹션 1)
-    function renderTrendChart() {
-        const chartDom = document.getElementById('main-trend-chart');
-        const myChart = echarts.init(chartDom);
-        
-        // 총 활동량 기준 상위 20명을 추출 (그래프가 너무 조밀해지는 것을 방지)
-        const topUsers = [...currentData].sort((a, b) => b.total - a.total).slice(0, 20);
-        
-        // X축(닉네임)과 Y축(글, 댓글) 데이터 분리
-        const nicknames = topUsers.map(u => u.nickname);
-        const posts = topUsers.map(u => u.post);
-        const comments = topUsers.map(u => u.comment);
-
-        const option = {
-            tooltip: { 
-                trigger: 'axis' 
-            },
-            legend: { 
-                data: ['게시글 수', '댓글 수'],
-                top: '0%'
-            },
-            grid: {
-                left: '3%',
-                right: '4%',
-                bottom: '5%',
-                containLabel: true
-            },
-            xAxis: { 
-                type: 'category', 
-                boundaryGap: false, // 선 그래프가 양쪽 끝에 딱 붙어서 시작하도록 설정
-                data: nicknames,
-                axisLabel: {
-                    interval: 0, // 모든 닉네임을 생략 없이 표시
-                    rotate: 45,  // 닉네임이 길어 겹치는 것을 방지하기 위해 45도 기울임
-                    fontSize: 11
-                }
-            },
-            yAxis: { 
-                type: 'value' 
-            },
-            series: [
-                {
-                    name: '게시글 수',
-                    type: 'line',
-                    data: posts,
-                    smooth: true, // 선을 꺾은선 대신 부드러운 곡선으로 처리
-                    itemStyle: { color: '#007bff' },
-                    areaStyle: { opacity: 0.1 } // 선 아래쪽에 옅은 색을 채워 가시성 향상
-                },
-                {
-                    name: '댓글 수',
-                    type: 'line',
-                    data: comments,
-                    smooth: true,
-                    itemStyle: { color: '#ff4b4b' },
-                    areaStyle: { opacity: 0.1 }
-                }
-            ]
-        };
-        myChart.setOption(option);
-    }
-
     // 상세 분석 모달
     let modalChart = null;
     function openModal(nick, id) {
@@ -334,7 +371,6 @@
         sortAndRender();
     }
 
-    // 검색창 실시간 필터
     document.getElementById('search-input').addEventListener('input', (e) => {
         const kw = e.target.value.toLowerCase();
         const filtered = currentData.filter(r => r.nickname.toLowerCase().includes(kw) || r.id.includes(kw));
@@ -342,6 +378,7 @@
     });
 
     function closeModal() { document.getElementById('graph-modal').style.display = "none"; }
+    
     window.onload = () => fetchData('latest');
 </script>
 
