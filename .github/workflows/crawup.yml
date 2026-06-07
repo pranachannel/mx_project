@@ -2,7 +2,7 @@ name: ProjectMX Crawler
 
 on:
   schedule:
-    - cron: '21 * * * *' 
+    - cron: '24 * * * *' 
   workflow_dispatch:
 
 jobs:
