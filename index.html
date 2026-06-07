@@ -26,7 +26,7 @@
             background-color: white; transition: border-color 0.2s; width: 140px;
         }
         input[type="text"].date-picker-box:hover { border-color: #888; }
-        select, input[type="text"] { padding: 10px; border: 1px solid #ddd; border-radius: 5px; outline: none; }
+        input[type="text"] { padding: 10px; border: 1px solid #ddd; border-radius: 5px; outline: none; }
 
         .tab-container { display: flex; gap: 5px; margin-bottom: 1.5rem; border-bottom: 1px solid #ddd; padding-bottom: 10px; }
         .tab { padding: 10px 20px; cursor: pointer; border-radius: 5px; font-weight: 500; color: #555; transition: all 0.2s; }
@@ -41,13 +41,13 @@
         .metric-label { font-size: 0.9rem; color: #666; font-weight: bold; }
         .metric-value { font-size: 1.8rem; font-weight: bold; margin-top: 5px; color: #007bff; }
 
-        /* 테이블 스타일 */
         table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-        th, td { padding: 12px; border-bottom: 1px solid #eee; text-align: left; }
+        td, th { padding: 12px; border-bottom: 1px solid #eee; text-align: left; }
         
-        /* 💡 정렬 가능 헤더에 마우스 포인터 표시 및 호버 스타일 적용 */
-        th { background: #fafafa; font-size: 0.85rem; color: #666; cursor: pointer; user-select: none; transition: background 0.2s; }
+        /* 💡 1. 정렬 화살표 영역의 너비를 고정하여 꿀렁거림 원천 차단 */
+        th { background: #fafafa; font-size: 0.85rem; color: #666; cursor: pointer; user-select: none; transition: background 0.2s; white-space: nowrap; }
         th:hover { background: #e2e6ea; }
+        th span[id^="sort-"] { display: inline-block; width: 1.5em; text-align: center; color: #888; }
         
         table tbody tr { cursor: pointer; transition: background 0.1s; }
         table tbody tr:hover { background-color: #f8f9fa !important; }
@@ -63,10 +63,15 @@
         .btn-search { background: var(--primary-color); color: white; border: 1px solid var(--primary-color); padding: 10px 20px; border-radius: 5px; cursor: pointer; font-weight: bold; }
         .btn-search:hover { background: #000; }
         
-        /* 💡 즐겨찾기 토글 버튼 스타일 */
-        .btn-star-filter { background: white; border: 1px solid #ddd; padding: 9px 15px; border-radius: 5px; cursor: pointer; font-size: 14px; transition: all 0.2s; display: flex; align-items: center; gap: 5px; }
+        .btn-star-filter { background: white; border: 1px solid #ddd; padding: 9px 15px; border-radius: 5px; cursor: pointer; font-size: 14px; transition: all 0.2s; }
         .btn-star-filter:hover { border-color: #aaa; background: #fafafa; }
         .btn-star-filter.active { background: #fffacd; border-color: #ffda44; font-weight: bold; }
+
+        /* 💡 2. 다중 선택용 유저 타입 토글 버튼 스타일 */
+        .btn-type { background: white; border: 1px solid #ddd; padding: 9px 12px; border-radius: 5px; cursor: pointer; font-size: 13px; font-weight: bold; color: #888; transition: all 0.2s; }
+        .btn-type.active.gonic { background: #17a2b8; color: white; border-color: #17a2b8; }
+        .btn-type.active.ban { background: #6c757d; color: white; border-color: #6c757d; }
+        .btn-type.active.udong { background: #dc3545; color: white; border-color: #dc3545; }
 
         .status-msg { font-size: 0.85rem; margin-bottom: 1rem; font-weight: bold; }
     </style>
@@ -116,7 +121,7 @@
                         <th onclick="handleHeaderSort('ranking', 'type')">타입<span id="sort-ranking-type"></span></th>
                         <th onclick="handleHeaderSort('ranking', 'post')">글<span id="sort-ranking-post"></span></th>
                         <th onclick="handleHeaderSort('ranking', 'comment')">댓글<span id="sort-ranking-comment"></span></th>
-                        <th onclick="handleHeaderSort('ranking', 'total')">총합<span id="sort-ranking-total"> ▼</span></th>
+                        <th onclick="handleHeaderSort('ranking', 'total')">총합<span id="sort-ranking-total">▼</span></th>
                     </tr>
                 </thead>
                 <tbody id="ranking-body"></tbody>
@@ -126,15 +131,16 @@
 
     <div id="section-search" class="content-section">
         <div class="st-card">
-            <div style="display:flex; gap:10px; align-items:center; margin-bottom: 20px;">
-                <input type="text" id="search-input" placeholder="검색할 닉네임 또는 ID 입력..." style="flex: 1; box-sizing: border-box; margin:0;">
-                <select id="search-type-select">
-                    <option value="all">전체 타입</option>
-                    <option value="고닉">고닉</option>
-                    <option value="반고닉">반고닉</option>
-                    <option value="유동">유동</option>
-                </select>
-                <button id="search-star-filter" class="btn-star-filter" onclick="toggleStarFilter('search')">⭐</button>
+            <div style="display:flex; gap:10px; align-items:center; margin-bottom: 20px; flex-wrap: wrap;">
+                <input type="text" id="search-input" placeholder="검색할 닉네임 또는 ID 입력..." style="flex: 1; box-sizing: border-box; margin:0; min-width: 200px;">
+                
+                <div style="display:flex; gap:5px;">
+                    <button id="btn-type-gonic" class="btn-type gonic active" onclick="toggleSearchType('고닉')">고닉</button>
+                    <button id="btn-type-ban" class="btn-type ban active" onclick="toggleSearchType('반고닉')">반고닉</button>
+                    <button id="btn-type-udong" class="btn-type udong active" onclick="toggleSearchType('유동')">유동</button>
+                </div>
+
+                <button id="search-star-filter" class="btn-star-filter" onclick="toggleStarFilter('search')" title="즐겨찾기 유저만 보기">⭐</button>
                 <button class="btn-search" onclick="executeSearch()">검색</button>
             </div>
             <table>
@@ -146,7 +152,7 @@
                         <th onclick="handleHeaderSort('search', 'type')">타입<span id="sort-search-type"></span></th>
                         <th onclick="handleHeaderSort('search', 'post')">글<span id="sort-search-post"></span></th>
                         <th onclick="handleHeaderSort('search', 'comment')">댓글<span id="sort-search-comment"></span></th>
-                        <th onclick="handleHeaderSort('search', 'total')">총합<span id="sort-search-total"> ▼</span></th>
+                        <th onclick="handleHeaderSort('search', 'total')">총합<span id="sort-search-total">▼</span></th>
                     </tr>
                 </thead>
                 <tbody id="search-body"></tbody>
@@ -164,7 +170,10 @@
 </div>
 
 <script>
+    // ========================================================
+    // 💡 R2 주소를 반드시 본인의 주소로 변경하세요!
     const R2_DOMAIN = "https://pub-fca2435a027e41bf954b4bc4f46e560a.r2.dev"; 
+    // ========================================================
 
     const PROJECT_START_DATE = "2026-06-07"; 
 
@@ -173,14 +182,15 @@
     let activeTab = 'trends';
     let dailyTrendData = null;
 
-    // 💡 탭별 독립적인 정렬 상태 관리 (기본값: 총활동수 내림차순)
     let sortStates = {
         ranking: { key: 'total', order: 'desc' },
         search: { key: 'total', order: 'desc' }
     };
 
-    // 💡 즐겨찾기 필터 작동 상태 관리
     let filterOnlyBookmarks = { ranking: false, search: false };
+    
+    // 💡 검색 탭의 다중 선택 유저 타입 상태 (기본값: 3개 모두 켜짐)
+    let searchTypes = { '고닉': true, '반고닉': true, '유동': true };
 
     const todayKst = new Date(new Date().getTime() + (9 * 60 * 60 * 1000)).toISOString().split('T')[0];
 
@@ -272,7 +282,7 @@
 
         updateMetrics(false);
         sortAndRenderRanking();
-        executeSearch(); // 날짜가 바뀌면 검색 페이지 결과도 초기 리셋 세팅
+        executeSearch(); 
         if (activeTab === 'trends') renderTrendChart();
 
         statusText.innerText = `✅ 성공: ${dateStr} 기준 유저 ${currentData.length}명의 데이터를 집계했습니다.`;
@@ -313,7 +323,6 @@
         document.getElementById('m-users').innerText = currentData.length.toLocaleString();
     }
 
-    // 💡 즐겨찾기 단독 토글 버튼 클릭 핸들러
     function toggleStarFilter(tab) {
         filterOnlyBookmarks[tab] = !filterOnlyBookmarks[tab];
         const btn = document.getElementById(`${tab}-star-filter`);
@@ -328,13 +337,24 @@
         if (tab === 'search') executeSearch();
     }
 
-    // 💡 헤더 클릭 시 호출되는 동적 정렬 제어 함수
+    // 💡 다중 유저 타입 토글 로직
+    function toggleSearchType(type) {
+        searchTypes[type] = !searchTypes[type]; // 상태 반전 (true <-> false)
+        
+        let btnId = type === '고닉' ? 'btn-type-gonic' : (type === '반고닉' ? 'btn-type-ban' : 'btn-type-udong');
+        const btn = document.getElementById(btnId);
+        
+        if (searchTypes[type]) {
+            btn.classList.add('active');
+        } else {
+            btn.classList.remove('active');
+        }
+    }
+
     function handleHeaderSort(tab, key) {
         if (sortStates[tab].key === key) {
-            // 동일 헤더를 연달아 클릭하면 차순 체인지 (내림차순 <-> 오름차순)
             sortStates[tab].order = sortStates[tab].order === 'desc' ? 'asc' : 'desc';
         } else {
-            // 새로운 헤더 클릭 시 내림차순(desc)을 우선 기본으로 세팅
             sortStates[tab].key = key;
             sortStates[tab].order = 'desc';
         }
@@ -344,14 +364,13 @@
         if (tab === 'search') executeSearch();
     }
 
-    // 💡 정렬 상태에 맞춰 헤더 우측에 ▲/▼ 화살표 텍스트 갱신 함수
     function updateSortIndicators(tab) {
         const columns = ['bookmark', 'nickname', 'id', 'type', 'post', 'comment', 'total'];
         columns.forEach(col => {
             const span = document.getElementById(`sort-${tab}-${col}`);
             if (span) {
                 if (sortStates[tab].key === col) {
-                    span.innerText = sortStates[tab].order === 'desc' ? ' ▼' : ' ▲';
+                    span.innerText = sortStates[tab].order === 'desc' ? '▼' : '▲';
                 } else {
                     span.innerText = '';
                 }
@@ -359,7 +378,6 @@
         });
     }
 
-    // 💡 데이터 코어 정렬 연산기 (문자열 한국어 사전순 및 숫자 대소 완벽 지원)
     function sortData(data, key, order) {
         return data.sort((a, b) => {
             let valA, valB;
@@ -379,7 +397,6 @@
         });
     }
 
-    // 💡 랭킹 탭 렌더링 파이프라인
     function sortAndRenderRanking() {
         let displayData = [...currentData];
         if (filterOnlyBookmarks.ranking) {
@@ -390,32 +407,28 @@
         renderTable('ranking-body', displayData.slice(0, 50));
     }
 
-    // 💡 [수정] 검색 버튼을 누를 때만 수행되는 독립 검색 파이프라인
     function executeSearch() {
         const kw = document.getElementById('search-input').value.toLowerCase();
-        const typeFilter = document.getElementById('search-type-select').value;
         
         let filtered = [...currentData];
         
-        // 키워드 검색 (ID 혹은 닉네임)
+        // 1. 키워드 필터
         if (kw) {
             filtered = filtered.filter(r => r.nickname.toLowerCase().includes(kw) || r.id.toLowerCase().includes(kw));
         }
-        // 계정 타입 드롭다운 매칭
-        if (typeFilter !== 'all') {
-            filtered = filtered.filter(r => r.type === typeFilter);
-        }
-        // 즐겨찾기 단독 토글 버튼 매칭
+        
+        // 2. 다중 토글 타입 필터 (켜져있는 타입의 유저만 통과)
+        filtered = filtered.filter(r => searchTypes[r.type]);
+        
+        // 3. 즐겨찾기 필터
         if (filterOnlyBookmarks.search) {
             filtered = filtered.filter(r => bookmarks.includes(r.id));
         }
         
-        // 정렬 엔진 가동
         filtered = sortData(filtered, sortStates.search.key, sortStates.search.order);
         renderTable('search-body', filtered);
     }
 
-    // 공용 테이블 주입기
     function renderTable(targetId, data) {
         const tbody = document.getElementById(targetId);
         tbody.innerHTML = '';
@@ -459,12 +472,12 @@
     function toggleBookmark(id) {
         bookmarks = bookmarks.includes(id) ? bookmarks.filter(b => b !== id) : [...bookmarks, id];
         localStorage.setItem('user_bookmarks', JSON.stringify(bookmarks));
-        // 즐겨찾기 상태 변경 시 양쪽 탭 동시 동기화 정렬
         sortAndRenderRanking();
         executeSearch();
     }
 
     function closeModal() { document.getElementById('graph-modal').style.display = "none"; }
+    
     window.onload = () => fetchDailyData(todayKst);
 </script>
 
