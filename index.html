@@ -250,25 +250,64 @@
     }
 
     // 시간대 그래프 (섹션 1)
+    // 시간대 그래프 (섹션 1)
     function renderTrendChart() {
         const chartDom = document.getElementById('main-trend-chart');
         const myChart = echarts.init(chartDom);
         
-        // 현재 로드된 데이터의 유저 타입별 분포도 (메인 그래프 예시)
-        const gonic = currentData.filter(r => r.type === "고닉").length;
-        const ban = currentData.filter(r => r.type === "반고닉").length;
-        const udong = currentData.filter(r => r.type === "유동").length;
+        // 총 활동량 기준 상위 20명을 추출 (그래프가 너무 조밀해지는 것을 방지)
+        const topUsers = [...currentData].sort((a, b) => b.total - a.total).slice(0, 20);
+        
+        // X축(닉네임)과 Y축(글, 댓글) 데이터 분리
+        const nicknames = topUsers.map(u => u.nickname);
+        const posts = topUsers.map(u => u.post);
+        const comments = topUsers.map(u => u.comment);
 
         const option = {
-            tooltip: { trigger: 'axis' },
-            legend: { data: ['유저 수'] },
-            xAxis: { type: 'category', data: ['고닉', '반고닉', '유동'] },
-            yAxis: { type: 'value' },
-            series: [{
-                data: [gonic, ban, udong],
-                type: 'bar',
-                itemStyle: { color: '#333' }
-            }]
+            tooltip: { 
+                trigger: 'axis' 
+            },
+            legend: { 
+                data: ['게시글 수', '댓글 수'],
+                top: '0%'
+            },
+            grid: {
+                left: '3%',
+                right: '4%',
+                bottom: '5%',
+                containLabel: true
+            },
+            xAxis: { 
+                type: 'category', 
+                boundaryGap: false, // 선 그래프가 양쪽 끝에 딱 붙어서 시작하도록 설정
+                data: nicknames,
+                axisLabel: {
+                    interval: 0, // 모든 닉네임을 생략 없이 표시
+                    rotate: 45,  // 닉네임이 길어 겹치는 것을 방지하기 위해 45도 기울임
+                    fontSize: 11
+                }
+            },
+            yAxis: { 
+                type: 'value' 
+            },
+            series: [
+                {
+                    name: '게시글 수',
+                    type: 'line',
+                    data: posts,
+                    smooth: true, // 선을 꺾은선 대신 부드러운 곡선으로 처리
+                    itemStyle: { color: '#007bff' },
+                    areaStyle: { opacity: 0.1 } // 선 아래쪽에 옅은 색을 채워 가시성 향상
+                },
+                {
+                    name: '댓글 수',
+                    type: 'line',
+                    data: comments,
+                    smooth: true,
+                    itemStyle: { color: '#ff4b4b' },
+                    areaStyle: { opacity: 0.1 }
+                }
+            ]
         };
         myChart.setOption(option);
     }
