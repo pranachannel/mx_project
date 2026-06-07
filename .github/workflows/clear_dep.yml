@@ -1,4 +1,4 @@
-name: Auto Clear Deployments
+name: Clean Deployments
 
 on: 
   workflow_dispatch: 
