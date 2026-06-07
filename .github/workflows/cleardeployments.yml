@@ -1,11 +1,18 @@
 name: Clear Deployments
-on: workflow_dispatch
+
+on: 
+  workflow_dispatch:
+  
+permissions:
+  deployments: write
+
 jobs:
   cleanup:
     runs-on: ubuntu-latest
     steps:
-      - uses: strumwolf/delete-deployment-environment@v2
+      - name: 배포(Deployments) 기록 싹 지우기
+        uses: strumwolf/delete-deployment-environment@v2
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          environment: production # Replace with your environment
+          environment: github-pages 
           onlyRemoveDeployments: true
