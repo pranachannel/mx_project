@@ -20,7 +20,6 @@ jobs:
       uses: actions/setup-go@v5
       with:
         go-version: '1.25'
-        cache: false
 
     - name: 크롤러 실행 및 R2 자동 업로드
       env:
