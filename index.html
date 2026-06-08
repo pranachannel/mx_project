@@ -41,10 +41,8 @@
         .metric-label { font-size: 0.9rem; color: #666; font-weight: bold; }
         .metric-value { font-size: 1.8rem; font-weight: bold; margin-top: 5px; color: #007bff; }
 
-        /* 💡 1. 모바일 가로 스크롤을 위한 테이블 래퍼(Wrapper) 컨테이너 추가 */
         .table-responsive { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
         
-        /* 💡 2. 테이블 최소 너비 설정 (750px 이하로 좁아지면 가로 스크롤 바 생성) */
         table { width: 100%; border-collapse: collapse; margin-top: 10px; table-layout: fixed; min-width: 750px; }
         td, th { padding: 12px; border-bottom: 1px solid #eee; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         
@@ -57,7 +55,10 @@
         table tbody tr { cursor: pointer; transition: background 0.1s; }
         table tbody tr:hover { background-color: #f8f9fa !important; }
         
-        .star-checkbox { transform: scale(1.3); cursor: pointer; }
+        .td-bookmark { cursor: pointer; text-align: center; transition: background 0.1s; }
+        .td-bookmark:hover { background-color: #e2e6ea !important; }
+        .star-checkbox { transform: scale(1.3); pointer-events: none; }
+        
         .badge { padding: 3px 7px; border-radius: 4px; font-size: 11px; font-weight: bold; color: white; }
         .bg-gonic { background: #17a2b8; } .bg-ban { background: #6c757d; } .bg-udong { background: #dc3545; }
 
@@ -82,7 +83,7 @@
         .btn-type.active.udong { background: #dc3545; color: white; border-color: #dc3545; }
 
         .status-msg { font-size: 0.85rem; margin-bottom: 1rem; font-weight: bold; }
-        .rank-number { font-weight: bold; color: #666; font-size: 14px; }
+        .rank-number { font-weight: bold; color: #666; font-size: 14px; text-align: center; }
     </style>
 </head>
 <body>
@@ -117,23 +118,20 @@
 
     <div id="section-ranking" class="content-section">
         <div class="st-card">
-            <div style="display:flex; justify-content: space-between; align-items:center; margin-bottom:15px; flex-wrap: wrap; gap: 10px;">
-                <div style="display:flex; gap: 15px; align-items:center;">
-                    <h3 style="margin:0;">🏆 Top 50 일일 랭킹</h3>
-                    <div style="display:flex; gap: 5px;">
-                        <button id="btn-rank-total" class="btn-rank active" onclick="setRankingMode('total')">총합 순</button>
-                        <button id="btn-rank-post" class="btn-rank" onclick="setRankingMode('post')">게시글 순</button>
-                        <button id="btn-rank-comment" class="btn-rank" onclick="setRankingMode('comment')">댓글 순</button>
-                    </div>
+            <div style="display:flex; gap:10px; align-items:center; margin-bottom:15px; flex-wrap: wrap;">
+                <button id="ranking-star-filter" class="btn-star-filter" onclick="toggleStarFilter('ranking')" title="즐겨찾기 유저만 보기">⭐</button>
+                <div style="display:flex; gap: 5px;">
+                    <button id="btn-rank-total" class="btn-rank active" onclick="setRankingMode('total')">총합 순</button>
+                    <button id="btn-rank-post" class="btn-rank" onclick="setRankingMode('post')">게시글 순</button>
+                    <button id="btn-rank-comment" class="btn-rank" onclick="setRankingMode('comment')">댓글 순</button>
                 </div>
-                <button id="ranking-star-filter" class="btn-star-filter" onclick="toggleStarFilter('ranking')">⭐ 즐겨찾기만</button>
             </div>
             
             <div class="table-responsive">
                 <table>
                     <colgroup>
                         <col style="width: 60px;">
-                        <col style="width: 50px;">
+                        <col style="width: 60px;">
                         <col style="width: 20%;">
                         <col style="width: 20%;">
                         <col style="width: 10%;">
@@ -143,8 +141,8 @@
                     </colgroup>
                     <thead>
                         <tr>
-                            <th>순위</th>
-                            <th>⭐</th>
+                            <th style="text-align: center;">순위</th>
+                            <th style="text-align: center;">⭐</th>
                             <th>닉네임</th>
                             <th>ID (IP)</th>
                             <th>타입</th>
@@ -175,7 +173,7 @@
             <div class="table-responsive">
                 <table>
                     <colgroup>
-                        <col style="width: 50px;">
+                        <col style="width: 60px;">
                         <col style="width: 22%;">
                         <col style="width: 22%;">
                         <col style="width: 12%;">
@@ -185,7 +183,7 @@
                     </colgroup>
                     <thead>
                         <tr>
-                            <th class="sortable" onclick="handleHeaderSort('search', 'bookmark')">⭐<span id="sort-search-bookmark"></span></th>
+                            <th class="sortable" style="text-align: center;" onclick="handleHeaderSort('search', 'bookmark')">⭐<span id="sort-search-bookmark"></span></th>
                             <th class="sortable" onclick="handleHeaderSort('search', 'nickname')">닉네임<span id="sort-search-nickname"></span></th>
                             <th class="sortable" onclick="handleHeaderSort('search', 'id')">ID (IP)<span id="sort-search-id"></span></th>
                             <th class="sortable" onclick="handleHeaderSort('search', 'type')">타입<span id="sort-search-type"></span></th>
@@ -221,10 +219,7 @@
     let bookmarks = JSON.parse(localStorage.getItem('user_bookmarks')) || [];
     let activeTab = 'trends';
     
-    // 일간 전체 통계 데이터
     let dailyTrendData = null;
-    
-    // 💡 시간대별 '유저 전용' 선 그래프를 그리기 위해, 24시간 원본 데이터를 보관할 변수
     let hourlyRawData = [];
 
     let currentRankingMode = 'total'; 
@@ -264,27 +259,32 @@
         const statusText = document.getElementById('status-text');
         statusText.innerText = `⏳ ${dateStr} 하루치 데이터를 합산 중입니다...`;
         
-        const hours = Array.from({length: 24}, (_, i) => i);
-        const promises = hours.map(h => {
-            const hh = String(h).padStart(2, '0');
+        const promises = Array.from({length: 24}, (_, i) => {
+            const hh = String(i).padStart(2, '0');
             const url = `${R2_DOMAIN}/${dateStr}/${hh}h.json`;
             return fetch(url, { cache: "no-store" }).then(r => r.ok ? r.json() : null).catch(() => null);
         });
 
         const results = await Promise.all(promises);
-        
-        // 💡 가져온 원본 24시간 치 배열을 전역에 보관 (모달용 선 그래프 데이터 뽑기 용도)
         hourlyRawData = results;
         
+        let lastValidIndex = -1;
+        for(let i = 23; i >= 0; i--) {
+            if(results[i] !== null) {
+                lastValidIndex = i;
+                break;
+            }
+        }
+
         const trendPosts = [];
         const trendComments = [];
         const trendUsers = [];
         const xAxisLabels = [];
         const userMap = new Map();
 
-        hours.forEach((h, index) => {
-            const data = results[index];
-            xAxisLabels.push(`${h}시`);
+        for (let i = 0; i <= lastValidIndex; i++) {
+            const data = results[i];
+            xAxisLabels.push(`${i}시`);
             
             if (data && data.length > 0) {
                 let hourPosts = 0;
@@ -312,7 +312,7 @@
                 trendComments.push(0);
                 trendUsers.push(0);
             }
-        });
+        }
 
         dailyTrendData = { labels: xAxisLabels, posts: trendPosts, comments: trendComments, users: trendUsers };
         currentData = Array.from(userMap.values());
@@ -332,12 +332,13 @@
         executeSearch(); 
         if (activeTab === 'trends') renderTrendChart();
 
-        statusText.innerText = `✅ 성공: ${dateStr} 기준 유저 ${currentData.length}명의 데이터를 집계했습니다.`;
-        statusText.style.color = "green";
+        // 💡 성공 시 로그를 고정 공지사항 문구로 대체
+        statusText.innerText = `📢 실시간 데이터 반영엔 시간이 걸립니다.`;
+        statusText.style.color = "#555"; // 차분한 공지사항 색상
     }
 
     function renderTrendChart() {
-        if (!dailyTrendData) return;
+        if (!dailyTrendData || dailyTrendData.labels.length === 0) return;
         const chartDom = document.getElementById('main-trend-chart');
         const myChart = echarts.init(chartDom);
         
@@ -494,15 +495,21 @@
             tr.onclick = () => openModal(row.nickname, row.id);
             let bType = (row.type === "고닉") ? "bg-gonic" : (row.type === "반고닉" ? "bg-ban" : "bg-udong");
             
+            const postWeight = currentRankingMode === 'post' ? 'font-weight:bold;' : '';
+            const commentWeight = currentRankingMode === 'comment' ? 'font-weight:bold;' : '';
+            const totalWeight = currentRankingMode === 'total' ? 'font-weight:bold;' : '';
+
             tr.innerHTML = `
                 <td class="rank-number">${row.rank}위</td>
-                <td><input type="checkbox" class="star-checkbox" ${isBookmarked ? 'checked' : ''} onchange="toggleBookmark('${row.id}')" onclick="event.stopPropagation()"></td>
-                <td title="${row.nickname}"><b>${row.nickname}</b></td>
+                <td class="td-bookmark" onclick="event.stopPropagation(); toggleBookmark('${row.id}')" title="클릭하여 즐겨찾기">
+                    <input type="checkbox" class="star-checkbox" ${isBookmarked ? 'checked' : ''}>
+                </td>
+                <td title="${row.nickname}">${row.nickname}</td>
                 <td title="${row.id}">${row.id}</td>
                 <td><span class="badge ${bType}">${row.type}</span></td>
-                <td>${row.post}</td>
-                <td>${row.comment}</td>
-                <td style="color:#ff4b4b; font-weight:bold;">${row.total}</td>
+                <td style="${postWeight}">${row.post}</td>
+                <td style="${commentWeight}">${row.comment}</td>
+                <td style="${totalWeight}">${row.total}</td>
             `;
             tbody.appendChild(tr);
         });
@@ -520,32 +527,41 @@
             let bType = (row.type === "고닉") ? "bg-gonic" : (row.type === "반고닉" ? "bg-ban" : "bg-udong");
             
             tr.innerHTML = `
-                <td><input type="checkbox" class="star-checkbox" ${isBookmarked ? 'checked' : ''} onchange="toggleBookmark('${row.id}')" onclick="event.stopPropagation()"></td>
-                <td title="${row.nickname}"><b>${row.nickname}</b></td>
+                <td class="td-bookmark" onclick="event.stopPropagation(); toggleBookmark('${row.id}')" title="클릭하여 즐겨찾기">
+                    <input type="checkbox" class="star-checkbox" ${isBookmarked ? 'checked' : ''}>
+                </td>
+                <td title="${row.nickname}">${row.nickname}</td>
                 <td title="${row.id}">${row.id}</td>
                 <td><span class="badge ${bType}">${row.type}</span></td>
                 <td>${row.post}</td>
                 <td>${row.comment}</td>
-                <td style="color:#ff4b4b; font-weight:bold;">${row.total}</td>
+                <td>${row.total}</td>
             `;
             tbody.appendChild(tr);
         });
     }
 
-    // 💡 개인 모달 그래프: 파이 차트에서 시간대별 선 그래프로 완전히 변경
     let modalChart = null;
     function openModal(nick, id) {
         document.getElementById('graph-modal').style.display = "block";
         document.getElementById('modal-title').innerText = `${nick} (${id}) 활동 상세`;
         
-        // 0시부터 23시까지 유저의 활동 추적
-        const hours = Array.from({length: 24}, (_, i) => `${i}시`);
+        let lastValidIndex = -1;
+        for(let i = 23; i >= 0; i--) {
+            if(hourlyRawData[i] !== null) {
+                lastValidIndex = i;
+                break;
+            }
+        }
+        
+        const validLen = lastValidIndex >= 0 ? lastValidIndex + 1 : 0;
+        const hours = Array.from({length: validLen}, (_, i) => `${i}시`);
         const userPosts = [];
         const userComments = [];
 
-        hourlyRawData.forEach(hourData => {
+        for(let i = 0; i < validLen; i++) {
+            const hourData = hourlyRawData[i];
             if (hourData && hourData.length > 0) {
-                // 이 시간대에 해당 유저가 쓴 글/댓글 찾기
                 const userRecord = hourData.find(u => u.id === id);
                 if (userRecord) {
                     userPosts.push(userRecord.post);
@@ -558,7 +574,7 @@
                 userPosts.push(0);
                 userComments.push(0);
             }
-        });
+        }
 
         if (modalChart) modalChart.dispose();
         modalChart = echarts.init(document.getElementById('chart-container'));
