@@ -118,9 +118,9 @@
 
     <div id="section-ranking" class="content-section">
         <div class="st-card">
-            <div style="display:flex; gap:10px; align-items:center; margin-bottom:15px; flex-wrap: wrap;">
+            <div style="display:flex; justify-content: space-between; align-items:center; margin-bottom:15px; flex-wrap: wrap; gap: 10px;">
                 <button id="ranking-star-filter" class="btn-star-filter" onclick="toggleStarFilter('ranking')" title="즐겨찾기 유저만 보기">⭐</button>
-                <div style="display:flex; gap: 5px;">
+                <div style="display:flex; gap: 5px; margin-left: auto;">
                     <button id="btn-rank-total" class="btn-rank active" onclick="setRankingMode('total')">총합 순</button>
                     <button id="btn-rank-post" class="btn-rank" onclick="setRankingMode('post')">게시글 순</button>
                     <button id="btn-rank-comment" class="btn-rank" onclick="setRankingMode('comment')">댓글 순</button>
@@ -208,10 +208,7 @@
 </div>
 
 <script>
-    // ========================================================
-    // 💡 R2 주소를 반드시 본인의 주소로 변경하세요!
     const R2_DOMAIN = "https://pub-fca2435a027e41bf954b4bc4f46e560a.r2.dev"; 
-    // ========================================================
 
     const PROJECT_START_DATE = "2026-06-07"; 
 
@@ -257,7 +254,7 @@
 
     async function fetchDailyData(dateStr) {
         const statusText = document.getElementById('status-text');
-        statusText.innerText = `⏳ ${dateStr} 하루치 데이터를 합산 중입니다...`;
+        statusText.innerText = `⏳ 프라나가 데이터를 정리 중입니다.`;
         
         const promises = Array.from({length: 24}, (_, i) => {
             const hh = String(i).padStart(2, '0');
@@ -318,7 +315,7 @@
         currentData = Array.from(userMap.values());
 
         if (currentData.length === 0) {
-            statusText.innerText = `❌ ${dateStr} 에는 수집된 데이터가 전혀 없습니다.`;
+            statusText.innerText = `❌ 아직 데이터 반영이 되지 않았습니다.`;
             statusText.style.color = "red";
             updateMetrics(true);
             renderRankingTable([]);
@@ -332,9 +329,8 @@
         executeSearch(); 
         if (activeTab === 'trends') renderTrendChart();
 
-        // 💡 성공 시 로그를 고정 공지사항 문구로 대체
         statusText.innerText = `📢 실시간 데이터 반영엔 시간이 걸립니다.`;
-        statusText.style.color = "#555"; // 차분한 공지사항 색상
+        statusText.style.color = "#555";
     }
 
     function renderTrendChart() {
