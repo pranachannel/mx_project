@@ -47,7 +47,6 @@
         td, th { padding: 12px; border-bottom: 1px solid #eee; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         
         th { background: #fafafa; font-size: 0.85rem; color: #666; user-select: none; transition: background 0.2s; }
-        
         th.sortable { cursor: pointer; }
         th.sortable:hover { background: #e2e6ea; }
         th span[id^="sort-"] { display: inline-block; width: 1.5em; text-align: center; color: #888; }
@@ -84,6 +83,9 @@
 
         .status-msg { font-size: 0.85rem; margin-bottom: 1rem; font-weight: bold; }
         .rank-number { font-weight: bold; color: #666; font-size: 14px; text-align: center; }
+        
+        /* 💡 높이 고정용 투명 컨테이너 (필터바와 동일한 높이 50px 확보) */
+        .filter-placeholder { height: 50px; }
     </style>
 </head>
 <body>
@@ -118,7 +120,7 @@
 
     <div id="section-ranking" class="content-section">
         <div class="st-card">
-            <div style="display:flex; justify-content: space-between; align-items:center; margin-bottom:15px; flex-wrap: wrap; gap: 10px;">
+            <div class="filter-placeholder" style="display:flex; justify-content: space-between; align-items:center; margin-bottom:15px; flex-wrap: wrap; gap: 10px;">
                 <button id="ranking-star-filter" class="btn-star-filter" onclick="toggleStarFilter('ranking')" title="즐겨찾기 유저만 보기">⭐</button>
                 <div style="display:flex; gap: 5px; margin-left: auto;">
                     <button id="btn-rank-total" class="btn-rank active" onclick="setRankingMode('total')">총합 순</button>
@@ -159,7 +161,7 @@
 
     <div id="section-search" class="content-section">
         <div class="st-card">
-            <div style="display:flex; gap:10px; align-items:center; margin-bottom: 20px; flex-wrap: wrap;">
+            <div style="display:flex; gap:10px; align-items:center; margin-bottom: 20px; flex-wrap: wrap; height: 50px;">
                 <button id="search-star-filter" class="btn-star-filter" onclick="toggleStarFilter('search')" title="즐겨찾기 유저만 보기">⭐</button>
                 <input type="text" id="search-input" placeholder="검색할 닉네임 또는 ID 입력..." style="flex: 1; box-sizing: border-box; margin:0; min-width: 200px;">
                 <div style="display:flex; gap:5px;">
@@ -208,7 +210,10 @@
 </div>
 
 <script>
+    // ========================================================
+    // 💡 R2 주소를 반드시 본인의 주소로 변경하세요!
     const R2_DOMAIN = "https://pub-fca2435a027e41bf954b4bc4f46e560a.r2.dev"; 
+    // ========================================================
 
     const PROJECT_START_DATE = "2026-06-07"; 
 
@@ -254,7 +259,7 @@
 
     async function fetchDailyData(dateStr) {
         const statusText = document.getElementById('status-text');
-        statusText.innerText = `⏳ 프라나가 데이터를 정리 중입니다.`;
+        statusText.innerText = `⏳ ${dateStr} 하루치 데이터를 합산 중입니다...`;
         
         const promises = Array.from({length: 24}, (_, i) => {
             const hh = String(i).padStart(2, '0');
@@ -315,7 +320,7 @@
         currentData = Array.from(userMap.values());
 
         if (currentData.length === 0) {
-            statusText.innerText = `❌ 아직 데이터 반영이 되지 않았습니다.`;
+            statusText.innerText = `❌ ${dateStr} 에는 수집된 데이터가 전혀 없습니다.`;
             statusText.style.color = "red";
             updateMetrics(true);
             renderRankingTable([]);
