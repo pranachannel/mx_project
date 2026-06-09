@@ -162,7 +162,9 @@
         <div class="st-card">
             <div style="display:flex; gap:10px; align-items:center; margin-bottom: 20px; flex-wrap: wrap; height: 50px;">
                 <button id="search-star-filter" class="btn-star-filter" onclick="toggleStarFilter('search')" title="즐겨찾기 유저만 보기">⭐</button>
-                <input type="text" id="search-input" placeholder="검색할 닉네임 또는 ID 입력..." style="flex: 1; box-sizing: border-box; margin:0; min-width: 200px;">
+                
+                <input type="text" id="search-input" placeholder="검색할 닉네임 또는 ID 입력..." style="flex: 1; box-sizing: border-box; margin:0; min-width: 200px;" onkeypress="if(event.key === 'Enter') executeSearch()">
+                
                 <div style="display:flex; gap:5px;">
                     <button id="btn-type-gonic" class="btn-type gonic active" onclick="toggleSearchType('고닉')">고닉</button>
                     <button id="btn-type-ban" class="btn-type ban active" onclick="toggleSearchType('반고닉')">반고닉</button>
