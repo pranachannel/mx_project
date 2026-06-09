@@ -2,7 +2,7 @@ name: ProjectMX Crawler
 
 on:
   schedule:
-    - cron: '17 * * * *' 
+    - cron: '24 * * * *' 
   workflow_dispatch:
 
 jobs:
@@ -19,6 +19,7 @@ jobs:
     - name: Go 언어 환경 셋업
       uses: actions/setup-go@v5
       with:
+        cache-dependency-path: scripts/go.sum
         go-version: '1.25'
 
     - name: 크롤러 실행 및 R2 자동 업로드
