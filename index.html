@@ -107,9 +107,9 @@
 
     <div id="section-trends" class="content-section active">
         <div class="metrics-grid">
-            <div class="metric-item"><div class="metric-label">📝 선택 일자 총 게시글</div><div id="m-posts" class="metric-value">0</div></div>
-            <div class="metric-item"><div class="metric-label">💬 선택 일자 총 댓글</div><div id="m-comments" class="metric-value">0</div></div>
-            <div class="metric-item"><div class="metric-label">👥 활동 유저 수</div><div id="m-users" class="metric-value">0</div></div>
+            <div class="metric-item"><div class="metric-label">총 게시글</div><div id="m-posts" class="metric-value">0</div></div>
+            <div class="metric-item"><div class="metric-label">총 댓글</div><div id="m-comments" class="metric-value">0</div></div>
+            <div class="metric-item"><div class="metric-label">활동 유저 수</div><div id="m-users" class="metric-value">0</div></div>
         </div>
         <div class="st-card">
             <h3 style="margin-top:0;">시간대별 활동 추이</h3>
@@ -268,7 +268,7 @@
 
     async function fetchDailyData(dateStr) {
         const statusText = document.getElementById('status-text');
-        statusText.innerText = `🤖 프라나가 데이터를 정리 중 입니다.`;
+        statusText.innerText = `프라나가 데이터를 정리 중 입니다.`;
         
         const promises = Array.from({length: 24}, (_, i) => {
             const hh = String(i).padStart(2, '0');
@@ -329,7 +329,7 @@
         currentData = Array.from(userMap.values());
 
         if (currentData.length === 0) {
-            statusText.innerText = `❌ 아직 이 날 데이터 정리를 하지 못했어요.`;
+            statusText.innerText = `아직 이 날 데이터 정리를 하지 못했어요.`;
             statusText.style.color = "red";
             updateMetrics(true);
             renderRankingTable([]);
@@ -343,7 +343,7 @@
         executeSearch(); 
         if (activeTab === 'trends') renderTrendChart();
 
-        statusText.innerText = `📢 실시간 데이터 반영엔 시간이 걸립니다.`;
+        statusText.innerText = `실시간 데이터 반영엔 시간이 걸립니다.`;
         statusText.style.color = "#555";
     }
 
