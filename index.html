@@ -84,7 +84,6 @@
         .status-msg { font-size: 0.85rem; margin-bottom: 1rem; font-weight: bold; }
         .rank-number { font-weight: bold; color: #666; font-size: 14px; text-align: center; }
         
-        /* 💡 높이 고정용 투명 컨테이너 (필터바와 동일한 높이 50px 확보) */
         .filter-placeholder { height: 50px; }
     </style>
 </head>
@@ -92,16 +91,16 @@
 
 <div class="main">
     <div class="header">
-        <h1 style="margin:0; font-size: 1.8rem;">프로젝트MX 대시보드</h1>
+        <h1 style="margin:0; font-size: 1.8rem;">블루 아카이브 갤러리 대시보드</h1>
         <div class="filters">
             <input type="text" id="date-picker" class="date-picker-box" placeholder="날짜 선택"> 
         </div>
     </div>
 
     <div class="tab-container">
-        <div class="tab active" onclick="switchTab('trends', this)">📈 일간 전체 그래프</div>
-        <div class="tab" onclick="switchTab('ranking', this)">🏆 일일 유저 랭킹</div>
-        <div class="tab" onclick="switchTab('search', this)">🔍 유저 검색</div>
+        <div class="tab active" onclick="switchTab('trends', this)">일간 전체 그래프</div>
+        <div class="tab" onclick="switchTab('ranking', this)">일일 유저 랭킹</div>
+        <div class="tab" onclick="switchTab('search', this)">유저 검색</div>
     </div>
 
     <div id="status-text" class="status-msg">데이터 로딩 중...</div>
@@ -210,10 +209,7 @@
 </div>
 
 <script>
-    // ========================================================
-    // 💡 R2 주소를 반드시 본인의 주소로 변경하세요!
     const R2_DOMAIN = "https://pub-fca2435a027e41bf954b4bc4f46e560a.r2.dev"; 
-    // ========================================================
 
     const PROJECT_START_DATE = "2026-06-07"; 
 
@@ -246,6 +242,19 @@
         }
     });
 
+    function escapeHTML(str) {
+        if (!str) return '';
+        return String(str).replace(/[&<>"']/g, function(match) {
+            return {
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#39;'
+            }[match];
+        });
+    }
+
     function switchTab(tabId, el) {
         document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
         document.querySelectorAll('.content-section').forEach(s => s.classList.remove('active'));
@@ -259,7 +268,7 @@
 
     async function fetchDailyData(dateStr) {
         const statusText = document.getElementById('status-text');
-        statusText.innerText = `⏳ ${dateStr} 하루치 데이터를 합산 중입니다...`;
+        statusText.innerText = `🤖 프라나가 데이터를 정리 중 입니다.`;
         
         const promises = Array.from({length: 24}, (_, i) => {
             const hh = String(i).padStart(2, '0');
@@ -320,7 +329,7 @@
         currentData = Array.from(userMap.values());
 
         if (currentData.length === 0) {
-            statusText.innerText = `❌ ${dateStr} 에는 수집된 데이터가 전혀 없습니다.`;
+            statusText.innerText = `❌ 아직 이 날 데이터 정리를 하지 못했어요.`;
             statusText.style.color = "red";
             updateMetrics(true);
             renderRankingTable([]);
@@ -500,13 +509,17 @@
             const commentWeight = currentRankingMode === 'comment' ? 'font-weight:bold;' : '';
             const totalWeight = currentRankingMode === 'total' ? 'font-weight:bold;' : '';
 
+            const safeNick = escapeHTML(row.nickname);
+            const safeId = escapeHTML(row.id);
+            const jsSafeId = row.id.replace(/'/g, "\\'");
+
             tr.innerHTML = `
                 <td class="rank-number">${row.rank}위</td>
-                <td class="td-bookmark" onclick="event.stopPropagation(); toggleBookmark('${row.id}')" title="클릭하여 즐겨찾기">
+                <td class="td-bookmark" onclick="event.stopPropagation(); toggleBookmark('${jsSafeId}')" title="클릭하여 즐겨찾기">
                     <input type="checkbox" class="star-checkbox" ${isBookmarked ? 'checked' : ''}>
                 </td>
-                <td title="${row.nickname}">${row.nickname}</td>
-                <td title="${row.id}">${row.id}</td>
+                <td title="${safeNick}">${safeNick}</td>
+                <td title="${safeId}">${safeId}</td>
                 <td><span class="badge ${bType}">${row.type}</span></td>
                 <td style="${postWeight}">${row.post}</td>
                 <td style="${commentWeight}">${row.comment}</td>
@@ -527,12 +540,16 @@
             tr.onclick = () => openModal(row.nickname, row.id);
             let bType = (row.type === "고닉") ? "bg-gonic" : (row.type === "반고닉" ? "bg-ban" : "bg-udong");
             
+            const safeNick = escapeHTML(row.nickname);
+            const safeId = escapeHTML(row.id);
+            const jsSafeId = row.id.replace(/'/g, "\\'");
+
             tr.innerHTML = `
-                <td class="td-bookmark" onclick="event.stopPropagation(); toggleBookmark('${row.id}')" title="클릭하여 즐겨찾기">
+                <td class="td-bookmark" onclick="event.stopPropagation(); toggleBookmark('${jsSafeId}')" title="클릭하여 즐겨찾기">
                     <input type="checkbox" class="star-checkbox" ${isBookmarked ? 'checked' : ''}>
                 </td>
-                <td title="${row.nickname}">${row.nickname}</td>
-                <td title="${row.id}">${row.id}</td>
+                <td title="${safeNick}">${safeNick}</td>
+                <td title="${safeId}">${safeId}</td>
                 <td><span class="badge ${bType}">${row.type}</span></td>
                 <td>${row.post}</td>
                 <td>${row.comment}</td>
