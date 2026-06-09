@@ -41,6 +41,9 @@
         .metric-label { font-size: 0.9rem; color: #666; font-weight: bold; }
         .metric-value { font-size: 1.8rem; font-weight: bold; margin-top: 5px; color: #007bff; }
 
+        /* 💡 검색/정렬 컨트롤바 공통 스타일 (가려짐 방지를 위해 min-height 사용) */
+        .controls-wrapper { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 15px; min-height: 45px; }
+
         .table-responsive { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
         
         table { width: 100%; border-collapse: collapse; margin-top: 10px; table-layout: fixed; min-width: 750px; }
@@ -83,33 +86,31 @@
 
         .status-msg { font-size: 0.85rem; margin-bottom: 1rem; font-weight: bold; }
         .rank-number { font-weight: bold; color: #666; font-size: 14px; text-align: center; }
-        
-        .filter-placeholder { height: 50px; }
     </style>
 </head>
 <body>
 
 <div class="main">
     <div class="header">
-        <h1 style="margin:0; font-size: 1.8rem;">블루 아카이브 갤러리 대시보드</h1>
+        <h1 style="margin:0; font-size: 1.8rem;">프로젝트MX 대시보드</h1>
         <div class="filters">
             <input type="text" id="date-picker" class="date-picker-box" placeholder="날짜 선택"> 
         </div>
     </div>
 
     <div class="tab-container">
-        <div class="tab active" onclick="switchTab('trends', this)">일간 전체 그래프</div>
-        <div class="tab" onclick="switchTab('ranking', this)">일일 유저 랭킹</div>
-        <div class="tab" onclick="switchTab('search', this)">유저 검색</div>
+        <div class="tab active" onclick="switchTab('trends', this)">📈 일간 전체 그래프</div>
+        <div class="tab" onclick="switchTab('ranking', this)">🏆 일일 유저 랭킹</div>
+        <div class="tab" onclick="switchTab('search', this)">🔍 유저 검색</div>
     </div>
 
     <div id="status-text" class="status-msg">데이터 로딩 중...</div>
 
     <div id="section-trends" class="content-section active">
         <div class="metrics-grid">
-            <div class="metric-item"><div class="metric-label">총 게시글</div><div id="m-posts" class="metric-value">0</div></div>
-            <div class="metric-item"><div class="metric-label">총 댓글</div><div id="m-comments" class="metric-value">0</div></div>
-            <div class="metric-item"><div class="metric-label">활동 유저 수</div><div id="m-users" class="metric-value">0</div></div>
+            <div class="metric-item"><div class="metric-label">📝 선택 일자 총 게시글</div><div id="m-posts" class="metric-value">0</div></div>
+            <div class="metric-item"><div class="metric-label">💬 선택 일자 총 댓글</div><div id="m-comments" class="metric-value">0</div></div>
+            <div class="metric-item"><div class="metric-label">👥 활동 유저 수</div><div id="m-users" class="metric-value">0</div></div>
         </div>
         <div class="st-card">
             <h3 style="margin-top:0;">시간대별 활동 추이</h3>
@@ -119,7 +120,7 @@
 
     <div id="section-ranking" class="content-section">
         <div class="st-card">
-            <div class="filter-placeholder" style="display:flex; justify-content: space-between; align-items:center; margin-bottom:15px; flex-wrap: wrap; gap: 10px;">
+            <div class="controls-wrapper" style="justify-content: space-between;">
                 <button id="ranking-star-filter" class="btn-star-filter" onclick="toggleStarFilter('ranking')" title="즐겨찾기 유저만 보기">⭐</button>
                 <div style="display:flex; gap: 5px; margin-left: auto;">
                     <button id="btn-rank-total" class="btn-rank active" onclick="setRankingMode('total')">총합 순</button>
@@ -143,8 +144,7 @@
                     <thead>
                         <tr>
                             <th style="text-align: center;">순위</th>
-                            <th style="text-align: center;"></th>
-                            <th>닉네임</th>
+                            <th style="text-align: center;">⭐</th> <th>닉네임</th>
                             <th>ID (IP)</th>
                             <th>타입</th>
                             <th>글</th>
@@ -160,7 +160,7 @@
 
     <div id="section-search" class="content-section">
         <div class="st-card">
-            <div style="display:flex; gap:10px; align-items:center; margin-bottom: 20px; flex-wrap: wrap; height: 50px;">
+            <div class="controls-wrapper">
                 <button id="search-star-filter" class="btn-star-filter" onclick="toggleStarFilter('search')" title="즐겨찾기 유저만 보기">⭐</button>
                 
                 <input type="text" id="search-input" placeholder="검색할 닉네임 또는 ID 입력..." style="flex: 1; box-sizing: border-box; margin:0; min-width: 200px;" onkeypress="if(event.key === 'Enter') executeSearch()">
@@ -211,7 +211,10 @@
 </div>
 
 <script>
+    // ========================================================
+    // 💡 R2 주소를 반드시 본인의 주소로 변경하세요!
     const R2_DOMAIN = "https://pub-fca2435a027e41bf954b4bc4f46e560a.r2.dev"; 
+    // ========================================================
 
     const PROJECT_START_DATE = "2026-06-07"; 
 
@@ -270,7 +273,7 @@
 
     async function fetchDailyData(dateStr) {
         const statusText = document.getElementById('status-text');
-        statusText.innerText = `프라나가 데이터를 정리 중 입니다.`;
+        statusText.innerText = `⏳ ${dateStr} 하루치 데이터를 합산 중입니다...`;
         
         const promises = Array.from({length: 24}, (_, i) => {
             const hh = String(i).padStart(2, '0');
@@ -331,7 +334,7 @@
         currentData = Array.from(userMap.values());
 
         if (currentData.length === 0) {
-            statusText.innerText = `아직 이 날 데이터 정리를 하지 못했어요.`;
+            statusText.innerText = `❌ ${dateStr} 에는 수집된 데이터가 전혀 없습니다.`;
             statusText.style.color = "red";
             updateMetrics(true);
             renderRankingTable([]);
@@ -345,7 +348,7 @@
         executeSearch(); 
         if (activeTab === 'trends') renderTrendChart();
 
-        statusText.innerText = `실시간 데이터 반영엔 시간이 걸립니다.`;
+        statusText.innerText = `📢 실시간 데이터 반영엔 시간이 걸립니다.`;
         statusText.style.color = "#555";
     }
 
@@ -564,7 +567,7 @@
     let modalChart = null;
     function openModal(nick, id) {
         document.getElementById('graph-modal').style.display = "block";
-        document.getElementById('modal-title').innerText = `${nick} (${id}) 활동 상세`;
+        document.getElementById('modal-title').innerText = `${nick} (${id}) 활동 상세`; 
         
         let lastValidIndex = -1;
         for(let i = 23; i >= 0; i--) {
