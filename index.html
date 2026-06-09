@@ -41,7 +41,6 @@
         .metric-label { font-size: 0.9rem; color: #666; font-weight: bold; }
         .metric-value { font-size: 1.8rem; font-weight: bold; margin-top: 5px; color: #007bff; }
 
-        /* 💡 검색/정렬 컨트롤바 공통 스타일 (가려짐 방지를 위해 min-height 사용) */
         .controls-wrapper { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 15px; min-height: 45px; }
 
         .table-responsive { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
@@ -99,21 +98,21 @@
     </div>
 
     <div class="tab-container">
-        <div class="tab active" onclick="switchTab('trends', this)">📈 일간 전체 그래프</div>
-        <div class="tab" onclick="switchTab('ranking', this)">🏆 일일 유저 랭킹</div>
-        <div class="tab" onclick="switchTab('search', this)">🔍 유저 검색</div>
+        <div class="tab active" onclick="switchTab('trends', this)">일간 전체 그래프</div>
+        <div class="tab" onclick="switchTab('ranking', this)">유저 랭킹</div>
+        <div class="tab" onclick="switchTab('search', this)">유저 검색</div>
     </div>
 
     <div id="status-text" class="status-msg">데이터 로딩 중...</div>
 
     <div id="section-trends" class="content-section active">
         <div class="metrics-grid">
-            <div class="metric-item"><div class="metric-label">📝 선택 일자 총 게시글</div><div id="m-posts" class="metric-value">0</div></div>
-            <div class="metric-item"><div class="metric-label">💬 선택 일자 총 댓글</div><div id="m-comments" class="metric-value">0</div></div>
-            <div class="metric-item"><div class="metric-label">👥 활동 유저 수</div><div id="m-users" class="metric-value">0</div></div>
+            <div class="metric-item"><div class="metric-label">총 게시글</div><div id="m-posts" class="metric-value">0</div></div>
+            <div class="metric-item"><div class="metric-label">총 댓글</div><div id="m-comments" class="metric-value">0</div></div>
+            <div class="metric-item"><div class="metric-label">활동 유저 수</div><div id="m-users" class="metric-value">0</div></div>
         </div>
         <div class="st-card">
-            <h3 style="margin-top:0;">시간대별 활동 추이</h3>
+            <h3 style="margin-top:0;">시간대 그래프</h3>
             <div id="main-trend-chart" style="width: 100%; height: 400px;"></div>
         </div>
     </div>
@@ -211,10 +210,7 @@
 </div>
 
 <script>
-    // ========================================================
-    // 💡 R2 주소를 반드시 본인의 주소로 변경하세요!
     const R2_DOMAIN = "https://pub-fca2435a027e41bf954b4bc4f46e560a.r2.dev"; 
-    // ========================================================
 
     const PROJECT_START_DATE = "2026-06-07"; 
 
@@ -273,7 +269,7 @@
 
     async function fetchDailyData(dateStr) {
         const statusText = document.getElementById('status-text');
-        statusText.innerText = `⏳ ${dateStr} 하루치 데이터를 합산 중입니다...`;
+        statusText.innerText = `프라나가 데이터를 정리 중 입니다`;
         
         const promises = Array.from({length: 24}, (_, i) => {
             const hh = String(i).padStart(2, '0');
@@ -334,7 +330,7 @@
         currentData = Array.from(userMap.values());
 
         if (currentData.length === 0) {
-            statusText.innerText = `❌ ${dateStr} 에는 수집된 데이터가 전혀 없습니다.`;
+            statusText.innerText = `아직 이 시간대의 데이터가 없어요`;
             statusText.style.color = "red";
             updateMetrics(true);
             renderRankingTable([]);
@@ -348,7 +344,7 @@
         executeSearch(); 
         if (activeTab === 'trends') renderTrendChart();
 
-        statusText.innerText = `📢 실시간 데이터 반영엔 시간이 걸립니다.`;
+        statusText.innerText = `실시간 데이터 반영엔 시간이 걸려요`;
         statusText.style.color = "#555";
     }
 
@@ -567,7 +563,7 @@
     let modalChart = null;
     function openModal(nick, id) {
         document.getElementById('graph-modal').style.display = "block";
-        document.getElementById('modal-title').innerText = `${nick} (${id}) 활동 상세`; 
+        document.getElementById('modal-title').innerText = `${nick} (${id}) 상세 그래프`; 
         
         let lastValidIndex = -1;
         for(let i = 23; i >= 0; i--) {
