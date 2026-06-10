@@ -65,7 +65,7 @@ var (
 		Timeout: 20 * time.Second,
 		Transport: &http.Transport{
 			MaxIdleConns:        100,
-			MaxIdleConnsPerHost: 50, // 💡 동시성 확장에 맞춰 커넥션 풀 증가
+			MaxIdleConnsPerHost: 50,
 			IdleConnTimeout:     90 * time.Second,
 		},
 	}
@@ -176,7 +176,7 @@ func scrapePostsAndComments(validPosts []int, collectionTimeStr string, targetSt
 		colly.Async(true),
 	)
 	c.SetRequestTimeout(60 * time.Second)
-	// 💡 병렬 처리 수 증가 및 딜레이 단축
+	
 	c.Limit(&colly.LimitRule{
 		DomainGlob:  "*",
 		Parallelism: 5,
@@ -186,7 +186,7 @@ func scrapePostsAndComments(validPosts []int, collectionTimeStr string, targetSt
 
 	var visitedPosts sync.Map
 	var failCount int32
-	var wg sync.WaitGroup // 💡 백그라운드 댓글 수집을 대기할 WaitGroup 추가
+	var wg sync.WaitGroup
 
 	c.OnError(func(r *colly.Response, err error) {
 		if r.StatusCode == 404 { return }
@@ -256,7 +256,6 @@ func scrapePostsAndComments(validPosts []int, collectionTimeStr string, targetSt
 			globalEsnoMutex.RUnlock()
 		}
 
-		// 💡 댓글 수집은 워커를 막지 않고 병렬 고루틴으로 위임
 		wg.Add(1)
 		go func(postNo int, postEsno string) {
 			defer wg.Done()
@@ -269,12 +268,12 @@ func scrapePostsAndComments(validPosts []int, collectionTimeStr string, targetSt
 		c.Visit(url)
 	}
 	
-	c.Wait() // Colly 요청 완료 대기
-	wg.Wait() // 백그라운드로 도는 댓글 수집 고루틴 모두 완료 대기
+	c.Wait() 
+	wg.Wait() 
 
 	finalFailCount := atomic.LoadInt32(&failCount)
 	if finalFailCount > 15 {
-		return fmt.Errorf("수집 실패 과다")
+		return fmt.Errorf("수집 실패 과다 (데이터 누수 가능성 있음)")
 	}
 	return nil
 }
@@ -350,7 +349,6 @@ func commentSrc(no int, esno string, collectionTimeStr string, targetStart, targ
 			var parseErr error
 			reg := comment.RegDate
 
-			// 💡 댓글 시간 정규화 로직 개선 (어떤 형식이든 YYYY.MM.DD HH:mm:ss 로 강제 변환)
 			if !strings.Contains(reg, ".") {
 				reg = targetStart.Format("2006.01.02 ") + reg
 			} else if strings.Count(reg, ".") == 1 {
@@ -551,14 +549,23 @@ func main() {
 
 		dataMap = make(map[string]*PostData)
 
+		// 💡 시작 시각 및 대상 시간대 출력
+		fmt.Printf("[%s] ▶️ 작업 시작 (대상 시간대: %s ~ %s)\n", time.Now().In(kstLoc).Format("15:04:05"), targetStart.Format("2006-01-02 15:00"), targetEnd.Format("15:00"))
+
 		validPosts, _, _, err := findTargetHourPosts(scanStart, targetEnd)
 		if err != nil {
+			fmt.Printf("[%s] ❌ [ERROR] 게시글 목록 탐색 중 오류 발생: %v\n", time.Now().In(kstLoc).Format("15:04:05"), err)
 			continue
 		}
+
+		// 💡 찾은 게시글 수 출력
+		fmt.Printf("[%s] 🔍 발견된 게시글 수: %d개\n", time.Now().In(kstLoc).Format("15:04:05"), len(validPosts))
 
 		if len(validPosts) > 0 {
 			err := scrapePostsAndComments(validPosts, collectionTimeStr, targetStart, targetEnd)
 			if err != nil {
+				// 💡 상세 내용 및 댓글 수집 중 크리티컬 오류 출력 (데이터 누수 의심 로그)
+				fmt.Printf("[%s] ❌ [ERROR] 수집 중 과도한 오류 발생 (데이터 누수 의심): %v\n", time.Now().In(kstLoc).Format("15:04:05"), err)
 				continue
 			}
 
@@ -574,7 +581,15 @@ func main() {
 				uploadToR2(excelFilename, r2ExcelKey)
 				os.Remove(excelFilename)
 			}
+			
+			// 💡 완료 시각 및 대상 시간대 출력
+			fmt.Printf("[%s] ✅ 작업 완료 및 업로드 성공\n", time.Now().In(kstLoc).Format("15:04:05"))
+		} else {
+			fmt.Printf("[%s] ⏭️ 수집할 게시글이 없어 건너뜁니다.\n", time.Now().In(kstLoc).Format("15:04:05"))
 		}
+		
+		// 💡 가독성을 위한 구분선 추가
+		fmt.Println(strings.Repeat("-", 50))
 		time.Sleep(3 * time.Second)
 		forceGC()
 	}
