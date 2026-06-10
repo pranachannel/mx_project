@@ -65,7 +65,7 @@ var (
 		Timeout: 20 * time.Second,
 		Transport: &http.Transport{
 			MaxIdleConns:        100,
-			MaxIdleConnsPerHost: 10,
+			MaxIdleConnsPerHost: 50, // 💡 동시성 확장에 맞춰 커넥션 풀 증가
 			IdleConnTimeout:     90 * time.Second,
 		},
 	}
@@ -176,15 +176,17 @@ func scrapePostsAndComments(validPosts []int, collectionTimeStr string, targetSt
 		colly.Async(true),
 	)
 	c.SetRequestTimeout(60 * time.Second)
+	// 💡 병렬 처리 수 증가 및 딜레이 단축
 	c.Limit(&colly.LimitRule{
 		DomainGlob:  "*",
-		Parallelism: 2,
-		Delay:       3 * time.Second,
-		RandomDelay: 2 * time.Second,
+		Parallelism: 5,
+		Delay:       1 * time.Second,
+		RandomDelay: 500 * time.Millisecond,
 	})
 
 	var visitedPosts sync.Map
 	var failCount int32
+	var wg sync.WaitGroup // 💡 백그라운드 댓글 수집을 대기할 WaitGroup 추가
 
 	c.OnError(func(r *colly.Response, err error) {
 		if r.StatusCode == 404 { return }
@@ -253,14 +255,22 @@ func scrapePostsAndComments(validPosts []int, collectionTimeStr string, targetSt
 			esno = globalEsno
 			globalEsnoMutex.RUnlock()
 		}
-		commentSrc(no, esno, collectionTimeStr, targetStart, targetEnd)
+
+		// 💡 댓글 수집은 워커를 막지 않고 병렬 고루틴으로 위임
+		wg.Add(1)
+		go func(postNo int, postEsno string) {
+			defer wg.Done()
+			commentSrc(postNo, postEsno, collectionTimeStr, targetStart, targetEnd)
+		}(no, esno)
 	})
 
 	for _, no := range validPosts {
 		url := fmt.Sprintf("https://gall.dcinside.com/mgallery/board/view/?id=projectmx&no=%d", no)
 		c.Visit(url)
 	}
-	c.Wait()
+	
+	c.Wait() // Colly 요청 완료 대기
+	wg.Wait() // 백그라운드로 도는 댓글 수집 고루틴 모두 완료 대기
 
 	finalFailCount := atomic.LoadInt32(&failCount)
 	if finalFailCount > 15 {
@@ -340,15 +350,17 @@ func commentSrc(no int, esno string, collectionTimeStr string, targetStart, targ
 			var parseErr error
 			reg := comment.RegDate
 
-			if strings.Count(reg, ".") == 2 {
-				cTime, parseErr = time.ParseInLocation("2006.01.02 15:04:05", reg, kstLoc)
-			} else if strings.Count(reg, ":") == 1 {
-				fullDateStr := fmt.Sprintf("%d.%s", targetStart.Year(), reg)
-				cTime, parseErr = time.ParseInLocation("2006.01.02 15:04", fullDateStr, kstLoc)
-			} else {
-				fullDateStr := fmt.Sprintf("%d.%s", targetStart.Year(), reg)
-				cTime, parseErr = time.ParseInLocation("2006.01.02 15:04:05", fullDateStr, kstLoc)
+			// 💡 댓글 시간 정규화 로직 개선 (어떤 형식이든 YYYY.MM.DD HH:mm:ss 로 강제 변환)
+			if !strings.Contains(reg, ".") {
+				reg = targetStart.Format("2006.01.02 ") + reg
+			} else if strings.Count(reg, ".") == 1 {
+				reg = fmt.Sprintf("%d.", targetStart.Year()) + reg
 			}
+			if strings.Count(reg, ":") == 1 {
+				reg += ":00" 
+			}
+
+			cTime, parseErr = time.ParseInLocation("2006.01.02 15:04:05", reg, kstLoc)
 
 			if parseErr == nil {
 				if cTime.Before(targetStart) || cTime.After(targetEnd) || cTime.Equal(targetEnd) { continue }
@@ -514,34 +526,17 @@ func forceGC() {
 }
 
 func main() {
-	fmt.Println("==================================================")
-	fmt.Println("🚀 ProjectMX 크롤러 실행 시작")
-
 	now := time.Now().In(kstLoc)
 	limitTime := time.Date(now.Year(), now.Month(), now.Day(), now.Hour(), 0, 0, 0, kstLoc)
 	
-	fmt.Printf("⏰ 시스템 현재 정각(limitTime): %v\n", limitTime)
-	fmt.Println("🔍 R2에서 마지막 저장 기록 조회 중...")
+	lastTime, _ := getLastSavedTime()
 
-	lastTime, err := getLastSavedTime()
-
-	if err != nil {
-		fmt.Printf("⚠️ R2 조회 에러: %v\n", err)
-	}
-
-	if err != nil || lastTime.IsZero() || time.Since(lastTime) > 24*time.Hour {
-		fmt.Println("ℹ️ 유효한 기존 기록이 없거나 24시간이 넘었습니다. 최초 실행 모드로 진입합니다.")
-		// 최초 실행 오류 수정: 1시간 전 데이터를 수집하기 위해 기준을 2시간 전으로 설정
+	if lastTime.IsZero() || time.Since(lastTime) > 24*time.Hour {
 		lastTime = limitTime.Add(-2 * time.Hour) 
 	}
 
-	fmt.Printf("⏱️ 설정된 기준 시간(lastTime): %v\n", lastTime)
-	fmt.Println("==================================================")
-
-	// 수정: t가 limitTime 이전이거나 같을 때까지 돌도록 루프 수정 (종료 방지)
 	for t := lastTime.Add(time.Hour); t.Before(limitTime.Add(time.Hour)); t = t.Add(time.Hour) {
 		
-		// t가 미래 시간이면 돌지 않음 (방어 코드)
 		if t.After(limitTime) || t.Equal(limitTime) {
 			break
 		}
@@ -554,59 +549,33 @@ func main() {
 		jsonFilename := fmt.Sprintf("%s_%02dh.json", targetStart.Format("2006-01-02"), targetStart.Hour())
 		excelFilename := fmt.Sprintf("%s_%02dh.xlsx", targetStart.Format("2006-01-02"), targetStart.Hour())
 
-		fmt.Printf("\n▶ [%s] 시간대 데이터 수집 시작...\n", collectionTimeStr)
-		fmt.Printf("  - 게시글 탐색 범위: %v ~ %v\n", scanStart, targetEnd)
-
 		dataMap = make(map[string]*PostData)
 
-		validPosts, firstPostDa, lastPostDa, err := findTargetHourPosts(scanStart, targetEnd)
-
+		validPosts, _, _, err := findTargetHourPosts(scanStart, targetEnd)
 		if err != nil {
-			fmt.Printf("  ❌ 게시글 목록 탐색 중 오류 발생: %v\n", err)
 			continue
 		}
 
-		if len(validPosts) == 0 {
-			fmt.Println("  ℹ️ [SKIP] 해당 시간대에 작성된 대상 게시글이 없습니다.")
-		} else {
-			fmt.Printf("  ✅ 대상 게시글 %d개 발견! (기간: %s ~ %s)\n", len(validPosts), firstPostDa, lastPostDa)
-			fmt.Println("  ⏳ 상세 내용 및 댓글 수집 중...")
-
+		if len(validPosts) > 0 {
 			err := scrapePostsAndComments(validPosts, collectionTimeStr, targetStart, targetEnd)
-
 			if err != nil {
-				fmt.Printf("  ❌ 상세 내용 수집 중 과도한 오류 발생: %v\n", err)
 				continue
 			}
 
-			fmt.Println("  💾 수집 완료! R2 업로드 준비 중...")
-
-			// 1. JSON 대시보드 데이터 생성 및 R2 업로드
 			if err := saveJsonLocal(jsonFilename); err == nil {
 				r2JsonKey := strings.Replace(jsonFilename, "_", "/", 1)
 				uploadToR2(jsonFilename, r2JsonKey)
-				fmt.Printf("  ☁️ JSON 업로드 완료: %s\n", r2JsonKey)
-				
 				uploadToR2(jsonFilename, "latest_data.json")
-				fmt.Println("  ☁️ latest_data.json 최신화 완료!")
 				os.Remove(jsonFilename)
-			} else {
-				fmt.Printf("  ⚠️ JSON 저장 실패: %v\n", err)
 			}
 
-			// 2. 엑셀 백업 데이터 생성 및 R2 업로드
 			if err := saveExcelLocal(excelFilename); err == nil {
 				r2ExcelKey := strings.Replace(excelFilename, "_", "/", 1)
 				uploadToR2(excelFilename, r2ExcelKey)
-				fmt.Printf("  ☁️ Excel 백업 업로드 완료: %s\n", r2ExcelKey)
 				os.Remove(excelFilename)
-			} else {
-				fmt.Printf("  ⚠️ Excel 저장 실패: %v\n", err)
 			}
 		}
 		time.Sleep(3 * time.Second)
 		forceGC()
 	}
-	
-	fmt.Println("\n🏁 이번 주기 크롤러 작업 완료!")
 }
