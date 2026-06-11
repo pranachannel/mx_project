@@ -121,16 +121,23 @@ func findTargetHourPosts(targetStart, targetEnd time.Time) ([]int, string, strin
 	const maxConsecutiveOld = 15
 
 	var networkErr error
+	var postsOnPage int          // 💡 현재 페이지의 게시글 수 추적
+	var lastTitle string         // 💡 디버그용: 마지막으로 본 텍스트
+	var lastParsed time.Time     // 💡 디버그용: 마지막으로 파싱된 시간
 
 	c.OnError(func(r *colly.Response, err error) {
 		if r.StatusCode == 403 || r.StatusCode == 503 {
-			networkErr = fmt.Errorf("디시인사이드 서버 차단 (HTTP %d - Cloudflare 캡차 또는 IP 밴)", r.StatusCode)
+			networkErr = fmt.Errorf("디시인사이드 서버 밴 (HTTP %d)", r.StatusCode)
 			done = true 
 		}
 	})
 
 	c.OnHTML("tr.ub-content", func(e *colly.HTMLElement) {
 		if done { return }
+		
+		// 💡 정상적인 게시판 HTML이 내려왔다면 무조건 카운트 증가
+		postsOnPage++
+
 		if _, err := strconv.Atoi(e.ChildText("td.gall_num")); err != nil { return }
 
 		subject := strings.TrimSpace(e.ChildText("td.gall_subject"))
@@ -148,24 +155,27 @@ func findTargetHourPosts(targetStart, targetEnd time.Time) ([]int, string, strin
 			title = strings.TrimSpace(e.ChildText("td.gall_date"))
 		}
 
+		lastTitle = title // 디버그 기록 저장
+
 		var postTime time.Time
 		var parseErr error
 
-		// 1. 정상적인 YYYY-MM-DD HH:MM:SS 파싱 시도 (가끔 title 속성에 존재하는 경우)
 		postTime, parseErr = time.ParseInLocation("2006-01-02 15:04:05", title, kstLoc)
 
 		if parseErr != nil {
-			// 2. 파싱 실패 시 디시인사이드 특유의 날짜 축약형 대응
 			if strings.Contains(title, ":") && !strings.Contains(title, "-") && !strings.Contains(title, ".") {
-				// 당일 글 (HH:MM 형식)
+				// 당일 글 (HH:MM)
 				todayStr := time.Now().In(kstLoc).Format("2006-01-02 ") + title + ":00"
 				postTime, _ = time.ParseInLocation("2006-01-02 15:04:05", todayStr, kstLoc)
+				
+				// 💡 자정을 막 넘겼을 때, 어제 밤에 쓴 글을 오늘 밤(미래)으로 오해하는 버그 완벽 차단
+				if postTime.After(time.Now().In(kstLoc)) {
+					postTime = postTime.Add(-24 * time.Hour)
+				}
 			} else if strings.Count(title, ".") == 1 {
-				// 올해 과거 글 (MM.DD 형식)
 				thisYearStr := fmt.Sprintf("%d-%s 00:00:00", time.Now().In(kstLoc).Year(), strings.ReplaceAll(title, ".", "-"))
 				postTime, _ = time.ParseInLocation("2006-01-02 15:04:05", thisYearStr, kstLoc)
 			} else if strings.Count(title, ".") == 2 {
-				// 작년 이전 글 (YY.MM.DD 형식)
 				parts := strings.Split(title, ".")
 				if len(parts[0]) == 2 {
 					title = "20" + title
@@ -175,12 +185,12 @@ func findTargetHourPosts(targetStart, targetEnd time.Time) ([]int, string, strin
 			}
 		}
 
-		// 💡 3. 핵심 방어선: 위 모든 방법으로도 날짜 파싱을 못했다면? 무한 루프 방지를 위해 아주 옛날 글로 강제 취급
 		if postTime.IsZero() {
 			postTime = time.Date(2000, 1, 1, 0, 0, 0, 0, kstLoc)
 		}
 
-		// 조건 비교
+		lastParsed = postTime // 디버그 기록 저장
+
 		if (postTime.Equal(targetStart) || postTime.After(targetStart)) && postTime.Before(targetEnd) {
 			consecutiveOldPosts = 0
 			validPostNumbers = append(validPostNumbers, postNo)
@@ -189,7 +199,6 @@ func findTargetHourPosts(targetStart, targetEnd time.Time) ([]int, string, strin
 			startDate = title
 		}
 
-		// 탐색 정지용 카운트다운
 		if postTime.Before(targetStart) {
 			consecutiveOldPosts++
 			if consecutiveOldPosts >= maxConsecutiveOld { done = true }
@@ -199,16 +208,23 @@ func findTargetHourPosts(targetStart, targetEnd time.Time) ([]int, string, strin
 	})
 
 	for !done {
+		postsOnPage = 0 // 페이지를 방문할 때마다 카운트 초기화
 		pageURL := fmt.Sprintf("https://gall.dcinside.com/mgallery/board/lists/?id=projectmx&page=%d", page)
-		time.Sleep(200 * time.Millisecond)
+		time.Sleep(300 * time.Millisecond) // IP 밴 확률을 낮추기 위해 미세 딜레이 증가
 		c.Visit(pageURL)
 
 		if networkErr != nil {
 			return nil, "", "", networkErr
 		}
 
+		// 💡 빈 화면 섀도우 밴 감지 로직!
+		if postsOnPage == 0 {
+			return nil, "", "", fmt.Errorf("페이지 %d에서 게시글이 하나도 로딩되지 않았습니다. (디시인사이드 캡차 차단/섀도우 밴 확실시 됨)", page)
+		}
+
 		if page > 500 {
-			return nil, "", "", fmt.Errorf("페이지 탐색 한계 초과 (유효한 게시글을 찾지 못함)")
+			// 💡 날짜 인식 실패로 인한 500페이지 초과 시, 도대체 뭘 보고 있었는지 상세 로그 출력
+			return nil, "", "", fmt.Errorf("페이지 탐색 한계 초과. [디버그] 마지막 파싱 텍스트: '%s' -> 시간: %v (목표: %v)", lastTitle, lastParsed.Format("2006-01-02 15:04"), targetStart.Format("2006-01-02 15:04"))
 		}
 		page++
 	}
