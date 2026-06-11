@@ -120,6 +120,16 @@ func findTargetHourPosts(targetStart, targetEnd time.Time) ([]int, string, strin
 	consecutiveOldPosts := 0
 	const maxConsecutiveOld = 15
 
+	var networkErr error
+
+	// 💡 1. 차단(403, 503) 등 네트워크 에러 발생 시 감지하여 빈 페이지 500번 도는 현상 즉시 중단
+	c.OnError(func(r *colly.Response, err error) {
+		if r.StatusCode == 403 || r.StatusCode == 503 {
+			networkErr = fmt.Errorf("디시인사이드 서버 차단 (HTTP %d - Cloudflare 캡차 또는 IP 밴)", r.StatusCode)
+			done = true 
+		}
+	})
+
 	c.OnHTML("tr.ub-content", func(e *colly.HTMLElement) {
 		if done { return }
 		if _, err := strconv.Atoi(e.ChildText("td.gall_num")); err != nil { return }
@@ -134,11 +144,19 @@ func findTargetHourPosts(targetStart, targetEnd time.Time) ([]int, string, strin
 		if visitedIDs[postNo] { return }
 		visitedIDs[postNo] = true
 
+		// 💡 2. 날짜 파싱 로직 보강 (title 속성이 사라진 경우 대비)
 		title := e.ChildAttr("td.gall_date", "title")
-		if title == "" { title = e.ChildText("td.gall_date") }
+		if title == "" {
+			title = e.ChildText("td.gall_date")
+		}
+		
+		// 당일 작성글이라 "HH:MM" 형식만 텍스트로 남았을 경우 오늘 날짜를 강제로 덧붙임
+		if !strings.Contains(title, "-") && strings.Contains(title, ":") {
+			title = time.Now().In(kstLoc).Format("2006-01-02 ") + title + ":00"
+		}
 
 		postTime, err := time.ParseInLocation("2006-01-02 15:04:05", title, kstLoc)
-		if err != nil { return }
+		if err != nil { return } // 파싱에 실패하면 해당 글만 건너뜀
 
 		if (postTime.Equal(targetStart) || postTime.After(targetStart)) && postTime.Before(targetEnd) {
 			consecutiveOldPosts = 0
@@ -161,14 +179,20 @@ func findTargetHourPosts(targetStart, targetEnd time.Time) ([]int, string, strin
 		time.Sleep(200 * time.Millisecond)
 		c.Visit(pageURL)
 
+		// 💡 에러가 감지되었다면 즉시 에러 반환하고 종료
+		if networkErr != nil {
+			return nil, "", "", networkErr
+		}
+
 		if page > 500 {
-			return nil, "", "", fmt.Errorf("페이지 탐색 한계 초과")
+			return nil, "", "", fmt.Errorf("페이지 탐색 한계 초과 (유효한 게시글을 찾지 못함)")
 		}
 		page++
 	}
 
 	return validPostNumbers, startDate, endDate, nil
 }
+
 
 func scrapePostsAndComments(validPosts []int, collectionTimeStr string, targetStart, targetEnd time.Time) error {
 	c := colly.NewCollector(
