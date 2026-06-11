@@ -122,7 +122,6 @@ func findTargetHourPosts(targetStart, targetEnd time.Time) ([]int, string, strin
 
 	var networkErr error
 
-	// 💡 1. 차단(403, 503) 등 네트워크 에러 발생 시 감지하여 빈 페이지 500번 도는 현상 즉시 중단
 	c.OnError(func(r *colly.Response, err error) {
 		if r.StatusCode == 403 || r.StatusCode == 503 {
 			networkErr = fmt.Errorf("디시인사이드 서버 차단 (HTTP %d - Cloudflare 캡차 또는 IP 밴)", r.StatusCode)
@@ -144,20 +143,44 @@ func findTargetHourPosts(targetStart, targetEnd time.Time) ([]int, string, strin
 		if visitedIDs[postNo] { return }
 		visitedIDs[postNo] = true
 
-		// 💡 2. 날짜 파싱 로직 보강 (title 속성이 사라진 경우 대비)
 		title := e.ChildAttr("td.gall_date", "title")
 		if title == "" {
-			title = e.ChildText("td.gall_date")
-		}
-		
-		// 당일 작성글이라 "HH:MM" 형식만 텍스트로 남았을 경우 오늘 날짜를 강제로 덧붙임
-		if !strings.Contains(title, "-") && strings.Contains(title, ":") {
-			title = time.Now().In(kstLoc).Format("2006-01-02 ") + title + ":00"
+			title = strings.TrimSpace(e.ChildText("td.gall_date"))
 		}
 
-		postTime, err := time.ParseInLocation("2006-01-02 15:04:05", title, kstLoc)
-		if err != nil { return } // 파싱에 실패하면 해당 글만 건너뜀
+		var postTime time.Time
+		var parseErr error
 
+		// 1. 정상적인 YYYY-MM-DD HH:MM:SS 파싱 시도 (가끔 title 속성에 존재하는 경우)
+		postTime, parseErr = time.ParseInLocation("2006-01-02 15:04:05", title, kstLoc)
+
+		if parseErr != nil {
+			// 2. 파싱 실패 시 디시인사이드 특유의 날짜 축약형 대응
+			if strings.Contains(title, ":") && !strings.Contains(title, "-") && !strings.Contains(title, ".") {
+				// 당일 글 (HH:MM 형식)
+				todayStr := time.Now().In(kstLoc).Format("2006-01-02 ") + title + ":00"
+				postTime, _ = time.ParseInLocation("2006-01-02 15:04:05", todayStr, kstLoc)
+			} else if strings.Count(title, ".") == 1 {
+				// 올해 과거 글 (MM.DD 형식)
+				thisYearStr := fmt.Sprintf("%d-%s 00:00:00", time.Now().In(kstLoc).Year(), strings.ReplaceAll(title, ".", "-"))
+				postTime, _ = time.ParseInLocation("2006-01-02 15:04:05", thisYearStr, kstLoc)
+			} else if strings.Count(title, ".") == 2 {
+				// 작년 이전 글 (YY.MM.DD 형식)
+				parts := strings.Split(title, ".")
+				if len(parts[0]) == 2 {
+					title = "20" + title
+				}
+				pastStr := strings.ReplaceAll(title, ".", "-") + " 00:00:00"
+				postTime, _ = time.ParseInLocation("2006-01-02 15:04:05", pastStr, kstLoc)
+			}
+		}
+
+		// 💡 3. 핵심 방어선: 위 모든 방법으로도 날짜 파싱을 못했다면? 무한 루프 방지를 위해 아주 옛날 글로 강제 취급
+		if postTime.IsZero() {
+			postTime = time.Date(2000, 1, 1, 0, 0, 0, 0, kstLoc)
+		}
+
+		// 조건 비교
 		if (postTime.Equal(targetStart) || postTime.After(targetStart)) && postTime.Before(targetEnd) {
 			consecutiveOldPosts = 0
 			validPostNumbers = append(validPostNumbers, postNo)
@@ -166,6 +189,7 @@ func findTargetHourPosts(targetStart, targetEnd time.Time) ([]int, string, strin
 			startDate = title
 		}
 
+		// 탐색 정지용 카운트다운
 		if postTime.Before(targetStart) {
 			consecutiveOldPosts++
 			if consecutiveOldPosts >= maxConsecutiveOld { done = true }
@@ -179,7 +203,6 @@ func findTargetHourPosts(targetStart, targetEnd time.Time) ([]int, string, strin
 		time.Sleep(200 * time.Millisecond)
 		c.Visit(pageURL)
 
-		// 💡 에러가 감지되었다면 즉시 에러 반환하고 종료
 		if networkErr != nil {
 			return nil, "", "", networkErr
 		}
@@ -192,6 +215,7 @@ func findTargetHourPosts(targetStart, targetEnd time.Time) ([]int, string, strin
 
 	return validPostNumbers, startDate, endDate, nil
 }
+
 
 
 func scrapePostsAndComments(validPosts []int, collectionTimeStr string, targetStart, targetEnd time.Time) error {
