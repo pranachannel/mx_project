@@ -5,10 +5,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"math/rand"
 	"net/http"
 	"net/url"
 	"os"
-	"math/rand"
 	"regexp"
 	"runtime"
 	"runtime/debug"
@@ -73,6 +73,7 @@ var (
 	globalEsno      string
 	globalEsnoMutex sync.RWMutex
 	esnoRegex       = regexp.MustCompile(`<input[^>]+id="e_s_n_o"[^>]+value="([^"]+)"`)
+)
 
 // 💡 다양한 브라우저 정보 리스트 (User-Agent 스푸핑용)
 var userAgents = []string{
@@ -94,6 +95,7 @@ func init() {
 	if err != nil {
 		kstLoc = time.FixedZone("KST", 9*60*60)
 	}
+	rand.Seed(time.Now().UnixNano())
 }
 
 func updateMemory(collectionTime string, nick string, uid string, isPost bool, isIp string) {
@@ -119,10 +121,9 @@ func updateMemory(collectionTime string, nick string, uid string, isPost bool, i
 	}
 }
 
-// 💡 메인 게시글 탐색 함수
 func findTargetHourPosts(targetStart, targetEnd time.Time) ([]int, string, string, error) {
 	c := colly.NewCollector(
-		colly.UserAgent(getRandomUA()), // 💡 매번 무작위 브라우저 정보 사용 (차단 회피)
+		colly.UserAgent(getRandomUA()),
 	)
 	c.SetRequestTimeout(30 * time.Second)
 
@@ -136,9 +137,9 @@ func findTargetHourPosts(targetStart, targetEnd time.Time) ([]int, string, strin
 	const maxConsecutiveOld = 15
 
 	var networkErr error
-	var postsOnPage int          // 💡 현재 페이지의 게시글 수 추적 (섀도우 밴 감지용)
-	var lastTitle string         // 💡 디버그용: 마지막으로 본 텍스트
-	var lastParsed time.Time     // 💡 디버그용: 마지막으로 파싱된 시간
+	var postsOnPage int          
+	var lastTitle string         
+	var lastParsed time.Time     
 
 	c.OnError(func(r *colly.Response, err error) {
 		if r.StatusCode == 403 || r.StatusCode == 503 {
@@ -149,8 +150,6 @@ func findTargetHourPosts(targetStart, targetEnd time.Time) ([]int, string, strin
 
 	c.OnHTML("tr.ub-content", func(e *colly.HTMLElement) {
 		if done { return }
-		
-		// 💡 정상적인 게시판 HTML이 내려왔다면 카운트 증가
 		postsOnPage++
 
 		if _, err := strconv.Atoi(e.ChildText("td.gall_num")); err != nil { return }
@@ -179,20 +178,16 @@ func findTargetHourPosts(targetStart, targetEnd time.Time) ([]int, string, strin
 
 		if parseErr != nil {
 			if strings.Contains(title, ":") && !strings.Contains(title, "-") && !strings.Contains(title, ".") {
-				// 당일 글 (HH:MM 형식)
 				todayStr := time.Now().In(kstLoc).Format("2006-01-02 ") + title + ":00"
 				postTime, _ = time.ParseInLocation("2006-01-02 15:04:05", todayStr, kstLoc)
 				
-				// 💡 자정을 막 넘겼을 때, 어제 밤에 쓴 글을 오늘 밤(미래)으로 오해하는 버그 차단
 				if postTime.After(time.Now().In(kstLoc)) {
 					postTime = postTime.Add(-24 * time.Hour)
 				}
 			} else if strings.Count(title, ".") == 1 {
-				// 올해 과거 글 (MM.DD 형식)
 				thisYearStr := fmt.Sprintf("%d-%s 00:00:00", time.Now().In(kstLoc).Year(), strings.ReplaceAll(title, ".", "-"))
 				postTime, _ = time.ParseInLocation("2006-01-02 15:04:05", thisYearStr, kstLoc)
 			} else if strings.Count(title, ".") == 2 {
-				// 작년 이전 글 (YY.MM.DD 형식)
 				parts := strings.Split(title, ".")
 				if len(parts[0]) == 2 {
 					title = "20" + title
@@ -225,10 +220,9 @@ func findTargetHourPosts(targetStart, targetEnd time.Time) ([]int, string, strin
 	})
 
 	for !done {
-		postsOnPage = 0 // 페이지를 방문할 때마다 카운트 초기화
+		postsOnPage = 0 
 		pageURL := fmt.Sprintf("https://gall.dcinside.com/mgallery/board/lists/?id=projectmx&page=%d", page)
 		
-		// 💡 기계적인 패턴(매크로 의심)을 피하기 위한 1.5초 ~ 3.5초 무작위 딜레이 추가
 		sleepTime := time.Duration(1500+rand.Intn(2000)) * time.Millisecond
 		time.Sleep(sleepTime) 
 		
@@ -238,13 +232,11 @@ func findTargetHourPosts(targetStart, targetEnd time.Time) ([]int, string, strin
 			return nil, "", "", networkErr
 		}
 
-		// 💡 빈 화면 섀도우 밴 감지
 		if postsOnPage == 0 {
 			return nil, "", "", fmt.Errorf("페이지 %d에서 게시글이 하나도 로딩되지 않았습니다. (디시인사이드 캡차 차단/섀도우 밴 확실시 됨)", page)
 		}
 
 		if page > 500 {
-			// 디버그 상세 정보 출력
 			return nil, "", "", fmt.Errorf("페이지 탐색 한계 초과. [디버그] 마지막 파싱 텍스트: '%s' -> 시간: %v (목표: %v)", lastTitle, lastParsed.Format("2006-01-02 15:04"), targetStart.Format("2006-01-02 15:04"))
 		}
 		page++
@@ -253,21 +245,18 @@ func findTargetHourPosts(targetStart, targetEnd time.Time) ([]int, string, strin
 	return validPostNumbers, startDate, endDate, nil
 }
 
-
-
-
 func scrapePostsAndComments(validPosts []int, collectionTimeStr string, targetStart, targetEnd time.Time) error {
 	c := colly.NewCollector(
-		colly.UserAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"),
+		colly.UserAgent(getRandomUA()),
 		colly.Async(true),
 	)
 	c.SetRequestTimeout(60 * time.Second)
 	
 	c.Limit(&colly.LimitRule{
 		DomainGlob:  "*",
-		Parallelism: 5,
-		Delay:       1 * time.Second,
-		RandomDelay: 500 * time.Millisecond,
+		Parallelism: 2,               
+		Delay:       2 * time.Second, 
+		RandomDelay: 1 * time.Second, 
 	})
 
 	var visitedPosts sync.Map
@@ -369,7 +358,7 @@ func commentSrc(no int, esno string, collectionTimeStr string, targetStart, targ
 		pageURL := fmt.Sprintf("https://gall.dcinside.com/mgallery/board/view/?id=projectmx&no=%d&t=cv", no)
 		req, err := http.NewRequest("GET", pageURL, nil)
 		if err != nil { return }
-		req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+		req.Header.Set("User-Agent", getRandomUA())
 		req.Header.Set("Referer", "https://gall.dcinside.com/")
 		resp, err := sharedClient.Do(req)
 		if err == nil {
@@ -409,7 +398,7 @@ func commentSrc(no int, esno string, collectionTimeStr string, targetStart, targ
 			req, _ := http.NewRequest("POST", endpoint, strings.NewReader(data.Encode()))
 			req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 			req.Header.Set("Referer", headerurl)
-			req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+			req.Header.Set("User-Agent", getRandomUA())
 			req.Header.Set("X-Requested-With", "XMLHttpRequest")
 
 			resp, err := sharedClient.Do(req)
@@ -635,7 +624,6 @@ func main() {
 
 		dataMap = make(map[string]*PostData)
 
-		// 💡 시작 시각 및 대상 시간대 출력
 		fmt.Printf("[%s] ▶️ 작업 시작 (대상 시간대: %s ~ %s)\n", time.Now().In(kstLoc).Format("15:04:05"), targetStart.Format("2006-01-02 15:00"), targetEnd.Format("15:00"))
 
 		validPosts, _, _, err := findTargetHourPosts(scanStart, targetEnd)
@@ -644,13 +632,11 @@ func main() {
 			continue
 		}
 
-		// 💡 찾은 게시글 수 출력
 		fmt.Printf("[%s] 🔍 발견된 게시글 수: %d개\n", time.Now().In(kstLoc).Format("15:04:05"), len(validPosts))
 
 		if len(validPosts) > 0 {
 			err := scrapePostsAndComments(validPosts, collectionTimeStr, targetStart, targetEnd)
 			if err != nil {
-				// 💡 상세 내용 및 댓글 수집 중 크리티컬 오류 출력 (데이터 누수 의심 로그)
 				fmt.Printf("[%s] ❌ [ERROR] 수집 중 과도한 오류 발생 (데이터 누수 의심): %v\n", time.Now().In(kstLoc).Format("15:04:05"), err)
 				continue
 			}
@@ -668,13 +654,11 @@ func main() {
 				os.Remove(excelFilename)
 			}
 			
-			// 💡 완료 시각 및 대상 시간대 출력
 			fmt.Printf("[%s] ✅ 작업 완료 및 업로드 성공\n", time.Now().In(kstLoc).Format("15:04:05"))
 		} else {
 			fmt.Printf("[%s] ⏭️ 수집할 게시글이 없어 건너뜁니다.\n", time.Now().In(kstLoc).Format("15:04:05"))
 		}
 		
-		// 💡 가독성을 위한 구분선 추가
 		fmt.Println(strings.Repeat("-", 50))
 		time.Sleep(3 * time.Second)
 		forceGC()
