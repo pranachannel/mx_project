@@ -63,7 +63,6 @@
         .badge { padding: 3px 7px; border-radius: 4px; font-size: 11px; font-weight: bold; color: white; }
         .bg-gonic { background: #17a2b8; } .bg-ban { background: #6c757d; } .bg-udong { background: #dc3545; }
 
-        /* 💡 페이징 컨트롤 스타일 추가 */
         .pagination-container { display: flex; justify-content: center; gap: 5px; margin-top: 20px; flex-wrap: wrap; }
         .page-btn { padding: 6px 12px; border: 1px solid #ddd; background: white; cursor: pointer; border-radius: 4px; transition: 0.2s; font-size: 13px; color: #555; }
         .page-btn:hover:not(:disabled) { background: #eee; }
@@ -98,28 +97,28 @@
 
 <div class="main">
     <div class="header">
-        <h1 style="margin:0; font-size: 1.8rem;">프로젝트MX 대시보드</h1>
+        <h1 style="margin:0; font-size: 1.8rem;">블루아카이브 갤러리 대시보드</h1>
         <div class="filters">
             <input type="text" id="date-picker" class="date-picker-box" placeholder="날짜 선택"> 
         </div>
     </div>
 
     <div class="tab-container">
-        <div class="tab active" onclick="switchTab('trends', this)">📈 일간 전체 그래프</div>
-        <div class="tab" onclick="switchTab('ranking', this)">🏆 일일 유저 랭킹</div>
-        <div class="tab" onclick="switchTab('search', this)">🔍 유저 검색</div>
+        <div class="tab active" onclick="switchTab('trends', this)">상세 그래프</div>
+        <div class="tab" onclick="switchTab('ranking', this)">유저 랭킹</div>
+        <div class="tab" onclick="switchTab('search', this)">유저 검색</div>
     </div>
 
     <div id="status-text" class="status-msg">데이터 로딩 중...</div>
 
     <div id="section-trends" class="content-section active">
         <div class="metrics-grid">
-            <div class="metric-item"><div class="metric-label">📝 선택 일자 총 게시글</div><div id="m-posts" class="metric-value">0</div></div>
-            <div class="metric-item"><div class="metric-label">💬 선택 일자 총 댓글</div><div id="m-comments" class="metric-value">0</div></div>
-            <div class="metric-item"><div class="metric-label">👥 활동 유저 수</div><div id="m-users" class="metric-value">0</div></div>
+            <div class="metric-item"><div class="metric-label">총 게시글</div><div id="m-posts" class="metric-value">0</div></div>
+            <div class="metric-item"><div class="metric-label">총 댓글</div><div id="m-comments" class="metric-value">0</div></div>
+            <div class="metric-item"><div class="metric-label">활동 유저 수</div><div id="m-users" class="metric-value">0</div></div>
         </div>
         <div class="st-card">
-            <h3 style="margin-top:0;">시간대별 활동 추이</h3>
+            <h3 style="margin-top:0;">시간대 활동 그래프</h3>
             <div id="main-trend-chart" style="width: 100%; height: 400px;"></div>
         </div>
     </div>
@@ -129,9 +128,9 @@
             <div class="controls-wrapper" style="justify-content: space-between;">
                 <button id="ranking-star-filter" class="btn-star-filter" onclick="toggleStarFilter('ranking')" title="즐겨찾기 유저만 보기">⭐</button>
                 <div style="display:flex; gap: 5px; margin-left: auto;">
-                    <button id="btn-rank-post" class="btn-rank" onclick="setRankingMode('post')">게시글 순</button>
-                    <button id="btn-rank-comment" class="btn-rank" onclick="setRankingMode('comment')">댓글 순</button>
-                    <button id="btn-rank-total" class="btn-rank active" onclick="setRankingMode('total')">총합 순</button>
+                    <button id="btn-rank-post" class="btn-rank" onclick="setRankingMode('post')">게시글</button>
+                    <button id="btn-rank-comment" class="btn-rank" onclick="setRankingMode('comment')">댓글</button>
+                    <button id="btn-rank-total" class="btn-rank active" onclick="setRankingMode('total')">총합</button>
                 </div>
             </div>
             
@@ -170,7 +169,7 @@
             <div class="controls-wrapper">
                 <button id="search-star-filter" class="btn-star-filter" onclick="toggleStarFilter('search')" title="즐겨찾기 유저만 보기">⭐</button>
                 
-                <input type="text" id="search-input" placeholder="검색할 닉네임 또는 ID 입력..." style="flex: 1; box-sizing: border-box; margin:0; min-width: 200px;" onkeypress="if(event.key === 'Enter') executeSearch()">
+                <input type="text" id="search-input" placeholder="검색할 닉네임 또는 ID 입력" style="flex: 1; box-sizing: border-box; margin:0; min-width: 200px;" onkeypress="if(event.key === 'Enter') executeSearch()">
                 
                 <div style="display:flex; gap:5px;">
                     <button id="btn-type-gonic" class="btn-type gonic active" onclick="toggleSearchType('고닉')">고닉</button>
@@ -219,10 +218,7 @@
 </div>
 
 <script>
-    // ========================================================
-    // 💡 R2 주소를 반드시 본인의 주소로 변경하세요!
     const R2_DOMAIN = "https://pub-fca2435a027e41bf954b4bc4f46e560a.r2.dev"; 
-    // ========================================================
 
     const PROJECT_START_DATE = "2026-06-07"; 
 
@@ -235,7 +231,6 @@
 
     let currentRankingMode = 'total'; 
 
-    // 💡 검색 탭의 기본 정렬 기준을 'type(타입)'의 'asc(오름차순)'으로 변경
     let sortStates = {
         search: { key: 'type', order: 'asc' }
     };
@@ -243,10 +238,9 @@
     let filterOnlyBookmarks = { ranking: false, search: false };
     let searchTypes = { '고닉': true, '반고닉': true, '유동': true };
 
-    // 💡 페이징 관련 변수 추가
     let searchCurrentPage = 1;
     const searchItemsPerPage = 15;
-    let searchFilteredData = []; // 필터링 및 정렬이 끝난 전체 검색 결과 데이터 보관용
+    let searchFilteredData = [];
 
     const todayKst = new Date(new Date().getTime() + (9 * 60 * 60 * 1000)).toISOString().split('T')[0];
 
@@ -287,7 +281,7 @@
 
     async function fetchDailyData(dateStr) {
         const statusText = document.getElementById('status-text');
-        statusText.innerText = `⏳ ${dateStr} 하루치 데이터를 합산 중입니다...`;
+        statusText.innerText = `${dateStr}의 데이터를 합산 중입니다`;
         
         const promises = Array.from({length: 24}, (_, i) => {
             const hh = String(i).padStart(2, '0');
@@ -348,12 +342,11 @@
         currentData = Array.from(userMap.values());
 
         if (currentData.length === 0) {
-            statusText.innerText = `❌ ${dateStr} 에는 수집된 데이터가 전혀 없습니다.`;
+            statusText.innerText = `아직 수집된 데이터가 전혀 없습니다`;
             statusText.style.color = "red";
             updateMetrics(true);
             renderRankingTable([]);
             
-            // 검색 데이터 리셋
             searchFilteredData = [];
             renderSearchTablePage(); 
             
@@ -366,7 +359,7 @@
         executeSearch(); 
         if (activeTab === 'trends') renderTrendChart();
 
-        statusText.innerText = `📢 실시간 데이터 반영엔 시간이 걸립니다.`;
+        statusText.innerText = `실시간 데이터 반영엔 시간이 걸립니다`;
         statusText.style.color = "#555";
     }
 
@@ -498,7 +491,6 @@
         renderRankingTable([...bookmarkedUsers, ...normalUsers]);
     }
 
-    // 💡 검색 실행 함수 (데이터 필터링 및 정렬 후 첫 페이지 로딩)
     function executeSearch() {
         const kw = document.getElementById('search-input').value.toLowerCase();
         let filtered = [...currentData];
@@ -513,26 +505,21 @@
         
         filtered = sortData(filtered, sortStates.search.key, sortStates.search.order);
 
-        // 즐겨찾기 최상단 고정 로직
         const bookmarkedUsers = filtered.filter(r => bookmarks.includes(r.id));
         const normalUsers = filtered.filter(r => !bookmarks.includes(r.id));
         
-        // 💡 전역 변수에 전체 검색 결과 저장 후 1페이지로 강제 리셋
         searchFilteredData = [...bookmarkedUsers, ...normalUsers];
         searchCurrentPage = 1; 
         
         renderSearchTablePage();
     }
 
-    // 💡 페이지 번호에 맞춰 테이블을 잘라서 렌더링하는 함수 추가
     function renderSearchTablePage() {
         const totalPages = Math.ceil(searchFilteredData.length / searchItemsPerPage) || 1;
         
-        // 페이지 범위 이탈 방지 안전장치
         if (searchCurrentPage > totalPages) searchCurrentPage = totalPages;
         if (searchCurrentPage < 1) searchCurrentPage = 1;
 
-        // 현재 페이지에 해당하는 데이터 인덱스 계산 (15개씩 자르기)
         const startIdx = (searchCurrentPage - 1) * searchItemsPerPage;
         const endIdx = startIdx + searchItemsPerPage;
         const pageData = searchFilteredData.slice(startIdx, endIdx);
@@ -541,14 +528,12 @@
         renderSearchPagination(totalPages);
     }
 
-    // 💡 하단 페이지네이션(버튼 UI) 생성 함수 추가
     function renderSearchPagination(totalPages) {
         const container = document.getElementById('search-pagination');
         container.innerHTML = '';
 
-        if (totalPages <= 1) return; // 1페이지밖에 없으면 버튼 숨김
+        if (totalPages <= 1) return;
 
-        // 이전 버튼
         const prevBtn = document.createElement('button');
         prevBtn.className = 'page-btn';
         prevBtn.innerText = '이전';
@@ -556,14 +541,12 @@
         prevBtn.onclick = () => { if (searchCurrentPage > 1) { searchCurrentPage--; renderSearchTablePage(); } };
         container.appendChild(prevBtn);
 
-        // 표시할 페이지 번호 범위 계산 (현재 페이지 기준 앞뒤 2개씩)
         let startPage = Math.max(1, searchCurrentPage - 2);
         let endPage = Math.min(totalPages, startPage + 4);
         if (endPage - startPage < 4) {
             startPage = Math.max(1, endPage - 4);
         }
 
-        // 첫 페이지로 가는 버튼 (건너뛰기 ...)
         if (startPage > 1) {
             const firstBtn = document.createElement('button');
             firstBtn.className = 'page-btn';
@@ -579,7 +562,6 @@
             }
         }
 
-        // 중간 숫자 버튼 생성
         for (let i = startPage; i <= endPage; i++) {
             const btn = document.createElement('button');
             btn.className = `page-btn ${i === searchCurrentPage ? 'active' : ''}`;
@@ -588,7 +570,6 @@
             container.appendChild(btn);
         }
 
-        // 끝 페이지로 가는 버튼 (건너뛰기 ...)
         if (endPage < totalPages) {
             if (endPage < totalPages - 1) {
                 const elp = document.createElement('span');
@@ -604,7 +585,6 @@
             container.appendChild(lastBtn);
         }
 
-        // 다음 버튼
         const nextBtn = document.createElement('button');
         nextBtn.className = 'page-btn';
         nextBtn.innerText = '다음';
@@ -681,7 +661,7 @@
     let modalChart = null;
     function openModal(nick, id) {
         document.getElementById('graph-modal').style.display = "block";
-        document.getElementById('modal-title').innerText = `${nick} (${id}) 활동 상세`; 
+        document.getElementById('modal-title').innerText = `${nick} (${id}) 상세 그래프`; 
         
         let lastValidIndex = -1;
         for(let i = 23; i >= 0; i--) {
@@ -733,7 +713,7 @@
         bookmarks = bookmarks.includes(id) ? bookmarks.filter(b => b !== id) : [...bookmarks, id];
         localStorage.setItem('user_bookmarks', JSON.stringify(bookmarks));
         sortAndRenderRanking();
-        executeSearch(); // 즐겨찾기가 변경되면 자동으로 목록 정렬 및 1페이지 리셋
+        executeSearch();
     }
 
     function closeModal() { document.getElementById('graph-modal').style.display = "none"; }
