@@ -8,10 +8,10 @@ on:
 jobs:
   run-crawler:
     runs-on: ubuntu-latest
-    
+  
     env:
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
-    
+      using: "node24" 
     steps:
     - name: 코드 가져오기
       uses: actions/checkout@v4
