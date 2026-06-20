@@ -12,9 +12,22 @@ jobs:
     env:
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
       using: "node24" 
+      
     steps:
     - name: 코드 가져오기
       uses: actions/checkout@v4
+      
+    - name: 중복 실행 확인
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # GitHub 내장 토큰을 자동으로 사용합니다.
+      run: |
+        RUNNING_COUNT=$(gh run list --workflow "${{ github.workflow }}" --status in_progress --json databaseId | jq '. | length')
+        
+        if [ "$RUNNING_COUNT" -gt 1 ]; then
+          echo "⚠️ 이전 시간대의 크롤링이 아직 끝나지 않은 상태입니다."
+          gh run cancel ${{ github.run_id }}
+          sleep 30
+        fi
 
     - name: Go 언어 환경 셋업
       uses: actions/setup-go@v5
