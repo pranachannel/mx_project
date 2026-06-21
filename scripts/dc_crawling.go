@@ -262,14 +262,36 @@ func scrapePostsAndComments(validPosts []int, collectionTimeStr string, targetSt
 	var wg sync.WaitGroup
 
 	c.OnError(func(r *colly.Response, err error) {
-		if r.StatusCode == 404 { return }
+		if r.StatusCode == 404 { return } 
+
 		retries, _ := strconv.Atoi(r.Ctx.Get("retry_count"))
+
+		if r.StatusCode == 403 || r.StatusCode == 503 {
+			if retries < 5 { // 최대 5번까지 끈질기게 재시도
+				r.Ctx.Put("retry_count", strconv.Itoa(retries+1))
+				
+				waitTime := time.Duration((retries+1)*30) * time.Second 
+				
+				fmt.Printf("\n[디버그] 🚨 403 차단 감지됨. 서버 진정을 위해 %v 대기 후 재시도합니다... (재시도 횟수: %d/5) - 대상: %s\n", waitTime, retries+1, r.Request.URL)
+				
+				time.Sleep(waitTime) 
+				
+				r.Request.Retry() 
+				return
+			} else {
+				fmt.Printf("\n[디버그] ❌ 403 영구 차단 의심. 최대 재시도 초과로 포기 - 대상: %s\n", r.Request.URL)
+				atomic.AddInt32(&failCount, 1)
+				return
+			}
+		}
+
 		if r.StatusCode >= 500 || r.StatusCode == 0 {
 			if retries < 3 {
 				r.Ctx.Put("retry_count", strconv.Itoa(retries+1))
-				time.Sleep(1 * time.Second)
+				time.Sleep(3 * time.Second)
 				r.Request.Retry()
 			} else {
+				fmt.Printf("\n[디버그] ⚠️ 서버 응답 에러 (HTTP %d) 재시도 실패 - 대상: %s\n", r.StatusCode, r.Request.URL)
 				atomic.AddInt32(&failCount, 1)
 			}
 		}
