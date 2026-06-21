@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
     inputs:
       target_date:
-        description: '2026-06-20'
+        description: '수집할 날짜 (예: 2026-06-20). 비워두면 현재 시간 기준으로 실행됩니다.'
         required: false
         default: ''
 
