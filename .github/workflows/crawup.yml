@@ -4,6 +4,11 @@ on:
   schedule:
     - cron: '34 * * * *' 
   workflow_dispatch:
+    inputs:
+      target_date:
+        description: '2026-06-20'
+        required: false
+        default: ''
 
 jobs:
   run-crawler:
@@ -37,6 +42,7 @@ jobs:
 
     - name: 크롤러 실행 및 R2 자동 업로드
       env:
+        TARGET_DATE: ${{ github.event.inputs.target_date }}
         CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
         CF_ACCESS_KEY_ID: ${{ secrets.CF_ACCESS_KEY_ID }}
         CF_SECRET_ACCESS_KEY: ${{ secrets.CF_SECRET_ACCESS_KEY }}
