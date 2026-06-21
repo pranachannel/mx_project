@@ -619,68 +619,91 @@ func forceGC() {
 }
 
 func main() {
-	now := time.Now().In(kstLoc)
-	limitTime := time.Date(now.Year(), now.Month(), now.Day(), now.Hour(), 0, 0, 0, kstLoc)
-	
-	lastTime, _ := getLastSavedTime()
+    now := time.Now().In(kstLoc)
+    
+    inputDate := os.Getenv("TARGET_DATE")
+    isManualMode := false
 
-	if lastTime.IsZero() || time.Since(lastTime) > 24*time.Hour {
-		lastTime = limitTime.Add(-2 * time.Hour) 
-	}
+    if inputDate != "" {
+        parsedDate, err := time.ParseInLocation("2006-01-02", inputDate, kstLoc)
+        if err == nil {
+            now = time.Date(parsedDate.Year(), parsedDate.Month(), parsedDate.Day(), now.Hour(), now.Minute(), now.Second(), now.Nanosecond(), kstLoc)
+            isManualMode = true
+            fmt.Printf("🎯 [수동 날짜 지정 모드] 기준 시각이 변경되었습니다: %s (%02d시 데이터 수집 시작)\n", inputDate, now.Hour())
+        } else {
+            fmt.Printf("⚠️ [경고] TARGET_DATE 형식이 올바르지 않습니다 (올바른 예: 2026-06-20). 현재 시간으로 진행합니다.\n")
+        }
+    }
 
-	for t := lastTime.Add(time.Hour); t.Before(limitTime.Add(time.Hour)); t = t.Add(time.Hour) {
-		
-		if t.After(limitTime) || t.Equal(limitTime) {
-			break
-		}
+    limitTime := time.Date(now.Year(), now.Month(), now.Day(), now.Hour(), 0, 0, 0, kstLoc)
+    
+    var lastTime time.Time
 
-		targetStart := time.Date(t.Year(), t.Month(), t.Day(), t.Hour(), 0, 0, 0, kstLoc)
-		targetEnd := targetStart.Add(time.Hour)
-		scanStart := targetStart.Add(-1 * time.Hour)
+    // 3. ⚡ [핵심 수정] 수동 모드와 자동 스케줄 모드의 시간 타겟팅 분기
+    if isManualMode {
+        lastTime = limitTime.Add(-2 * time.Hour) 
+    } else {
+        var _ error
+        lastTime, _ = getLastSavedTime()
 
-		collectionTimeStr := targetStart.Format("2006-01-02 15:04")
-		jsonFilename := fmt.Sprintf("%s_%02dh.json", targetStart.Format("2006-01-02"), targetStart.Hour())
-		excelFilename := fmt.Sprintf("%s_%02dh.xlsx", targetStart.Format("2006-01-02"), targetStart.Hour())
+        if lastTime.IsZero() || time.Since(lastTime) > 24*time.Hour {
+            lastTime = limitTime.Add(-2 * time.Hour) 
+        }
+    }
 
-		dataMap = make(map[string]*PostData)
+    for t := lastTime.Add(time.Hour); t.Before(limitTime.Add(time.Hour)); t = t.Add(time.Hour) {
+        
+        if t.After(limitTime) || t.Equal(limitTime) {
+            break
+        }
 
-		fmt.Printf("[%s] ▶️ 작업 시작 (대상 시간대: %s ~ %s)\n", time.Now().In(kstLoc).Format("15:04:05"), targetStart.Format("2006-01-02 15:00"), targetEnd.Format("15:00"))
+        targetStart := time.Date(t.Year(), t.Month(), t.Day(), t.Hour(), 0, 0, 0, kstLoc)
+        targetEnd := targetStart.Add(time.Hour)
+        scanStart := targetStart.Add(-1 * time.Hour)
 
-		validPosts, _, _, err := findTargetHourPosts(scanStart, targetEnd)
-		if err != nil {
-			fmt.Printf("[%s] ❌ [ERROR] 게시글 목록 탐색 중 오류 발생: %v\n", time.Now().In(kstLoc).Format("15:04:05"), err)
-			continue
-		}
+        collectionTimeStr := targetStart.Format("2006-01-02 15:04")
+        jsonFilename := fmt.Sprintf("%s_%02dh.json", targetStart.Format("2006-01-02"), targetStart.Hour())
+        excelFilename := fmt.Sprintf("%s_%02dh.xlsx", targetStart.Format("2006-01-02"), targetStart.Hour())
 
-		fmt.Printf("[%s] 🔍 발견된 게시글 수: %d개\n", time.Now().In(kstLoc).Format("15:04:05"), len(validPosts))
+        dataMap = make(map[string]*PostData)
 
-		if len(validPosts) > 0 {
-			err := scrapePostsAndComments(validPosts, collectionTimeStr, targetStart, targetEnd)
-			if err != nil {
-				fmt.Printf("[%s] ❌ [ERROR] 수집 중 과도한 오류 발생 (데이터 누수 의심): %v\n", time.Now().In(kstLoc).Format("15:04:05"), err)
-				continue
-			}
+        fmt.Printf("[%s] ▶️ 작업 시작 (대상 시간대: %s ~ %s)\n", time.Now().In(kstLoc).Format("15:04:05"), targetStart.Format("2006-01-02 15:00"), targetEnd.Format("15:00"))
 
-			if err := saveJsonLocal(jsonFilename); err == nil {
-				r2JsonKey := strings.Replace(jsonFilename, "_", "/", 1)
-				uploadToR2(jsonFilename, r2JsonKey)
-				uploadToR2(jsonFilename, "latest_data.json")
-				os.Remove(jsonFilename)
-			}
+        validPosts, _, _, err := findTargetHourPosts(scanStart, targetEnd)
+        if err != nil {
+            fmt.Printf("[%s] ❌ [ERROR] 게시글 목록 탐색 중 오류 발생: %v\n", time.Now().In(kstLoc).Format("15:04:05"), err)
+            continue
+        }
 
-			if err := saveExcelLocal(excelFilename); err == nil {
-				r2ExcelKey := strings.Replace(excelFilename, "_", "/", 1)
-				uploadToR2(excelFilename, r2ExcelKey)
-				os.Remove(excelFilename)
-			}
-			
-			fmt.Printf("[%s] ✅ 작업 완료 및 업로드 성공\n", time.Now().In(kstLoc).Format("15:04:05"))
-		} else {
-			fmt.Printf("[%s] ⏭️ 수집할 게시글이 없어 건너뜁니다.\n", time.Now().In(kstLoc).Format("15:04:05"))
-		}
-		
-		fmt.Println(strings.Repeat("-", 50))
-		time.Sleep(3 * time.Second)
-		forceGC()
-	}
+        fmt.Printf("[%s] 🔍 발견된 게시글 수: %d개\n", time.Now().In(kstLoc).Format("15:04:05"), len(validPosts))
+
+        if len(validPosts) > 0 {
+            err := scrapePostsAndComments(validPosts, collectionTimeStr, targetStart, targetEnd)
+            if err != nil {
+                fmt.Printf("[%s] ❌ [ERROR] 수집 중 과도한 오류 발생 (데이터 누수 의심): %v\n", time.Now().In(kstLoc).Format("15:04:05"), err)
+                continue
+            }
+
+            if err := saveJsonLocal(jsonFilename); err == nil {
+                r2JsonKey := strings.Replace(jsonFilename, "_", "/", 1)
+                uploadToR2(jsonFilename, r2JsonKey)
+                uploadToR2(jsonFilename, "latest_data.json")
+                os.Remove(jsonFilename)
+            }
+
+            if err := saveExcelLocal(excelFilename); err == nil {
+                r2ExcelKey := strings.Replace(excelFilename, "_", "/", 1)
+                uploadToR2(excelFilename, r2ExcelKey)
+                os.Remove(excelFilename)
+            }
+            
+            fmt.Printf("[%s] ✅ 작업 완료 및 업로드 성공\n", time.Now().In(kstLoc).Format("15:04:05"))
+        } else {
+            fmt.Printf("[%s] ⏭️ 수집할 게시글이 없어 건너뜁니다.\n", time.Now().In(kstLoc).Format("15:04:05"))
+        }
+        
+        fmt.Println(strings.Repeat("-", 50))
+        time.Sleep(3 * time.Second)
+        forceGC()
+    }
 }
