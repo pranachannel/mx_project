@@ -267,7 +267,7 @@ func scrapePostsAndComments(validPosts []int, collectionTimeStr string, targetSt
 		retries, _ := strconv.Atoi(r.Ctx.Get("retry_count"))
 
 		if r.StatusCode == 403 || r.StatusCode == 503 {
-			if retries < 5 { // 최대 5번까지 끈질기게 재시도
+			if retries < 5 { 
 				r.Ctx.Put("retry_count", strconv.Itoa(retries+1))
 				
 				waitTime := time.Duration((retries+1)*30) * time.Second 
@@ -535,31 +535,6 @@ func saveExcelLocal(filename string) error {
 	return nil
 }
 
-func uploadToR2(localFilename string, r2Key string) error {
-	client, bucketName, err := getR2Client()
-	if err != nil { return err }
-
-	file, err := os.Open(localFilename)
-	if err != nil { return err }
-	defer file.Close()
-
-	contentType := "application/octet-stream"
-	if strings.HasSuffix(localFilename, ".xlsx") {
-		contentType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-	} else if strings.HasSuffix(localFilename, ".json") {
-		contentType = "application/json"
-	}
-
-	_, err = client.PutObject(context.TODO(), &s3.PutObjectInput{
-		Bucket:      aws.String(bucketName),
-		Key:         aws.String(r2Key),
-		Body:        file,
-		ContentType: aws.String(contentType),
-	})
-
-	return err
-}
-
 func getR2Client() (*s3.Client, string, error) {
 	accountId := os.Getenv("CF_ACCOUNT_ID")
 	accessKeyId := os.Getenv("CF_ACCESS_KEY_ID")
@@ -586,31 +561,72 @@ func getR2Client() (*s3.Client, string, error) {
 	return s3.NewFromConfig(cfg), bucketName, nil
 }
 
-func getLastSavedTime() (time.Time, error) {
+func uploadToR2(localFilename string, r2Key string) error {
 	client, bucketName, err := getR2Client()
-	if err != nil { return time.Time{}, err }
+	if err != nil { return err }
 
-	var maxTime time.Time
-	paginator := s3.NewListObjectsV2Paginator(client, &s3.ListObjectsV2Input{
-		Bucket: aws.String(bucketName),
+	file, err := os.Open(localFilename)
+	if err != nil { return err }
+	defer file.Close()
+
+	contentType := "application/octet-stream"
+	if strings.HasSuffix(localFilename, ".xlsx") {
+		contentType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+	} else if strings.HasSuffix(localFilename, ".json") {
+		contentType = "application/json"
+	} else if strings.HasSuffix(localFilename, ".txt") {
+		contentType = "text/plain"
+	}
+
+	_, err = client.PutObject(context.TODO(), &s3.PutObjectInput{
+		Bucket:      aws.String(bucketName),
+		Key:         aws.String(r2Key),
+		Body:        file,
+		ContentType: aws.String(contentType),
 	})
 
-	for paginator.HasMorePages() {
-		page, err := paginator.NextPage(context.TODO())
-		if err != nil { return time.Time{}, err }
-		
-		for _, obj := range page.Contents {
-			key := *obj.Key
-			if !strings.HasSuffix(key, ".xlsx") { continue }
-			normalizedKey := strings.Replace(key, "/", "_", 1)
-			datePart := strings.TrimSuffix(normalizedKey, ".xlsx")
-			parsedTime, err := time.ParseInLocation("2006-01-02_15h", datePart, kstLoc)
-			if err != nil { continue }
-			
-			if parsedTime.After(maxTime) { maxTime = parsedTime }
-		}
+	return err
+}
+
+func downloadFromR2(objectKey string, localFilename string) error {
+	client, bucketName, err := getR2Client()
+	if err != nil { return err }
+
+	file, err := os.Create(localFilename)
+	if err != nil { return err }
+	defer file.Close()
+
+	result, err := client.GetObject(context.TODO(), &s3.GetObjectInput{
+		Bucket: aws.String(bucketName),
+		Key:    aws.String(objectKey),
+	})
+	if err != nil { return err } 
+	defer result.Body.Close()
+
+	_, err = io.Copy(file, result.Body)
+	return err
+}
+
+func getLastSavedTimeFromR2() (time.Time, error) {
+	err := downloadFromR2("last_time.txt", "last_time.txt")
+	if err != nil {
+		return time.Time{}, fmt.Errorf("R2에 저장된 시간 기록이 없습니다: %v", err)
 	}
-	return maxTime, nil
+	defer os.Remove("last_time.txt")
+
+	data, err := os.ReadFile("last_time.txt")
+	if err != nil {
+		return time.Time{}, err
+	}
+
+	timeStr := strings.TrimSpace(string(data))
+	parsedTime, err := time.ParseInLocation("2006-01-02 15:00", timeStr, kstLoc)
+	if err != nil {
+		return time.Time{}, fmt.Errorf("시간 문자열 파싱 실패: %v", err)
+	}
+
+	fmt.Printf("📂 [R2 동기화] 마지막으로 수집 완료된 시간: %s\n", parsedTime.Format("2006-01-02 15:00"))
+	return parsedTime, nil
 }
 
 func forceGC() {
@@ -619,91 +635,70 @@ func forceGC() {
 }
 
 func main() {
-    now := time.Now().In(kstLoc)
-    
-    inputDate := os.Getenv("TARGET_DATE")
-    isManualMode := false
+	now := time.Now().In(kstLoc)
+	limitTime := time.Date(now.Year(), now.Month(), now.Day(), now.Hour(), 0, 0, 0, kstLoc)
 
-    if inputDate != "" {
-        parsedDate, err := time.ParseInLocation("2006-01-02", inputDate, kstLoc)
-        if err == nil {
-            now = time.Date(parsedDate.Year(), parsedDate.Month(), parsedDate.Day(), now.Hour(), now.Minute(), now.Second(), now.Nanosecond(), kstLoc)
-            isManualMode = true
-            fmt.Printf("🎯 [수동 날짜 지정 모드] 기준 시각이 변경되었습니다: %s (%02d시 데이터 수집 시작)\n", inputDate, now.Hour())
-        } else {
-            fmt.Printf("⚠️ [경고] TARGET_DATE 형식이 올바르지 않습니다 (올바른 예: 2026-06-20). 현재 시간으로 진행합니다.\n")
-        }
-    }
+	lastTime, err := getLastSavedTimeFromR2()
 
-    limitTime := time.Date(now.Year(), now.Month(), now.Day(), now.Hour(), 0, 0, 0, kstLoc)
-    
-    var lastTime time.Time
+	if err != nil || lastTime.IsZero() {
+		fmt.Printf("⚠️ %v\n기본값(현재 시간 기준 2시간 전)으로 수집을 시작합니다.\n", err)
+		lastTime = limitTime.Add(-2 * time.Hour)
+	}
 
-    // 3. ⚡ [핵심 수정] 수동 모드와 자동 스케줄 모드의 시간 타겟팅 분기
-    if isManualMode {
-        lastTime = limitTime.Add(-2 * time.Hour) 
-    } else {
-        var _ error
-        lastTime, _ = getLastSavedTime()
+	for t := lastTime.Add(time.Hour); !t.After(limitTime); t = t.Add(time.Hour) {
 
-        if lastTime.IsZero() || time.Since(lastTime) > 24*time.Hour {
-            lastTime = limitTime.Add(-2 * time.Hour) 
-        }
-    }
+		targetStart := time.Date(t.Year(), t.Month(), t.Day(), t.Hour(), 0, 0, 0, kstLoc)
+		targetEnd := targetStart.Add(time.Hour)
+		scanStart := targetStart.Add(-1 * time.Hour)
 
-    for t := lastTime.Add(time.Hour); t.Before(limitTime.Add(time.Hour)); t = t.Add(time.Hour) {
-        
-        if t.After(limitTime) || t.Equal(limitTime) {
-            break
-        }
+		collectionTimeStr := targetStart.Format("2006-01-02 15:04")
+		jsonFilename := fmt.Sprintf("%s_%02dh.json", targetStart.Format("2006-01-02"), targetStart.Hour())
+		excelFilename := fmt.Sprintf("%s_%02dh.xlsx", targetStart.Format("2006-01-02"), targetStart.Hour())
 
-        targetStart := time.Date(t.Year(), t.Month(), t.Day(), t.Hour(), 0, 0, 0, kstLoc)
-        targetEnd := targetStart.Add(time.Hour)
-        scanStart := targetStart.Add(-1 * time.Hour)
+		dataMap = make(map[string]*PostData)
 
-        collectionTimeStr := targetStart.Format("2006-01-02 15:04")
-        jsonFilename := fmt.Sprintf("%s_%02dh.json", targetStart.Format("2006-01-02"), targetStart.Hour())
-        excelFilename := fmt.Sprintf("%s_%02dh.xlsx", targetStart.Format("2006-01-02"), targetStart.Hour())
+		fmt.Printf("[%s] ▶️ 작업 시작 (대상 시간대: %s ~ %s)\n", time.Now().In(kstLoc).Format("15:04:05"), targetStart.Format("2006-01-02 15:00"), targetEnd.Format("15:00"))
 
-        dataMap = make(map[string]*PostData)
+		validPosts, _, _, err := findTargetHourPosts(scanStart, targetEnd)
+		if err != nil {
+			fmt.Printf("[%s] ❌ [ERROR] 게시글 목록 탐색 중 오류 발생: %v\n", time.Now().In(kstLoc).Format("15:04:05"), err)
+			continue
+		}
 
-        fmt.Printf("[%s] ▶️ 작업 시작 (대상 시간대: %s ~ %s)\n", time.Now().In(kstLoc).Format("15:04:05"), targetStart.Format("2006-01-02 15:00"), targetEnd.Format("15:00"))
+		fmt.Printf("[%s] 🔍 발견된 게시글 수: %d개\n", time.Now().In(kstLoc).Format("15:04:05"), len(validPosts))
 
-        validPosts, _, _, err := findTargetHourPosts(scanStart, targetEnd)
-        if err != nil {
-            fmt.Printf("[%s] ❌ [ERROR] 게시글 목록 탐색 중 오류 발생: %v\n", time.Now().In(kstLoc).Format("15:04:05"), err)
-            continue
-        }
+		if len(validPosts) > 0 {
+			err := scrapePostsAndComments(validPosts, collectionTimeStr, targetStart, targetEnd)
+			if err != nil {
+				fmt.Printf("[%s] ❌ [ERROR] 수집 중 과도한 오류 발생 (데이터 누수 의심): %v\n", time.Now().In(kstLoc).Format("15:04:05"), err)
+				continue
+			}
 
-        fmt.Printf("[%s] 🔍 발견된 게시글 수: %d개\n", time.Now().In(kstLoc).Format("15:04:05"), len(validPosts))
+			if err := saveJsonLocal(jsonFilename); err == nil {
+				r2JsonKey := strings.Replace(jsonFilename, "_", "/", 1)
+				uploadToR2(jsonFilename, r2JsonKey)
+				uploadToR2(jsonFilename, "latest_data.json")
+				os.Remove(jsonFilename)
 
-        if len(validPosts) > 0 {
-            err := scrapePostsAndComments(validPosts, collectionTimeStr, targetStart, targetEnd)
-            if err != nil {
-                fmt.Printf("[%s] ❌ [ERROR] 수집 중 과도한 오류 발생 (데이터 누수 의심): %v\n", time.Now().In(kstLoc).Format("15:04:05"), err)
-                continue
-            }
+				timeStr := targetStart.Format("2006-01-02 15:00")
+				os.WriteFile("last_time.txt", []byte(timeStr), 0644)
+				uploadToR2("last_time.txt", "last_time.txt")
+				os.Remove("last_time.txt")
+			}
 
-            if err := saveJsonLocal(jsonFilename); err == nil {
-                r2JsonKey := strings.Replace(jsonFilename, "_", "/", 1)
-                uploadToR2(jsonFilename, r2JsonKey)
-                uploadToR2(jsonFilename, "latest_data.json")
-                os.Remove(jsonFilename)
-            }
+			if err := saveExcelLocal(excelFilename); err == nil {
+				r2ExcelKey := strings.Replace(excelFilename, "_", "/", 1)
+				uploadToR2(excelFilename, r2ExcelKey)
+				os.Remove(excelFilename)
+			}
 
-            if err := saveExcelLocal(excelFilename); err == nil {
-                r2ExcelKey := strings.Replace(excelFilename, "_", "/", 1)
-                uploadToR2(excelFilename, r2ExcelKey)
-                os.Remove(excelFilename)
-            }
-            
-            fmt.Printf("[%s] ✅ 작업 완료 및 업로드 성공\n", time.Now().In(kstLoc).Format("15:04:05"))
-        } else {
-            fmt.Printf("[%s] ⏭️ 수집할 게시글이 없어 건너뜁니다.\n", time.Now().In(kstLoc).Format("15:04:05"))
-        }
-        
-        fmt.Println(strings.Repeat("-", 50))
-        time.Sleep(3 * time.Second)
-        forceGC()
-    }
+			fmt.Printf("[%s] ✅ 작업 완료 및 업로드 성공\n", time.Now().In(kstLoc).Format("15:04:05"))
+		} else {
+			fmt.Printf("[%s] ⏭️ 수집할 게시글이 없어 건너뜁니다.\n", time.Now().In(kstLoc).Format("15:04:05"))
+		}
+
+		fmt.Println(strings.Repeat("-", 50))
+		time.Sleep(3 * time.Second)
+		forceGC()
+	}
 }
