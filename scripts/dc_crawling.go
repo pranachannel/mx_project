@@ -261,7 +261,7 @@ func findTargetHourPosts(targetStart, targetEnd time.Time) ([]int, string, strin
 			return nil, "", "", fmt.Errorf("페이지 %d에서 게시글이 하나도 로딩되지 않았습니다. (디시인사이드 캡차 차단/섀도우 밴 확실시 됨)", page)
 		}
 
-		if page > 500 {
+		if page > 5000 {
 			return nil, "", "", fmt.Errorf("페이지 탐색 한계 초과. [디버그] 마지막 파싱 텍스트: '%s' -> 시간: %v (목표: %v)", lastTitle, lastParsed.Format("2006-01-02 15:04"), targetStart.Format("2006-01-02 15:04"))
 		}
 		page++
@@ -691,7 +691,9 @@ func main() {
 		validPosts, _, _, err := findTargetHourPosts(scanStart, targetEnd)
 		if err != nil {
 			fmt.Printf("[%s] ❌ [ERROR] 게시글 목록 탐색 중 오류 발생: %v\n", time.Now().In(kstLoc).Format("15:04:05"), err)
-			continue
+			// ⚡ [핵심 수정] 다음 시간대로 넘어가지 않고 루프를 즉시 박살 냅니다.
+			fmt.Println("🚨 데이터 누락을 방지하기 위해 전체 작업을 즉시 중단합니다. (다음 스케줄에서 이 시간대부터 재시도합니다)")
+			break 
 		}
 
 		fmt.Printf("[%s] 🔍 발견된 게시글 수: %d개\n", time.Now().In(kstLoc).Format("15:04:05"), len(validPosts))
@@ -700,19 +702,21 @@ func main() {
 			err := scrapePostsAndComments(validPosts, collectionTimeStr, targetStart, targetEnd)
 			if err != nil {
 				fmt.Printf("[%s] ❌ [ERROR] 수집 중 과도한 오류 발생 (데이터 누수 의심): %v\n", time.Now().In(kstLoc).Format("15:04:05"), err)
-				continue
+				// ⚡ [핵심 수정] 여기서도 즉시 중단합니다.
+				fmt.Println("🚨 데이터 누락을 방지하기 위해 전체 작업을 즉시 중단합니다.")
+				break 
 			}
 
 			if err := saveJsonLocal(jsonFilename); err == nil {
 				r2JsonKey := strings.Replace(jsonFilename, "_", "/", 1)
 				uploadToR2(jsonFilename, r2JsonKey)
-				uploadToR2(jsonFilename, "latest_data.json")
-				os.Remove(jsonFilename)
-
+				
+				// ⚡ 작업이 '완벽히 성공'했을 때만 R2의 시간을 다음 타겟으로 갱신
 				timeStr := targetStart.Format("2006-01-02 15:00")
 				os.WriteFile("last_time.txt", []byte(timeStr), 0644)
 				uploadToR2("last_time.txt", "last_time.txt")
 				os.Remove("last_time.txt")
+				os.Remove(jsonFilename)
 			}
 
 			if err := saveExcelLocal(excelFilename); err == nil {
@@ -724,6 +728,12 @@ func main() {
 			fmt.Printf("[%s] ✅ 작업 완료 및 업로드 성공\n", time.Now().In(kstLoc).Format("15:04:05"))
 		} else {
 			fmt.Printf("[%s] ⏭️ 수집할 게시글이 없어 건너뜁니다.\n", time.Now().In(kstLoc).Format("15:04:05"))
+			
+			// ⚡ 게시글이 0개여서 건너뛸 때도 '해당 시간대는 무사히 끝난 것'이므로 시간은 갱신해 줘야 합니다.
+			timeStr := targetStart.Format("2006-01-02 15:00")
+			os.WriteFile("last_time.txt", []byte(timeStr), 0644)
+			uploadToR2("last_time.txt", "last_time.txt")
+			os.Remove("last_time.txt")
 		}
 
 		fmt.Println(strings.Repeat("-", 50))
