@@ -467,7 +467,11 @@ func commentSrc(no int, esno string, collectionTimeStr string, targetStart, targ
 			data := url.Values{}
 			data.Set("id", "projectmx")
 			data.Set("no", sno)
-			// ... (나머지 data.Set 내용 동일)
+			data.Set("cmt_id", "projectmx")
+			data.Set("cmt_no", sno)
+			data.Set("e_s_n_o", esno)          
+			data.Set("_GALLTYPE_", "M")        
+			data.Set("page", strconv.Itoa(page))
 
 			req, _ := http.NewRequest("POST", endpoint, strings.NewReader(data.Encode()))
 			req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
