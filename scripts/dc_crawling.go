@@ -252,9 +252,9 @@ func scrapePostsAndComments(validPosts []int, collectionTimeStr string, targetSt
 	
 	c.Limit(&colly.LimitRule{
 		DomainGlob:  "*",
-		Parallelism: 5,               
+		Parallelism: 3,               
 		Delay:       5 * time.Second, 
-		RandomDelay: 1 * time.Second, 
+		RandomDelay: 2 * time.Second, 
 	})
 
 	var visitedPosts sync.Map
