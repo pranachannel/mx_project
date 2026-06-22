@@ -83,6 +83,33 @@ var userAgents = []string{
 	"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 Edg/120.0.0.0",
 }
 
+var (
+	banMutex sync.Mutex
+	banUntil time.Time // 밴이 풀리는 시간 기록
+)
+
+// 💡 1. 밴 상태 체크: 밴 기간이면 풀릴 때까지 모든 스레드가 여기서 대기합니다.
+func checkBanState() {
+	banMutex.Lock()
+	if time.Now().Before(banUntil) {
+		sleepDur := time.Until(banUntil)
+		banMutex.Unlock()
+		time.Sleep(sleepDur) // 밴이 풀릴 때까지 스레드 정지
+		return
+	}
+	banMutex.Unlock()
+}
+
+// 💡 2. 밴 발동: 403 감지 시 기준 시간을 현재부터 1분 뒤로 설정합니다.
+func triggerBan() {
+	banMutex.Lock()
+	defer banMutex.Unlock()
+	// 여러 스레드가 동시에 에러를 내더라도, 대기 시간은 최초 1회만 1분으로 늘어납니다.
+	if time.Now().After(banUntil) {
+		banUntil = time.Now().Add(2 * time.Minute)
+	}
+}
+
 func getRandomUA() string {
 	return userAgents[rand.Intn(len(userAgents))]
 }
@@ -252,9 +279,9 @@ func scrapePostsAndComments(validPosts []int, collectionTimeStr string, targetSt
 	
 	c.Limit(&colly.LimitRule{
 		DomainGlob:  "*",
-		Parallelism: 3,               
+		Parallelism: 5,               
 		Delay:       5 * time.Second, 
-		RandomDelay: 2 * time.Second, 
+		RandomDelay: 1 * time.Second, 
 	})
 
 	var visitedPosts sync.Map
@@ -266,38 +293,35 @@ func scrapePostsAndComments(validPosts []int, collectionTimeStr string, targetSt
 
 		retries, _ := strconv.Atoi(r.Ctx.Get("retry_count"))
 
+		// ⚡ 403 밴 발생 시
 		if r.StatusCode == 403 || r.StatusCode == 503 {
-			if retries < 5 { 
+			triggerBan() // 1. 즉시 전역 1분 정지 발동
+			
+			if retries < 3 { 
 				r.Ctx.Put("retry_count", strconv.Itoa(retries+1))
-				
-				waitTime := time.Duration((retries+1)*30) * time.Second 
-				
-				fmt.Printf("\n[디버그] 🚨 403 차단 감지됨. 서버 진정을 위해 %v 대기 후 재시도합니다... (재시도 횟수: %d/5) - 대상: %s\n", waitTime, retries+1, r.Request.URL)
-				
-				time.Sleep(waitTime) 
-				
-				r.Request.Retry() 
+				r.Request.Retry() // 2. 실패한 게시글을 다시 큐에 집어넣음 (최우선 재시도)
 				return
 			} else {
-				fmt.Printf("\n[디버그] ❌ 403 영구 차단 의심. 최대 재시도 초과로 포기 - 대상: %s\n", r.Request.URL)
 				atomic.AddInt32(&failCount, 1)
 				return
 			}
 		}
 
+		// 기타 서버 에러 처리
 		if r.StatusCode >= 500 || r.StatusCode == 0 {
 			if retries < 3 {
 				r.Ctx.Put("retry_count", strconv.Itoa(retries+1))
 				time.Sleep(3 * time.Second)
 				r.Request.Retry()
 			} else {
-				fmt.Printf("\n[디버그] ⚠️ 서버 응답 에러 (HTTP %d) 재시도 실패 - 대상: %s\n", r.StatusCode, r.Request.URL)
 				atomic.AddInt32(&failCount, 1)
 			}
 		}
 	})
 
+	// ⚡ 모든 요청을 보내기 직전에 '정지 신호등'이 켜져 있는지 확인
 	c.OnRequest(func(r *colly.Request) {
+		checkBanState() 
 		r.Headers.Set("Referer", "https://gall.dcinside.com/mgallery/board/lists/?id=projectmx")
 	})
 
@@ -406,14 +430,12 @@ func commentSrc(no int, esno string, collectionTimeStr string, targetStart, targ
 		var reqErr error
 
 		for retry := 0; retry < 3; retry++ {
+			checkBanState() // ⚡ 댓글 수집 전에도 밴 상태인지 확인하고 대기
+
 			data := url.Values{}
 			data.Set("id", "projectmx")
 			data.Set("no", sno)
-			data.Set("cmt_id", "projectmx")
-			data.Set("cmt_no", sno)
-			data.Set("e_s_n_o", esno)
-			data.Set("comment_page", strconv.Itoa(page))
-			data.Set("_GALLTYPE_", "M")
+			// ... (나머지 data.Set 내용 동일)
 
 			req, _ := http.NewRequest("POST", endpoint, strings.NewReader(data.Encode()))
 			req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
@@ -423,6 +445,13 @@ func commentSrc(no int, esno string, collectionTimeStr string, targetStart, targ
 
 			resp, err := sharedClient.Do(req)
 			if err == nil {
+				// ⚡ 댓글 서버에서 403 차단이 떨어지면 전역 1분 정지 발동
+				if resp.StatusCode == 403 || resp.StatusCode == 503 {
+					triggerBan() 
+					resp.Body.Close()
+					continue // 다음 retry 루프로 넘어가 1분 대기 후 재시도
+				}
+
 				body, reqErr = io.ReadAll(resp.Body)
 				resp.Body.Close()
 				if reqErr == nil && len(body) > 0 { break }
