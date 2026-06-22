@@ -58,6 +58,12 @@ type ResponseData struct {
 	Comments []Comment `json:"comments"`
 }
 
+// 💡 체크포인트 데이터 저장을 위한 구조체
+type CheckpointData struct {
+	RemainingPosts []int                `json:"remaining_posts"`
+	SavedData      map[string]*PostData `json:"saved_data"`
+}
+
 var (
 	kstLoc       *time.Location
 	dataMap      = make(map[string]*PostData)
@@ -110,8 +116,34 @@ func triggerBan() {
 	}
 }
 
+
 func getRandomUA() string {
 	return userAgents[rand.Intn(len(userAgents))]
+}
+
+// 💡 중간 저장본을 로컬에 저장하는 함수
+func saveCheckpointLocal(filename string, cp *CheckpointData) error {
+	file, err := os.Create(filename)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+	encoder := json.NewEncoder(file)
+	encoder.SetIndent("", "  ")
+	return encoder.Encode(cp)
+}
+
+// 💡 처리가 완료된 후 R2에서 체크포인트 파일을 청소하는 함수
+func deleteFromR2(objectKey string) error {
+	client, bucketName, err := getR2Client()
+	if err != nil {
+		return err
+	}
+	_, err = client.DeleteObject(context.TODO(), &s3.DeleteObjectInput{
+		Bucket: aws.String(bucketName),
+		Key:    aws.String(objectKey),
+	})
+	return err
 }
 
 func init() {
@@ -683,53 +715,105 @@ func main() {
 		collectionTimeStr := targetStart.Format("2006-01-02 15:04")
 		jsonFilename := fmt.Sprintf("%s_%02dh.json", targetStart.Format("2006-01-02"), targetStart.Hour())
 		excelFilename := fmt.Sprintf("%s_%02dh.xlsx", targetStart.Format("2006-01-02"), targetStart.Hour())
+		checkpointFilename := fmt.Sprintf("checkpoint_%s_%02dh.json", targetStart.Format("2006-01-02"), targetStart.Hour())
 
+		var validPosts []int
 		dataMap = make(map[string]*PostData)
 
 		fmt.Printf("[%s] ▶️ 작업 시작 (대상 시간대: %s ~ %s)\n", time.Now().In(kstLoc).Format("15:04:05"), targetStart.Format("2006-01-02 15:00"), targetEnd.Format("15:00"))
 
-		validPosts, _, _, err := findTargetHourPosts(scanStart, targetEnd)
-		if err != nil {
-			fmt.Printf("[%s] ❌ [ERROR] 게시글 목록 탐색 중 오류 발생: %v\n", time.Now().In(kstLoc).Format("15:04:05"), err)
-			// ⚡ [핵심 수정] 다음 시간대로 넘어가지 않고 루프를 즉시 박살 냅니다.
-			fmt.Println("🚨 데이터 누락을 방지하기 위해 전체 작업을 즉시 중단합니다. (다음 스케줄에서 이 시간대부터 재시도합니다)")
-			break 
+		// ⚡ [1단계] R2에 체크포인트(중간 저장본)가 있는지 확인
+		err = downloadFromR2(checkpointFilename, checkpointFilename)
+		if err == nil {
+			// 체크포인트가 존재하면 로드 (탐색 스킵)
+			fileData, _ := os.ReadFile(checkpointFilename)
+			var cp CheckpointData
+			json.Unmarshal(fileData, &cp)
+			
+			validPosts = cp.RemainingPosts
+			dataMap = cp.SavedData // 이전에 작업했던 유저 데이터 복구
+			os.Remove(checkpointFilename)
+
+			fmt.Printf("♻️ [복구 성공] 6시간 강제 종료로 멈췄던 체크포인트를 불러왔습니다.\n")
+			fmt.Printf("⏭️ 게시글 탐색을 스킵하고, 남은 %d개의 게시글부터 수집을 재개합니다.\n", len(validPosts))
+		} else {
+			// 체크포인트가 없으면 정상적으로 게시글 탐색 시작
+			var findErr error
+			validPosts, _, _, findErr = findTargetHourPosts(scanStart, targetEnd)
+			if findErr != nil {
+				fmt.Printf("[%s] ❌ [ERROR] 게시글 목록 탐색 중 오류 발생: %v\n", time.Now().In(kstLoc).Format("15:04:05"), findErr)
+				fmt.Println("🚨 데이터 누락을 방지하기 위해 전체 작업을 즉시 중단합니다.")
+				break
+			}
+			fmt.Printf("[%s] 🔍 발견된 게시글 수: %d개\n", time.Now().In(kstLoc).Format("15:04:05"), len(validPosts))
 		}
 
-		fmt.Printf("[%s] 🔍 발견된 게시글 수: %d개\n", time.Now().In(kstLoc).Format("15:04:05"), len(validPosts))
-
 		if len(validPosts) > 0 {
-			err := scrapePostsAndComments(validPosts, collectionTimeStr, targetStart, targetEnd)
-			if err != nil {
-				fmt.Printf("[%s] ❌ [ERROR] 수집 중 과도한 오류 발생 (데이터 누수 의심): %v\n", time.Now().In(kstLoc).Format("15:04:05"), err)
-				// ⚡ [핵심 수정] 여기서도 즉시 중단합니다.
-				fmt.Println("🚨 데이터 누락을 방지하기 위해 전체 작업을 즉시 중단합니다.")
-				break 
-			}
+			// ⚡ [2단계] 한 번에 다 하지 않고 500개씩 쪼개서(Chunk) 작업
+			chunkSize := 500
+			totalToProcess := len(validPosts)
 
-			if err := saveJsonLocal(jsonFilename); err == nil {
-				r2JsonKey := strings.Replace(jsonFilename, "_", "/", 1)
-				uploadToR2(jsonFilename, r2JsonKey)
+			for len(validPosts) > 0 {
+				end := chunkSize
+				if end > len(validPosts) {
+					end = len(validPosts)
+				}
 				
-				// ⚡ 작업이 '완벽히 성공'했을 때만 R2의 시간을 다음 타겟으로 갱신
-				timeStr := targetStart.Format("2006-01-02 15:00")
-				os.WriteFile("last_time.txt", []byte(timeStr), 0644)
-				uploadToR2("last_time.txt", "last_time.txt")
-				os.Remove("last_time.txt")
-				os.Remove(jsonFilename)
+				chunk := validPosts[:end]
+				
+				// 500개만 수집
+				err := scrapePostsAndComments(chunk, collectionTimeStr, targetStart, targetEnd)
+				if err != nil {
+					fmt.Printf("[%s] ❌ [ERROR] 수집 중 오류 발생: %v\n", time.Now().In(kstLoc).Format("15:04:05"), err)
+					fmt.Println("🚨 작업을 중단합니다. 다음 스케줄에서 남은 분량을 재시도합니다.")
+					break
+				}
+
+				// 성공적으로 수집한 500개를 목록에서 제거
+				validPosts = validPosts[end:]
+
+				// ⚡ [3단계] 중간 세이브 데이터 R2에 업로드
+				cp := CheckpointData{
+					RemainingPosts: validPosts,
+					SavedData:      dataMap,
+				}
+				saveCheckpointLocal(checkpointFilename, &cp)
+				uploadToR2(checkpointFilename, checkpointFilename)
+				os.Remove(checkpointFilename)
+
+				processedSoFar := totalToProcess - len(validPosts)
+				fmt.Printf("💾 [Save Point] 500개 단위 중간 저장 완료. (진행률: %d / %d)\n", processedSoFar, totalToProcess)
 			}
 
-			if err := saveExcelLocal(excelFilename); err == nil {
-				r2ExcelKey := strings.Replace(excelFilename, "_", "/", 1)
-				uploadToR2(excelFilename, r2ExcelKey)
-				os.Remove(excelFilename)
-			}
+			// 위 루프를 무사히 빠져나왔다면 (남은 게시글이 0개라면) 최종 파일 생성
+			if len(validPosts) == 0 {
+				if err := saveJsonLocal(jsonFilename); err == nil {
+					r2JsonKey := strings.Replace(jsonFilename, "_", "/", 1)
+					uploadToR2(jsonFilename, r2JsonKey)
 
-			fmt.Printf("[%s] ✅ 작업 완료 및 업로드 성공\n", time.Now().In(kstLoc).Format("15:04:05"))
+					timeStr := targetStart.Format("2006-01-02 15:00")
+					os.WriteFile("last_time.txt", []byte(timeStr), 0644)
+					uploadToR2("last_time.txt", "last_time.txt")
+					os.Remove("last_time.txt")
+					os.Remove(jsonFilename)
+				}
+
+				if err := saveExcelLocal(excelFilename); err == nil {
+					r2ExcelKey := strings.Replace(excelFilename, "_", "/", 1)
+					uploadToR2(excelFilename, r2ExcelKey)
+					os.Remove(excelFilename)
+				}
+
+				// ⚡ [4단계] 완벽하게 끝났으니 R2에 남아있는 중간 세이브 파일(체크포인트) 삭제
+				deleteFromR2(checkpointFilename)
+				fmt.Printf("[%s] ✅ 작업 완료 및 업로드 성공\n", time.Now().In(kstLoc).Format("15:04:05"))
+			} else {
+				// 에러로 루프를 빠져나온 경우 다음 스케줄러로 넘기기 위해 종료
+				break
+			}
 		} else {
 			fmt.Printf("[%s] ⏭️ 수집할 게시글이 없어 건너뜁니다.\n", time.Now().In(kstLoc).Format("15:04:05"))
 			
-			// ⚡ 게시글이 0개여서 건너뛸 때도 '해당 시간대는 무사히 끝난 것'이므로 시간은 갱신해 줘야 합니다.
 			timeStr := targetStart.Format("2006-01-02 15:00")
 			os.WriteFile("last_time.txt", []byte(timeStr), 0644)
 			uploadToR2("last_time.txt", "last_time.txt")
