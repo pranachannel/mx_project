@@ -4,6 +4,10 @@ on:
   schedule:
     - cron: '34 * * * *' 
   workflow_dispatch:
+  
+concurrency:
+  group: mxproject-group
+  cancel-in-progress: true
 
 jobs:
   run-crawler:
