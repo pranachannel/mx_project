@@ -697,7 +697,7 @@ func main() {
 		lastTime = limitTime.Add(-2 * time.Hour)
 	}
 
-	for t := lastTime.Add(time.Hour); !t.After(limitTime); t = t.Add(time.Hour) {
+	for t := lastTime.Add(time.Hour); t.Before(limitTime); t = t.Add(time.Hour) {
 
 		targetStart := time.Date(t.Year(), t.Month(), t.Day(), t.Hour(), 0, 0, 0, kstLoc)
 		targetEnd := targetStart.Add(time.Hour)
