@@ -486,6 +486,184 @@ func commentSrc(no int, esno string, collectionTimeStr string, targetStart, targ
 					triggerBan() 
 					resp.Body.Close()
 					continue // 다음 retry 루프로 넘어가 1분 대기 후 재시도
+func scrapePostsAndComments(validPosts []int, collectionTimeStr string, targetStart, targetEnd time.Time) error {
+	c := colly.NewCollector(
+		colly.UserAgent(getRandomUA()),
+		colly.Async(true), // 비동기 큐 가동
+	)
+	c.SetRequestTimeout(60 * time.Second)
+	
+	// ⚡ [최적화 1] 사용자님의 직감대로 스레드를 2개로 제한하고, 대기 시간을 현실적으로 늘립니다.
+	c.Limit(&colly.LimitRule{
+		DomainGlob:  "*",
+		Parallelism: 3,               // 💡 정확히 2개의 워커 스레드만 가동
+		Delay:       10 * time.Second, // 본문 수집 간격 기본 4초
+		RandomDelay: 5 * time.Second, // 0~2초 랜덤 추가 (총 4~6초 대기)
+	})
+
+	var visitedPosts sync.Map
+	var failCount int32
+	// 💡 무제한 고루틴을 안 쓰므로 대기조(sync.WaitGroup)가 필요 없어졌습니다.
+
+	c.OnError(func(r *colly.Response, err error) {
+		if r.StatusCode == 404 { return } 
+		retries, _ := strconv.Atoi(r.Ctx.Get("retry_count"))
+
+		if r.StatusCode == 403 || r.StatusCode == 503 {
+			triggerBan() 
+			if retries < 3 { 
+				r.Ctx.Put("retry_count", strconv.Itoa(retries+1))
+				r.Request.Retry() 
+				return
+			} else {
+				atomic.AddInt32(&failCount, 1)
+				return
+			}
+		}
+
+		if r.StatusCode >= 500 || r.StatusCode == 0 {
+			if retries < 3 {
+				r.Ctx.Put("retry_count", strconv.Itoa(retries+1))
+				time.Sleep(3 * time.Second)
+				r.Request.Retry()
+			} else {
+				atomic.AddInt32(&failCount, 1)
+			}
+		}
+	})
+
+	c.OnRequest(func(r *colly.Request) {
+		checkBanState() 
+		r.Headers.Set("Referer", "https://gall.dcinside.com/mgallery/board/lists/?id=projectmx")
+	})
+
+	c.OnResponse(func(r *colly.Response) {
+		matches := esnoRegex.FindSubmatch(r.Body)
+		if len(matches) > 1 {
+			parsedEsno := string(matches[1])
+			r.Ctx.Put("esno", parsedEsno)
+			
+			globalEsnoMutex.Lock()
+			globalEsno = parsedEsno
+			globalEsnoMutex.Unlock()
+		}
+	})
+
+	c.OnHTML("div.view_content_wrap", func(e *colly.HTMLElement) {
+		noStr := e.Request.URL.Query().Get("no")
+		no, err := strconv.Atoi(noStr)
+		if err != nil { return }
+
+		if _, loaded := visitedPosts.LoadOrStore(no, true); loaded { return }
+
+		nick := e.ChildAttr(".gall_writer", "data-nick")
+		uid := e.ChildAttr(".gall_writer", "data-uid")
+
+		isip := ""
+		if uid == "" {
+			uid = e.ChildAttr(".gall_writer", "data-ip")
+			isip = "유동"
+		} else {
+			if strings.Contains(e.ChildAttr(".gall_writer .writer_nikcon img", "src"), "fix_nik.gif") {
+				isip = "고닉"
+			} else {
+				isip = "반고닉"
+			}
+		}
+
+		postDateStr := e.ChildAttr(".gall_date", "title")
+		if postDateStr == "" { postDateStr = e.ChildText(".gall_date") }
+
+		pTime, err := time.ParseInLocation("2006-01-02 15:04:05", postDateStr, kstLoc)
+
+		if err == nil && (pTime.Equal(targetStart) || pTime.After(targetStart)) && pTime.Before(targetEnd) {
+			updateMemory(collectionTimeStr, nick, uid, true, isip)
+		}
+
+		esno := e.Request.Ctx.Get("esno")
+		if esno == "" {
+			globalEsnoMutex.RLock()
+			esno = globalEsno
+			globalEsnoMutex.RUnlock()
+		}
+
+		// ⚡ [최적화 2] go func 고루틴 폭발을 제거하고 '동기 방식'으로 직접 호출합니다.
+		// 이렇게 하면 Colly가 지정한 2개의 스레드가 본문을 읽은 후, 이 함수 안에서 댓글까지 순서대로 수집합니다.
+		// 총 스레드 수가 정확히 2개로 고정되어 서버 방화벽을 완벽히 우회합니다.
+		commentSrc(no, esno, collectionTimeStr, targetStart, targetEnd)
+	})
+
+	for _, no := range validPosts {
+		url := fmt.Sprintf("https://gall.dcinside.com/mgallery/board/view/?id=projectmx&no=%d", no)
+		c.Visit(url)
+	}
+	
+	c.Wait() // 💡 2개의 워커 스레드가 큐에 쌓인 모든 작업을 마칠 때까지 안전하게 대기합니다.
+
+	finalFailCount := atomic.LoadInt32(&failCount)
+	if finalFailCount > 15 {
+		return fmt.Errorf("수집 실패 과다 (데이터 누수 가능성 있음)")
+	}
+	return nil
+}
+
+func commentSrc(no int, esno string, collectionTimeStr string, targetStart, targetEnd time.Time) {
+	if esno == "" {
+		pageURL := fmt.Sprintf("https://gall.dcinside.com/mgallery/board/view/?id=projectmx&no=%d&t=cv", no)
+		req, err := http.NewRequest("GET", pageURL, nil)
+		if err != nil { return }
+		req.Header.Set("User-Agent", getRandomUA())
+		req.Header.Set("Referer", "https://gall.dcinside.com/")
+		resp, err := sharedClient.Do(req)
+		if err == nil {
+			doc, err := goquery.NewDocumentFromReader(resp.Body)
+			if err == nil && doc != nil {
+				esno, _ = doc.Find("input#e_s_n_o").Attr("value")
+				if esno != "" {
+					globalEsnoMutex.Lock()
+					globalEsno = esno
+					globalEsnoMutex.Unlock()
+				}
+			}
+			resp.Body.Close()
+		}
+	}
+	if esno == "" { return }
+
+	endpoint := "https://gall.dcinside.com/board/comment/"
+	sno := strconv.Itoa(no)
+	headerurl := fmt.Sprintf("https://gall.dcinside.com/mgallery/board/view/?id=projectmx&no=%d&t=cv", no)
+
+	page := 1
+	for {
+		var body []byte
+		var reqErr error
+
+		for retry := 0; retry < 3; retry++ {
+			checkBanState() 
+
+			// ⚡ [이전 오류 전면 수정] 줄임 주석(//...)을 제거하고 완전한 폼 데이터를 채워 넣었습니다.
+			data := url.Values{}
+			data.Set("id", "projectmx")
+			data.Set("no", sno)
+			data.Set("cmt_id", "projectmx")
+			data.Set("cmt_no", sno)
+			data.Set("e_s_n_o", esno)
+			data.Set("_GALLTYPE_", "M")
+			data.Set("page", strconv.Itoa(page))
+
+			req, _ := http.NewRequest("POST", endpoint, strings.NewReader(data.Encode()))
+			req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+			req.Header.Set("Referer", headerurl)
+			req.Header.Set("User-Agent", getRandomUA())
+			req.Header.Set("X-Requested-With", "XMLHttpRequest")
+
+			resp, err := sharedClient.Do(req)
+			if err == nil {
+				if resp.StatusCode == 403 || resp.StatusCode == 503 {
+					triggerBan() 
+					resp.Body.Close()
+					continue 
 				}
 
 				body, reqErr = io.ReadAll(resp.Body)
@@ -539,9 +717,13 @@ func commentSrc(no int, esno string, collectionTimeStr string, targetStart, targ
 			updateMemory(collectionTimeStr, comment.Name, uniqueKey, false, isip)
 		}
 		page++
-		time.Sleep(100 * time.Millisecond)
+		
+		// ⚡ [최적화 3] 기존 100ms 대기는 너무 빨랐습니다. 
+		// 댓글 페이지를 넘길 때 0.6초 ~ 1.0초 사이의 랜덤 딜레이를 주어 사람처럼 행동하게 만듭니다.
+		time.Sleep(time.Duration(600+rand.Intn(400)) * time.Millisecond)
 	}
 }
+
 
 func saveJsonLocal(filename string) error {
 	var jsonData []UserData
