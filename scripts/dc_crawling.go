@@ -58,12 +58,6 @@ type ResponseData struct {
 	Comments []Comment `json:"comments"`
 }
 
-// 💡 체크포인트 데이터 저장을 위한 구조체
-type CheckpointData struct {
-	RemainingPosts []int                `json:"remaining_posts"`
-	SavedData      map[string]*PostData `json:"saved_data"`
-}
-
 var (
 	kstLoc       *time.Location
 	dataMap      = make(map[string]*PostData)
@@ -94,7 +88,7 @@ var (
 	banUntil time.Time // 밴이 풀리는 시간 기록
 )
 
-// 💡 1. 밴 상태 체크: 밴 기간이면 풀릴 때까지 모든 스레드가 여기서 대기합니다.
+// 밴 상태 체크: 밴 기간이면 풀릴 때까지 모든 워커 스레드가 여기서 대기합니다.
 func checkBanState() {
 	banMutex.Lock()
 	if time.Now().Before(banUntil) {
@@ -106,44 +100,17 @@ func checkBanState() {
 	banMutex.Unlock()
 }
 
-// 💡 2. 밴 발동: 403 감지 시 기준 시간을 현재부터 1분 뒤로 설정합니다.
+// 밴 발동: 403 감지 시 기준 시간을 현재부터 2분 뒤로 설정합니다.
 func triggerBan() {
 	banMutex.Lock()
 	defer banMutex.Unlock()
-	// 여러 스레드가 동시에 에러를 내더라도, 대기 시간은 최초 1회만 1분으로 늘어납니다.
 	if time.Now().After(banUntil) {
 		banUntil = time.Now().Add(2 * time.Minute)
 	}
 }
 
-
 func getRandomUA() string {
 	return userAgents[rand.Intn(len(userAgents))]
-}
-
-// 💡 중간 저장본을 로컬에 저장하는 함수
-func saveCheckpointLocal(filename string, cp *CheckpointData) error {
-	file, err := os.Create(filename)
-	if err != nil {
-		return err
-	}
-	defer file.Close()
-	encoder := json.NewEncoder(file)
-	encoder.SetIndent("", "  ")
-	return encoder.Encode(cp)
-}
-
-// 💡 처리가 완료된 후 R2에서 체크포인트 파일을 청소하는 함수
-func deleteFromR2(objectKey string) error {
-	client, bucketName, err := getR2Client()
-	if err != nil {
-		return err
-	}
-	_, err = client.DeleteObject(context.TODO(), &s3.DeleteObjectInput{
-		Bucket: aws.String(bucketName),
-		Key:    aws.String(objectKey),
-	})
-	return err
 }
 
 func init() {
@@ -302,6 +269,7 @@ func findTargetHourPosts(targetStart, targetEnd time.Time) ([]int, string, strin
 	return validPostNumbers, startDate, endDate, nil
 }
 
+// ⚡ [구조 개조 적용] 정확히 2개의 워커 스레드로 제한하고 고루틴 폭발을 제거한 안전한 본문 수집기
 func scrapePostsAndComments(validPosts []int, collectionTimeStr string, targetStart, targetEnd time.Time) error {
 	c := colly.NewCollector(
 		colly.UserAgent(getRandomUA()),
@@ -311,206 +279,22 @@ func scrapePostsAndComments(validPosts []int, collectionTimeStr string, targetSt
 	
 	c.Limit(&colly.LimitRule{
 		DomainGlob:  "*",
-		Parallelism: 2,               
-		Delay:       5 * time.Second, 
-		RandomDelay: 5 * time.Second, 
+		Parallelism: 2,               // 💡 동시성 상한선을 정확히 2개 스레드로 봉인
+		Delay:       4 * time.Second, // 기본 대기 4초
+		RandomDelay: 2 * time.Second, // 0~2초 랜덤 추가
 	})
 
 	var visitedPosts sync.Map
 	var failCount int32
-	var wg sync.WaitGroup
 
 	c.OnError(func(r *colly.Response, err error) {
 		if r.StatusCode == 404 { return } 
 
-		retries, _ := strconv.Atoi(r.Ctx.Get("retry_count"))
-
-		// ⚡ 403 밴 발생 시
-		if r.StatusCode == 403 || r.StatusCode == 503 {
-			triggerBan() // 1. 즉시 전역 1분 정지 발동
-			
-			if retries < 3 { 
-				r.Ctx.Put("retry_count", strconv.Itoa(retries+1))
-				r.Request.Retry() // 2. 실패한 게시글을 다시 큐에 집어넣음 (최우선 재시도)
-				return
-			} else {
-				atomic.AddInt32(&failCount, 1)
-				return
-			}
-		}
-
-		// 기타 서버 에러 처리
-		if r.StatusCode >= 500 || r.StatusCode == 0 {
-			if retries < 3 {
-				r.Ctx.Put("retry_count", strconv.Itoa(retries+1))
-				time.Sleep(3 * time.Second)
-				r.Request.Retry()
-			} else {
-				atomic.AddInt32(&failCount, 1)
-			}
-		}
-	})
-
-	// ⚡ 모든 요청을 보내기 직전에 '정지 신호등'이 켜져 있는지 확인
-	c.OnRequest(func(r *colly.Request) {
-		checkBanState() 
-		r.Headers.Set("Referer", "https://gall.dcinside.com/mgallery/board/lists/?id=projectmx")
-	})
-
-	c.OnResponse(func(r *colly.Response) {
-		matches := esnoRegex.FindSubmatch(r.Body)
-		if len(matches) > 1 {
-			parsedEsno := string(matches[1])
-			r.Ctx.Put("esno", parsedEsno)
-			
-			globalEsnoMutex.Lock()
-			globalEsno = parsedEsno
-			globalEsnoMutex.Unlock()
-		}
-	})
-
-	c.OnHTML("div.view_content_wrap", func(e *colly.HTMLElement) {
-		noStr := e.Request.URL.Query().Get("no")
-		no, err := strconv.Atoi(noStr)
-		if err != nil { return }
-
-		if _, loaded := visitedPosts.LoadOrStore(no, true); loaded { return }
-
-		nick := e.ChildAttr(".gall_writer", "data-nick")
-		uid := e.ChildAttr(".gall_writer", "data-uid")
-
-		isip := ""
-		if uid == "" {
-			uid = e.ChildAttr(".gall_writer", "data-ip")
-			isip = "유동"
-		} else {
-			if strings.Contains(e.ChildAttr(".gall_writer .writer_nikcon img", "src"), "fix_nik.gif") {
-				isip = "고닉"
-			} else {
-				isip = "반고닉"
-			}
-		}
-
-		postDateStr := e.ChildAttr(".gall_date", "title")
-		if postDateStr == "" { postDateStr = e.ChildText(".gall_date") }
-
-		pTime, err := time.ParseInLocation("2006-01-02 15:04:05", postDateStr, kstLoc)
-
-		if err == nil && (pTime.Equal(targetStart) || pTime.After(targetStart)) && pTime.Before(targetEnd) {
-			updateMemory(collectionTimeStr, nick, uid, true, isip)
-		}
-
-		esno := e.Request.Ctx.Get("esno")
-		if esno == "" {
-			globalEsnoMutex.RLock()
-			esno = globalEsno
-			globalEsnoMutex.RUnlock()
-		}
-
-		wg.Add(1)
-		go func(postNo int, postEsno string) {
-			defer wg.Done()
-			commentSrc(postNo, postEsno, collectionTimeStr, targetStart, targetEnd)
-		}(no, esno)
-	})
-
-	for _, no := range validPosts {
-		url := fmt.Sprintf("https://gall.dcinside.com/mgallery/board/view/?id=projectmx&no=%d", no)
-		c.Visit(url)
-	}
-	
-	c.Wait() 
-	wg.Wait() 
-
-	finalFailCount := atomic.LoadInt32(&failCount)
-	if finalFailCount > 15 {
-		return fmt.Errorf("수집 실패 과다 (데이터 누수 가능성 있음)")
-	}
-	return nil
-}
-
-func commentSrc(no int, esno string, collectionTimeStr string, targetStart, targetEnd time.Time) {
-	if esno == "" {
-		pageURL := fmt.Sprintf("https://gall.dcinside.com/mgallery/board/view/?id=projectmx&no=%d&t=cv", no)
-		req, err := http.NewRequest("GET", pageURL, nil)
-		if err != nil { return }
-		req.Header.Set("User-Agent", getRandomUA())
-		req.Header.Set("Referer", "https://gall.dcinside.com/")
-		resp, err := sharedClient.Do(req)
-		if err == nil {
-			doc, err := goquery.NewDocumentFromReader(resp.Body)
-			if err == nil && doc != nil {
-				esno, _ = doc.Find("input#e_s_n_o").Attr("value")
-				if esno != "" {
-					globalEsnoMutex.Lock()
-					globalEsno = esno
-					globalEsnoMutex.Unlock()
-				}
-			}
-			resp.Body.Close()
-		}
-	}
-	if esno == "" { return }
-
-	endpoint := "https://gall.dcinside.com/board/comment/"
-	sno := strconv.Itoa(no)
-	headerurl := fmt.Sprintf("https://gall.dcinside.com/mgallery/board/view/?id=projectmx&no=%d&t=cv", no)
-
-	page := 1
-	for {
-		var body []byte
-		var reqErr error
-
-		for retry := 0; retry < 3; retry++ {
-			checkBanState() // ⚡ 댓글 수집 전에도 밴 상태인지 확인하고 대기
-
-			data := url.Values{}
-			data.Set("id", "projectmx")
-			data.Set("no", sno)
-			data.Set("cmt_id", "projectmx")
-			data.Set("cmt_no", sno)
-			data.Set("e_s_n_o", esno)          
-			data.Set("_GALLTYPE_", "M")        
-			data.Set("page", strconv.Itoa(page))
-
-			req, _ := http.NewRequest("POST", endpoint, strings.NewReader(data.Encode()))
-			req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-			req.Header.Set("Referer", headerurl)
-			req.Header.Set("User-Agent", getRandomUA())
-			req.Header.Set("X-Requested-With", "XMLHttpRequest")
-
-			resp, err := sharedClient.Do(req)
-			if err == nil {
-				// ⚡ 댓글 서버에서 403 차단이 떨어지면 전역 1분 정지 발동
-				if resp.StatusCode == 403 || resp.StatusCode == 503 {
-					triggerBan() 
-					resp.Body.Close()
-					continue // 다음 retry 루프로 넘어가 1분 대기 후 재시도
-func scrapePostsAndComments(validPosts []int, collectionTimeStr string, targetStart, targetEnd time.Time) error {
-	c := colly.NewCollector(
-		colly.UserAgent(getRandomUA()),
-		colly.Async(true), // 비동기 큐 가동
-	)
-	c.SetRequestTimeout(60 * time.Second)
-	
-	// ⚡ [최적화 1] 사용자님의 직감대로 스레드를 2개로 제한하고, 대기 시간을 현실적으로 늘립니다.
-	c.Limit(&colly.LimitRule{
-		DomainGlob:  "*",
-		Parallelism: 3,               // 💡 정확히 2개의 워커 스레드만 가동
-		Delay:       10 * time.Second, // 본문 수집 간격 기본 4초
-		RandomDelay: 5 * time.Second, // 0~2초 랜덤 추가 (총 4~6초 대기)
-	})
-
-	var visitedPosts sync.Map
-	var failCount int32
-	// 💡 무제한 고루틴을 안 쓰므로 대기조(sync.WaitGroup)가 필요 없어졌습니다.
-
-	c.OnError(func(r *colly.Response, err error) {
-		if r.StatusCode == 404 { return } 
 		retries, _ := strconv.Atoi(r.Ctx.Get("retry_count"))
 
 		if r.StatusCode == 403 || r.StatusCode == 503 {
 			triggerBan() 
+			
 			if retries < 3 { 
 				r.Ctx.Put("retry_count", strconv.Itoa(retries+1))
 				r.Request.Retry() 
@@ -587,9 +371,7 @@ func scrapePostsAndComments(validPosts []int, collectionTimeStr string, targetSt
 			globalEsnoMutex.RUnlock()
 		}
 
-		// ⚡ [최적화 2] go func 고루틴 폭발을 제거하고 '동기 방식'으로 직접 호출합니다.
-		// 이렇게 하면 Colly가 지정한 2개의 스레드가 본문을 읽은 후, 이 함수 안에서 댓글까지 순서대로 수집합니다.
-		// 총 스레드 수가 정확히 2개로 고정되어 서버 방화벽을 완벽히 우회합니다.
+		// 💡 [동기식 변경] 제한 없는 고루틴(go func)을 완전히 지우고, 2개의 워커가 직접 순차 처리하게 만듭니다.
 		commentSrc(no, esno, collectionTimeStr, targetStart, targetEnd)
 	})
 
@@ -598,7 +380,7 @@ func scrapePostsAndComments(validPosts []int, collectionTimeStr string, targetSt
 		c.Visit(url)
 	}
 	
-	c.Wait() // 💡 2개의 워커 스레드가 큐에 쌓인 모든 작업을 마칠 때까지 안전하게 대기합니다.
+	c.Wait() 
 
 	finalFailCount := atomic.LoadInt32(&failCount)
 	if finalFailCount > 15 {
@@ -607,6 +389,7 @@ func scrapePostsAndComments(validPosts []int, collectionTimeStr string, targetSt
 	return nil
 }
 
+// ⚡ [데이터 누락 복구 및 딜레이 최적화] 완벽한 디시 전용 폼 데이터 형식과 안전한 사람 수준의 대기 속도 구현
 func commentSrc(no int, esno string, collectionTimeStr string, targetStart, targetEnd time.Time) {
 	if esno == "" {
 		pageURL := fmt.Sprintf("https://gall.dcinside.com/mgallery/board/view/?id=projectmx&no=%d&t=cv", no)
@@ -642,7 +425,7 @@ func commentSrc(no int, esno string, collectionTimeStr string, targetStart, targ
 		for retry := 0; retry < 3; retry++ {
 			checkBanState() 
 
-			// ⚡ [이전 오류 전면 수정] 줄임 주석(//...)을 제거하고 완전한 폼 데이터를 채워 넣었습니다.
+			// 💡 디시인사이드가 요구하는 모든 인증 필드를 온전하게 구성하여 댓글 누락 차단 우회
 			data := url.Values{}
 			data.Set("id", "projectmx")
 			data.Set("no", sno)
@@ -718,12 +501,10 @@ func commentSrc(no int, esno string, collectionTimeStr string, targetStart, targ
 		}
 		page++
 		
-		// ⚡ [최적화 3] 기존 100ms 대기는 너무 빨랐습니다. 
-		// 댓글 페이지를 넘길 때 0.6초 ~ 1.0초 사이의 랜덤 딜레이를 주어 사람처럼 행동하게 만듭니다.
+		// 💡 댓글 페이지를 조회할 때마다 0.6초~1.0초 사이의 유동적인 봇 탐지 우회 딜레이 적용
 		time.Sleep(time.Duration(600+rand.Intn(400)) * time.Millisecond)
 	}
 }
-
 
 func saveJsonLocal(filename string) error {
 	var jsonData []UserData
@@ -901,102 +682,46 @@ func main() {
 		collectionTimeStr := targetStart.Format("2006-01-02 15:04")
 		jsonFilename := fmt.Sprintf("%s_%02dh.json", targetStart.Format("2006-01-02"), targetStart.Hour())
 		excelFilename := fmt.Sprintf("%s_%02dh.xlsx", targetStart.Format("2006-01-02"), targetStart.Hour())
-		checkpointFilename := fmt.Sprintf("checkpoint_%s_%02dh.json", targetStart.Format("2006-01-02"), targetStart.Hour())
 
-		var validPosts []int
 		dataMap = make(map[string]*PostData)
 
 		fmt.Printf("[%s] ▶️ 작업 시작 (대상 시간대: %s ~ %s)\n", time.Now().In(kstLoc).Format("15:04:05"), targetStart.Format("2006-01-02 15:00"), targetEnd.Format("15:00"))
 
-		// ⚡ [1단계] R2에 체크포인트(중간 저장본)가 있는지 확인
-		err = downloadFromR2(checkpointFilename, checkpointFilename)
-		if err == nil {
-			// 체크포인트가 존재하면 로드 (탐색 스킵)
-			fileData, _ := os.ReadFile(checkpointFilename)
-			var cp CheckpointData
-			json.Unmarshal(fileData, &cp)
-			
-			validPosts = cp.RemainingPosts
-			dataMap = cp.SavedData // 이전에 작업했던 유저 데이터 복구
-			os.Remove(checkpointFilename)
-
-			fmt.Printf("♻️ [복구 성공] 6시간 강제 종료로 멈췄던 체크포인트를 불러왔습니다.\n")
-			fmt.Printf("⏭️ 게시글 탐색을 스킵하고, 남은 %d개의 게시글부터 수집을 재개합니다.\n", len(validPosts))
-		} else {
-			// 체크포인트가 없으면 정상적으로 게시글 탐색 시작
-			var findErr error
-			validPosts, _, _, findErr = findTargetHourPosts(scanStart, targetEnd)
-			if findErr != nil {
-				fmt.Printf("[%s] ❌ [ERROR] 게시글 목록 탐색 중 오류 발생: %v\n", time.Now().In(kstLoc).Format("15:04:05"), findErr)
-				fmt.Println("🚨 데이터 누락을 방지하기 위해 전체 작업을 즉시 중단합니다.")
-				break
-			}
-			fmt.Printf("[%s] 🔍 발견된 게시글 수: %d개\n", time.Now().In(kstLoc).Format("15:04:05"), len(validPosts))
+		validPosts, _, _, err := findTargetHourPosts(scanStart, targetEnd)
+		if err != nil {
+			fmt.Printf("[%s] ❌ [ERROR] 게시글 목록 탐색 중 오류 발생: %v\n", time.Now().In(kstLoc).Format("15:04:05"), err)
+			fmt.Println("🚨 데이터 누락을 방지하기 위해 전체 작업을 즉시 중단합니다. (다음 스케줄에서 이 시간대부터 재시도합니다)")
+			break 
 		}
 
+		fmt.Printf("[%s] 🔍 발견된 게시글 수: %d개\n", time.Now().In(kstLoc).Format("15:04:05"), len(validPosts))
+
 		if len(validPosts) > 0 {
-			// ⚡ [2단계] 한 번에 다 하지 않고 500개씩 쪼개서(Chunk) 작업
-			chunkSize := 500
-			totalToProcess := len(validPosts)
-
-			for len(validPosts) > 0 {
-				end := chunkSize
-				if end > len(validPosts) {
-					end = len(validPosts)
-				}
-				
-				chunk := validPosts[:end]
-				
-				// 500개만 수집
-				err := scrapePostsAndComments(chunk, collectionTimeStr, targetStart, targetEnd)
-				if err != nil {
-					fmt.Printf("[%s] ❌ [ERROR] 수집 중 오류 발생: %v\n", time.Now().In(kstLoc).Format("15:04:05"), err)
-					fmt.Println("🚨 작업을 중단합니다. 다음 스케줄에서 남은 분량을 재시도합니다.")
-					break
-				}
-
-				// 성공적으로 수집한 500개를 목록에서 제거
-				validPosts = validPosts[end:]
-
-				// ⚡ [3단계] 중간 세이브 데이터 R2에 업로드
-				cp := CheckpointData{
-					RemainingPosts: validPosts,
-					SavedData:      dataMap,
-				}
-				saveCheckpointLocal(checkpointFilename, &cp)
-				uploadToR2(checkpointFilename, checkpointFilename)
-				os.Remove(checkpointFilename)
-
-				processedSoFar := totalToProcess - len(validPosts)
-				fmt.Printf("💾 [Save Point] 500개 단위 중간 저장 완료. (진행률: %d / %d)\n", processedSoFar, totalToProcess)
+			err := scrapePostsAndComments(validPosts, collectionTimeStr, targetStart, targetEnd)
+			if err != nil {
+				fmt.Printf("[%s] ❌ [ERROR] 수집 중 과도한 오류 발생 (데이터 누수 의심): %v\n", time.Now().In(kstLoc).Format("15:04:05"), err)
+				fmt.Println("🚨 데이터 누락을 방지하기 위해 전체 작업을 즉시 중단합니다.")
+				break 
 			}
 
-			// 위 루프를 무사히 빠져나왔다면 (남은 게시글이 0개라면) 최종 파일 생성
-			if len(validPosts) == 0 {
-				if err := saveJsonLocal(jsonFilename); err == nil {
-					r2JsonKey := strings.Replace(jsonFilename, "_", "/", 1)
-					uploadToR2(jsonFilename, r2JsonKey)
-
-					timeStr := targetStart.Format("2006-01-02 15:00")
-					os.WriteFile("last_time.txt", []byte(timeStr), 0644)
-					uploadToR2("last_time.txt", "last_time.txt")
-					os.Remove("last_time.txt")
-					os.Remove(jsonFilename)
-				}
-
-				if err := saveExcelLocal(excelFilename); err == nil {
-					r2ExcelKey := strings.Replace(excelFilename, "_", "/", 1)
-					uploadToR2(excelFilename, r2ExcelKey)
-					os.Remove(excelFilename)
-				}
-
-				// ⚡ [4단계] 완벽하게 끝났으니 R2에 남아있는 중간 세이브 파일(체크포인트) 삭제
-				deleteFromR2(checkpointFilename)
-				fmt.Printf("[%s] ✅ 작업 완료 및 업로드 성공\n", time.Now().In(kstLoc).Format("15:04:05"))
-			} else {
-				// 에러로 루프를 빠져나온 경우 다음 스케줄러로 넘기기 위해 종료
-				break
+			if err := saveJsonLocal(jsonFilename); err == nil {
+				r2JsonKey := strings.Replace(jsonFilename, "_", "/", 1)
+				uploadToR2(jsonFilename, r2JsonKey)
+				
+				timeStr := targetStart.Format("2006-01-02 15:00")
+				os.WriteFile("last_time.txt", []byte(timeStr), 0644)
+				uploadToR2("last_time.txt", "last_time.txt")
+				os.Remove("last_time.txt")
+				os.Remove(jsonFilename)
 			}
+
+			if err := saveExcelLocal(excelFilename); err == nil {
+				r2ExcelKey := strings.Replace(excelFilename, "_", "/", 1)
+				uploadToR2(excelFilename, r2ExcelKey)
+				os.Remove(excelFilename)
+			}
+
+			fmt.Printf("[%s] ✅ 작업 완료 및 업로드 성공\n", time.Now().In(kstLoc).Format("15:04:05"))
 		} else {
 			fmt.Printf("[%s] ⏭️ 수집할 게시글이 없어 건너뜁니다.\n", time.Now().In(kstLoc).Format("15:04:05"))
 			
