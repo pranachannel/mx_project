@@ -313,7 +313,7 @@ func scrapePostsAndComments(validPosts []int, collectionTimeStr string, targetSt
 		DomainGlob:  "*",
 		Parallelism: 3,               
 		Delay:       10 * time.Second, 
-		RandomDelay: 2 * time.Second, 
+		RandomDelay: 5 * time.Second, 
 	})
 
 	var visitedPosts sync.Map
