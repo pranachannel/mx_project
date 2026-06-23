@@ -58,6 +58,12 @@ type ResponseData struct {
 	Comments []Comment `json:"comments"`
 }
 
+// 💡 6시간 강제 종료 방어용 체크포인트 구조체 추가
+type CheckpointData struct {
+	RemainingPosts []int                `json:"remaining_posts"`
+	SavedData      map[string]*PostData `json:"saved_data"`
+}
+
 var (
 	kstLoc       *time.Location
 	dataMap      = make(map[string]*PostData)
@@ -85,22 +91,20 @@ var userAgents = []string{
 
 var (
 	banMutex sync.Mutex
-	banUntil time.Time // 밴이 풀리는 시간 기록
+	banUntil time.Time
 )
 
-// 밴 상태 체크: 밴 기간이면 풀릴 때까지 모든 워커 스레드가 여기서 대기합니다.
 func checkBanState() {
 	banMutex.Lock()
 	if time.Now().Before(banUntil) {
 		sleepDur := time.Until(banUntil)
 		banMutex.Unlock()
-		time.Sleep(sleepDur) // 밴이 풀릴 때까지 스레드 정지
+		time.Sleep(sleepDur)
 		return
 	}
 	banMutex.Unlock()
 }
 
-// 밴 발동: 403 감지 시 기준 시간을 현재부터 2분 뒤로 설정합니다.
 func triggerBan() {
 	banMutex.Lock()
 	defer banMutex.Unlock()
@@ -269,7 +273,6 @@ func findTargetHourPosts(targetStart, targetEnd time.Time) ([]int, string, strin
 	return validPostNumbers, startDate, endDate, nil
 }
 
-// ⚡ [구조 개조 적용] 정확히 2개의 워커 스레드로 제한하고 고루틴 폭발을 제거한 안전한 본문 수집기
 func scrapePostsAndComments(validPosts []int, collectionTimeStr string, targetStart, targetEnd time.Time) error {
 	c := colly.NewCollector(
 		colly.UserAgent(getRandomUA()),
@@ -279,9 +282,9 @@ func scrapePostsAndComments(validPosts []int, collectionTimeStr string, targetSt
 	
 	c.Limit(&colly.LimitRule{
 		DomainGlob:  "*",
-		Parallelism: 2,               // 💡 동시성 상한선을 정확히 2개 스레드로 봉인
-		Delay:       4 * time.Second, // 기본 대기 4초
-		RandomDelay: 2 * time.Second, // 0~2초 랜덤 추가
+		Parallelism: 2,               
+		Delay:       4 * time.Second, 
+		RandomDelay: 2 * time.Second, 
 	})
 
 	var visitedPosts sync.Map
@@ -371,7 +374,6 @@ func scrapePostsAndComments(validPosts []int, collectionTimeStr string, targetSt
 			globalEsnoMutex.RUnlock()
 		}
 
-		// 💡 [동기식 변경] 제한 없는 고루틴(go func)을 완전히 지우고, 2개의 워커가 직접 순차 처리하게 만듭니다.
 		commentSrc(no, esno, collectionTimeStr, targetStart, targetEnd)
 	})
 
@@ -389,7 +391,6 @@ func scrapePostsAndComments(validPosts []int, collectionTimeStr string, targetSt
 	return nil
 }
 
-// ⚡ [데이터 누락 복구 및 딜레이 최적화] 완벽한 디시 전용 폼 데이터 형식과 안전한 사람 수준의 대기 속도 구현
 func commentSrc(no int, esno string, collectionTimeStr string, targetStart, targetEnd time.Time) {
 	if esno == "" {
 		pageURL := fmt.Sprintf("https://gall.dcinside.com/mgallery/board/view/?id=projectmx&no=%d&t=cv", no)
@@ -425,7 +426,6 @@ func commentSrc(no int, esno string, collectionTimeStr string, targetStart, targ
 		for retry := 0; retry < 3; retry++ {
 			checkBanState() 
 
-			// 💡 디시인사이드가 요구하는 모든 인증 필드를 온전하게 구성하여 댓글 누락 차단 우회
 			data := url.Values{}
 			data.Set("id", "projectmx")
 			data.Set("no", sno)
@@ -501,9 +501,20 @@ func commentSrc(no int, esno string, collectionTimeStr string, targetStart, targ
 		}
 		page++
 		
-		// 💡 댓글 페이지를 조회할 때마다 0.6초~1.0초 사이의 유동적인 봇 탐지 우회 딜레이 적용
 		time.Sleep(time.Duration(600+rand.Intn(400)) * time.Millisecond)
 	}
+}
+
+// 💡 체크포인트 저장을 위한 로컬 파일 생성 함수
+func saveCheckpointLocal(filename string, cp *CheckpointData) error {
+	file, err := os.Create(filename)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+	encoder := json.NewEncoder(file)
+	encoder.SetIndent("", "  ")
+	return encoder.Encode(cp)
 }
 
 func saveJsonLocal(filename string) error {
@@ -635,6 +646,19 @@ func downloadFromR2(objectKey string, localFilename string) error {
 	return err
 }
 
+// 💡 R2에서 역할을 다 한 체크포인트 파일을 깔끔하게 청소하는 함수
+func deleteFromR2(objectKey string) error {
+	client, bucketName, err := getR2Client()
+	if err != nil {
+		return err
+	}
+	_, err = client.DeleteObject(context.TODO(), &s3.DeleteObjectInput{
+		Bucket: aws.String(bucketName),
+		Key:    aws.String(objectKey),
+	})
+	return err
+}
+
 func getLastSavedTimeFromR2() (time.Time, error) {
 	err := downloadFromR2("last_time.txt", "last_time.txt")
 	if err != nil {
@@ -682,46 +706,96 @@ func main() {
 		collectionTimeStr := targetStart.Format("2006-01-02 15:04")
 		jsonFilename := fmt.Sprintf("%s_%02dh.json", targetStart.Format("2006-01-02"), targetStart.Hour())
 		excelFilename := fmt.Sprintf("%s_%02dh.xlsx", targetStart.Format("2006-01-02"), targetStart.Hour())
+		checkpointFilename := fmt.Sprintf("checkpoint_%s_%02dh.json", targetStart.Format("2006-01-02"), targetStart.Hour())
 
+		var validPosts []int
 		dataMap = make(map[string]*PostData)
 
 		fmt.Printf("[%s] ▶️ 작업 시작 (대상 시간대: %s ~ %s)\n", time.Now().In(kstLoc).Format("15:04:05"), targetStart.Format("2006-01-02 15:00"), targetEnd.Format("15:00"))
 
-		validPosts, _, _, err := findTargetHourPosts(scanStart, targetEnd)
-		if err != nil {
-			fmt.Printf("[%s] ❌ [ERROR] 게시글 목록 탐색 중 오류 발생: %v\n", time.Now().In(kstLoc).Format("15:04:05"), err)
-			fmt.Println("🚨 데이터 누락을 방지하기 위해 전체 작업을 즉시 중단합니다. (다음 스케줄에서 이 시간대부터 재시도합니다)")
-			break 
+		// ⚡ [체크포인트 복구 로직 복원] R2에 중간 저장본이 있는지 먼저 확인합니다.
+		err = downloadFromR2(checkpointFilename, checkpointFilename)
+		if err == nil {
+			fileData, _ := os.ReadFile(checkpointFilename)
+			var cp CheckpointData
+			json.Unmarshal(fileData, &cp)
+			
+			validPosts = cp.RemainingPosts
+			dataMap = cp.SavedData 
+			os.Remove(checkpointFilename)
+
+			fmt.Printf("♻️ [복구 성공] 6시간 강제 종료로 멈췄던 체크포인트를 불러왔습니다.\n")
+			fmt.Printf("⏭️ 게시글 탐색을 스킵하고, 남은 %d개의 게시글부터 수집을 재개합니다.\n", len(validPosts))
+		} else {
+			var findErr error
+			validPosts, _, _, findErr = findTargetHourPosts(scanStart, targetEnd)
+			if findErr != nil {
+				fmt.Printf("[%s] ❌ [ERROR] 게시글 목록 탐색 중 오류 발생: %v\n", time.Now().In(kstLoc).Format("15:04:05"), findErr)
+				fmt.Println("🚨 데이터 누락을 방지하기 위해 전체 작업을 즉시 중단합니다.")
+				break
+			}
+			fmt.Printf("[%s] 🔍 발견된 게시글 수: %d개\n", time.Now().In(kstLoc).Format("15:04:05"), len(validPosts))
 		}
 
-		fmt.Printf("[%s] 🔍 발견된 게시글 수: %d개\n", time.Now().In(kstLoc).Format("15:04:05"), len(validPosts))
-
 		if len(validPosts) > 0 {
-			err := scrapePostsAndComments(validPosts, collectionTimeStr, targetStart, targetEnd)
-			if err != nil {
-				fmt.Printf("[%s] ❌ [ERROR] 수집 중 과도한 오류 발생 (데이터 누수 의심): %v\n", time.Now().In(kstLoc).Format("15:04:05"), err)
-				fmt.Println("🚨 데이터 누락을 방지하기 위해 전체 작업을 즉시 중단합니다.")
-				break 
-			}
+			// ⚡ [500개 분할 청크 로직 복원] 한 번에 돌리지 않고 500개씩 끊어서 저장합니다.
+			chunkSize := 500
+			totalToProcess := len(validPosts)
 
-			if err := saveJsonLocal(jsonFilename); err == nil {
-				r2JsonKey := strings.Replace(jsonFilename, "_", "/", 1)
-				uploadToR2(jsonFilename, r2JsonKey)
+			for len(validPosts) > 0 {
+				end := chunkSize
+				if end > len(validPosts) {
+					end = len(validPosts)
+				}
 				
-				timeStr := targetStart.Format("2006-01-02 15:00")
-				os.WriteFile("last_time.txt", []byte(timeStr), 0644)
-				uploadToR2("last_time.txt", "last_time.txt")
-				os.Remove("last_time.txt")
-				os.Remove(jsonFilename)
+				chunk := validPosts[:end]
+				
+				err := scrapePostsAndComments(chunk, collectionTimeStr, targetStart, targetEnd)
+				if err != nil {
+					fmt.Printf("[%s] ❌ [ERROR] 수집 중 오류 발생: %v\n", time.Now().In(kstLoc).Format("15:04:05"), err)
+					fmt.Println("🚨 작업을 중단합니다. 다음 스케줄에서 남은 분량을 재시도합니다.")
+					break
+				}
+
+				validPosts = validPosts[end:]
+
+				// ⚡ 500개마다 중간 세이브 데이터 R2에 업로드
+				cp := CheckpointData{
+					RemainingPosts: validPosts,
+					SavedData:      dataMap,
+				}
+				saveCheckpointLocal(checkpointFilename, &cp)
+				uploadToR2(checkpointFilename, checkpointFilename)
+				os.Remove(checkpointFilename)
+
+				processedSoFar := totalToProcess - len(validPosts)
+				fmt.Printf("💾 [Save Point] 500개 단위 중간 저장 완료. (진행률: %d / %d)\n", processedSoFar, totalToProcess)
 			}
 
-			if err := saveExcelLocal(excelFilename); err == nil {
-				r2ExcelKey := strings.Replace(excelFilename, "_", "/", 1)
-				uploadToR2(excelFilename, r2ExcelKey)
-				os.Remove(excelFilename)
-			}
+			if len(validPosts) == 0 {
+				if err := saveJsonLocal(jsonFilename); err == nil {
+					r2JsonKey := strings.Replace(jsonFilename, "_", "/", 1)
+					uploadToR2(jsonFilename, r2JsonKey)
 
-			fmt.Printf("[%s] ✅ 작업 완료 및 업로드 성공\n", time.Now().In(kstLoc).Format("15:04:05"))
+					timeStr := targetStart.Format("2006-01-02 15:00")
+					os.WriteFile("last_time.txt", []byte(timeStr), 0644)
+					uploadToR2("last_time.txt", "last_time.txt")
+					os.Remove("last_time.txt")
+					os.Remove(jsonFilename)
+				}
+
+				if err := saveExcelLocal(excelFilename); err == nil {
+					r2ExcelKey := strings.Replace(excelFilename, "_", "/", 1)
+					uploadToR2(excelFilename, r2ExcelKey)
+					os.Remove(excelFilename)
+				}
+
+				// ⚡ 완벽하게 끝났으니 R2에 남아있는 체크포인트 최종 삭제
+				deleteFromR2(checkpointFilename)
+				fmt.Printf("[%s] ✅ 작업 완료 및 업로드 성공\n", time.Now().In(kstLoc).Format("15:04:05"))
+			} else {
+				break
+			}
 		} else {
 			fmt.Printf("[%s] ⏭️ 수집할 게시글이 없어 건너뜁니다.\n", time.Now().In(kstLoc).Format("15:04:05"))
 			
