@@ -78,6 +78,7 @@ var (
 	globalEsno      string
 	globalEsnoMutex sync.RWMutex
 	esnoRegex       = regexp.MustCompile(`<input[^>]+id="e_s_n_o"[^>]+value="([^"]+)"`)
+	commentCountRegex = regexp.MustCompile(`댓글\s*(\d+)`)
 )
 
 var userAgents = []string{
@@ -257,27 +258,31 @@ func findTargetHourPosts(targetStart, targetEnd time.Time) ([]int, string, strin
 }
 
 func scrapePostsAndComments(validPosts []int, collectionTimeStr string, targetStart, targetEnd time.Time) error {
-	c := colly.NewCollector(colly.UserAgent(getRandomUA()), colly.Async(true))
+	c := colly.NewCollector(
+		colly.UserAgent(getRandomUA()),
+		colly.Async(true),
+	)
 	c.SetRequestTimeout(60 * time.Second)
 	
 	c.Limit(&colly.LimitRule{
 		DomainGlob:  "*",
-		Parallelism: 2,               
-		Delay:       4 * time.Second, 
-		RandomDelay: 2 * time.Second, 
+		Parallelism: 5,               
+		Delay:       5 * time.Second, 
+		RandomDelay: 1 * time.Second, 
 	})
 
 	var visitedPosts sync.Map
 	var failCount int32
+	var wg sync.WaitGroup
 
 	c.OnError(func(r *colly.Response, err error) {
 		if r.StatusCode == 404 { return } 
 
 		retries, _ := strconv.Atoi(r.Ctx.Get("retry_count"))
-		sysLog("ERROR", "본문 수집 에러 발생! URL: %s, 상태: %d (시도 횟수: %d)", r.Request.URL.String(), r.StatusCode, retries)
 
 		if r.StatusCode == 403 || r.StatusCode == 503 {
-			triggerBan("본문 수집기") 
+			triggerBan() 
+			
 			if retries < 3 { 
 				r.Ctx.Put("retry_count", strconv.Itoa(retries+1))
 				r.Request.Retry() 
@@ -309,6 +314,7 @@ func scrapePostsAndComments(validPosts []int, collectionTimeStr string, targetSt
 		if len(matches) > 1 {
 			parsedEsno := string(matches[1])
 			r.Ctx.Put("esno", parsedEsno)
+			
 			globalEsnoMutex.Lock()
 			globalEsno = parsedEsno
 			globalEsnoMutex.Unlock()
@@ -339,10 +345,21 @@ func scrapePostsAndComments(validPosts []int, collectionTimeStr string, targetSt
 
 		postDateStr := e.ChildAttr(".gall_date", "title")
 		if postDateStr == "" { postDateStr = e.ChildText(".gall_date") }
+
 		pTime, err := time.ParseInLocation("2006-01-02 15:04:05", postDateStr, kstLoc)
 
 		if err == nil && (pTime.Equal(targetStart) || pTime.After(targetStart)) && pTime.Before(targetEnd) {
 			updateMemory(collectionTimeStr, nick, uid, true, isip)
+		}
+
+		// ⚡ [핵심 수정] 댓글 개수 체크 로직 추가
+		commentText := e.ChildText("span.gall_comment")
+		commentMatches := commentCountRegex.FindStringSubmatch(commentText)
+		
+		// "댓글 0"이 매칭된다면 댓글 수집(commentSrc) 과정을 생략하고 즉시 빠져나갑니다.
+		if len(commentMatches) > 1 && commentMatches[1] == "0" {
+			// 게시글 데이터(글쓴이)는 위에서 이미 updateMemory로 저장했으므로 안심하고 return 해도 됩니다.
+			return 
 		}
 
 		esno := e.Request.Ctx.Get("esno")
@@ -352,13 +369,11 @@ func scrapePostsAndComments(validPosts []int, collectionTimeStr string, targetSt
 			globalEsnoMutex.RUnlock()
 		}
 
-		// ⚡ [성능 최적화 복구] HTML 상에서 댓글 개수가 0개면 API 통신 없이 즉시 패스합니다.
-		commentCountStr := strings.TrimSpace(e.ChildText(".gall_comment .font_red"))
-		if commentCountStr == "" || commentCountStr == "0" || commentCountStr == "[0]" {
-			return 
-		}
-
-		commentSrc(no, esno, collectionTimeStr, targetStart, targetEnd)
+		wg.Add(1)
+		go func(postNo int, postEsno string) {
+			defer wg.Done()
+			commentSrc(postNo, postEsno, collectionTimeStr, targetStart, targetEnd)
+		}(no, esno)
 	})
 
 	for _, no := range validPosts {
@@ -367,11 +382,11 @@ func scrapePostsAndComments(validPosts []int, collectionTimeStr string, targetSt
 	}
 	
 	c.Wait() 
+	wg.Wait() 
 
 	finalFailCount := atomic.LoadInt32(&failCount)
 	if finalFailCount > 15 {
-		sysLog("CRITICAL", "본문 수집 중 허용 한도 이상의 실패가 발생하여 해당 청크의 크롤링을 포기합니다. (누적 실패 수: %d)", finalFailCount)
-		return fmt.Errorf("수집 실패 과다 (데이터 누수)")
+		return fmt.Errorf("수집 실패 과다 (데이터 누수 가능성 있음)")
 	}
 	return nil
 }
