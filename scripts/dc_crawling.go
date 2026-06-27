@@ -266,9 +266,9 @@ func scrapePostsAndComments(validPosts []int, collectionTimeStr string, targetSt
 	
 	c.Limit(&colly.LimitRule{
 		DomainGlob:  "*",
-		Parallelism: 5,               
-		Delay:       5 * time.Second, 
-		RandomDelay: 1 * time.Second, 
+		Parallelism: 2,               
+		Delay:       10 * time.Second, 
+		RandomDelay: 5 * time.Second, 
 	})
 
 	var visitedPosts sync.Map
@@ -281,7 +281,7 @@ func scrapePostsAndComments(validPosts []int, collectionTimeStr string, targetSt
 		retries, _ := strconv.Atoi(r.Ctx.Get("retry_count"))
 
 		if r.StatusCode == 403 || r.StatusCode == 503 {
-			triggerBan() 
+			triggerBan("재시도") 
 			
 			if retries < 3 { 
 				r.Ctx.Put("retry_count", strconv.Itoa(retries+1))
@@ -457,7 +457,7 @@ func commentSrc(no int, esno string, collectionTimeStr string, targetStart, targ
 				resp.Body.Close()
 				if reqErr == nil && len(body) > 0 { break }
 			}
-			time.Sleep(500 * time.Millisecond)
+			time.Sleep(time.Duration(1000+rand.Intn(5000)) * time.Millisecond) 
 		}
 
 		if len(body) == 0 { 
@@ -508,7 +508,7 @@ func commentSrc(no int, esno string, collectionTimeStr string, targetStart, targ
 			updateMemory(collectionTimeStr, comment.Name, uniqueKey, false, isip)
 		}
 		page++
-		time.Sleep(time.Duration(600+rand.Intn(400)) * time.Millisecond)
+		time.Sleep(time.Duration(1000+rand.Intn(5000)) * time.Millisecond) 
 	}
 }
 
