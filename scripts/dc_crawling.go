@@ -230,14 +230,14 @@ func sysLog(level, format string, args ...interface{}) {
 
 	msg := fmt.Sprintf("[%s] [%s] %s\n", time.Now().In(kstLoc).Format("15:04:05"), level, fmt.Sprintf(format, args...))
 
-	f, err := os.OpenFile("crawler_debug_log.txt", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	f, err := os.OpenFile("crawler_debug_log1.txt", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err == nil {
 		f.WriteString(msg)
 		f.Close()
 	}
 
 	if level == "ERROR" || level == "CRITICAL" || level == "SYSTEM" {
-		uploadToR2("crawler_debug_log.txt", "crawler_debug_log.txt")
+		uploadToR2("crawler_debug_log1.txt", "crawler_debug_log1.txt")
 	}
 }
 
