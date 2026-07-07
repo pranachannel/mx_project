@@ -907,12 +907,12 @@ func deleteFromR2(objectKey string) error {
 }
 
 func getLastSavedTimeFromR2() (time.Time, error) {
-	err := downloadFromR2("last_time.txt", "last_time.txt")
+	err := downloadFromR2("last_time1.txt", "last_time1.txt")
 	if err != nil {
 		return time.Time{}, fmt.Errorf("R2 기록 없음")
 	}
-	defer os.Remove("last_time.txt")
-	data, err := os.ReadFile("last_time.txt")
+	defer os.Remove("last_time1.txt")
+	data, err := os.ReadFile("last_time1.txt")
 	if err != nil {
 		return time.Time{}, err
 	}
@@ -1074,9 +1074,9 @@ func main() {
 				if err := saveJsonLocal(jsonFilename); err == nil {
 					uploadToR2(jsonFilename, strings.Replace(jsonFilename, "_", "/", 1))
 					timeStr := targetStart.Format("2006-01-02 15:00")
-					os.WriteFile("last_time.txt", []byte(timeStr), 0644)
-					uploadToR2("last_time.txt", "last_time.txt")
-					os.Remove("last_time.txt")
+					os.WriteFile("last_time1.txt", []byte(timeStr), 0644)
+					uploadToR2("last_time1.txt", "last_time1.txt")
+					os.Remove("last_time1.txt")
 					os.Remove(jsonFilename)
 				}
 				if err := saveExcelLocal(excelFilename); err == nil {
@@ -1092,9 +1092,9 @@ func main() {
 		} else {
 			sysLog("SYSTEM", "⏭️ 수집할 게시글이 0개입니다. 스킵 처리합니다.")
 			timeStr := targetStart.Format("2006-01-02 15:00")
-			os.WriteFile("last_time.txt", []byte(timeStr), 0644)
-			uploadToR2("last_time.txt", "last_time.txt")
-			os.Remove("last_time.txt")
+			os.WriteFile("last_time1.txt", []byte(timeStr), 0644)
+			uploadToR2("last_time1.txt", "last_time1.txt")
+			os.Remove("last_time1.txt")
 		}
 		Sleep(SleepHourlyBatchDelay)
 		forceGC()
