@@ -1,8 +1,8 @@
 name: ProjectMX Crawler
 
 on:
-  schedule:
-    - cron: '34 * * * *' 
+  #schedule:
+    #- cron: '34 * * * *' 
   workflow_dispatch:
   
 concurrency:
