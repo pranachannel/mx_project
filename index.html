@@ -28,10 +28,20 @@
         input[type="text"].date-picker-box:hover { border-color: #888; }
         input[type="text"] { padding: 10px; border: 1px solid #ddd; border-radius: 5px; outline: none; }
 
-        .tab-container { display: flex; gap: 5px; margin-bottom: 1.5rem; border-bottom: 1px solid #ddd; padding-bottom: 10px; }
+        .tab-container { display: flex; gap: 5px; align-items: center; margin-bottom: 1.5rem; border-bottom: 1px solid #ddd; padding-bottom: 10px; }
         .tab { padding: 10px 20px; cursor: pointer; border-radius: 5px; font-weight: 500; color: #555; transition: all 0.2s; }
         .tab:hover { background: #eee; }
         .tab.active { background: var(--primary-color); color: white; font-weight: bold; }
+        .btn-refresh {
+            margin-left: auto; background: white; color: #555; border: 1px solid #ccc;
+            padding: 9px 14px; border-radius: 5px; cursor: pointer; font-size: 13px;
+            font-weight: bold; transition: all 0.2s; white-space: nowrap;
+        }
+        .btn-refresh:hover:not(:disabled) { background: #f5f5f5; border-color: #888; color: #222; }
+        .btn-refresh:disabled { cursor: wait; opacity: 0.6; }
+        .btn-refresh .refresh-icon { display: inline-block; margin-right: 5px; }
+        .btn-refresh.loading .refresh-icon { animation: refresh-spin 0.8s linear infinite; }
+        @keyframes refresh-spin { to { transform: rotate(360deg); } }
 
         .content-section { display: none; }
         .content-section.active { display: block; }
@@ -69,9 +79,50 @@
         .page-btn.active { background: var(--primary-color); color: white; border-color: var(--primary-color); font-weight: bold; }
         .page-btn:disabled { background: #f9f9f9; color: #ccc; cursor: not-allowed; border-color: #eee; }
 
-        .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); }
-        .modal-content { background: white; margin: 5% auto; padding: 25px; border-radius: 10px; width: 90%; max-width: 700px; }
+        .modal {
+            display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5); overflow-y: auto; padding: 24px 0; box-sizing: border-box;
+        }
+        .modal-content {
+            background: white; margin: 0 auto; padding: 25px; border-radius: 10px; width: 90%; max-width: 900px;
+            max-height: calc(100vh - 48px); overflow-y: auto; box-sizing: border-box;
+        }
         #chart-container { width: 100%; height: 350px; }
+
+        .activity-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 20px; }
+        .activity-panel { border: 1px solid #e5e7eb; border-radius: 9px; background: #fafafa; overflow: hidden; min-width: 0; }
+        .activity-panel-header {
+            display: flex; align-items: center; justify-content: space-between; gap: 10px;
+            padding: 12px 14px; border-bottom: 1px solid #e5e7eb; background: white;
+        }
+        .activity-panel-header h4 { margin: 0; font-size: 15px; }
+        .activity-limit { font-size: 11px; color: #888; white-space: nowrap; }
+        .activity-list { max-height: 360px; overflow-y: auto; padding: 8px; box-sizing: border-box; }
+        .activity-item { background: white; border: 1px solid #e9ecef; border-radius: 8px; padding: 11px 12px; margin-bottom: 8px; }
+        .activity-item:last-child { margin-bottom: 0; }
+        .activity-item-title { font-size: 14px; font-weight: 700; color: #30323a; margin-bottom: 5px; line-height: 1.4; overflow-wrap: anywhere; }
+        .activity-item-meta { font-size: 11px; color: #888; margin-bottom: 7px; display: flex; gap: 8px; flex-wrap: wrap; }
+        .activity-item-content {
+            font-size: 13px; color: #444; line-height: 1.55; white-space: pre-wrap; overflow-wrap: anywhere;
+            background: #f8f9fa; border-radius: 6px; padding: 9px;
+        }
+        .activity-item-content.empty { color: #999; font-style: italic; }
+        .activity-item-link { display: inline-block; margin-top: 7px; font-size: 12px; color: #0069d9; text-decoration: none; }
+        .activity-item-link:hover { text-decoration: underline; }
+        .activity-state { padding: 28px 12px; text-align: center; color: #888; font-size: 13px; line-height: 1.5; }
+        .activity-state.error { color: #c0392b; }
+
+        @media (max-width: 720px) {
+            .main { padding: 1rem; }
+            .metrics-grid { grid-template-columns: 1fr; gap: 10px; }
+            .tab { padding: 9px 10px; font-size: 13px; }
+            .btn-refresh { padding: 8px 10px; }
+            .modal { padding: 10px 0; }
+            .modal-content { width: 96%; padding: 16px; max-height: calc(100vh - 20px); }
+            #chart-container { height: 300px; }
+            .activity-grid { grid-template-columns: 1fr; }
+            .activity-list { max-height: 320px; }
+        }
 
         .btn-search { background: var(--primary-color); color: white; border: 1px solid var(--primary-color); padding: 10px 40px; border-radius: 5px; cursor: pointer; font-weight: bold; font-size: 14px; }
         .btn-search:hover { background: #000; }
@@ -107,6 +158,9 @@
         <div class="tab active" onclick="switchTab('trends', this)">상세 그래프</div>
         <div class="tab" onclick="switchTab('ranking', this)">유저 랭킹</div>
         <div class="tab" onclick="switchTab('search', this)">유저 검색</div>
+        <button id="refresh-btn" class="btn-refresh" type="button" onclick="refreshCurrentData()" title="현재 선택 날짜의 최신 데이터를 다시 불러옵니다">
+            <span class="refresh-icon">↻</span>새로고침
+        </button>
     </div>
 
     <div id="status-text" class="status-msg">데이터 로딩 중...</div>
@@ -214,11 +268,36 @@
         <span style="cursor:pointer; float:right; font-size:24px;" onclick="closeModal()">&times;</span>
         <h3 id="modal-title" style="margin-top:0; margin-bottom: 20px;">유저 활동 분석</h3>
         <div id="chart-container"></div>
+
+        <div class="activity-grid">
+            <section class="activity-panel">
+                <div class="activity-panel-header">
+                    <h4>최근 게시글</h4>
+                    <span class="activity-limit">최대 5개</span>
+                </div>
+                <div id="recent-posts" class="activity-list">
+                    <div class="activity-state">불러오는 중...</div>
+                </div>
+            </section>
+
+            <section class="activity-panel">
+                <div class="activity-panel-header">
+                    <h4>최근 댓글</h4>
+                    <span class="activity-limit">최대 10개</span>
+                </div>
+                <div id="recent-comments" class="activity-list">
+                    <div class="activity-state">불러오는 중...</div>
+                </div>
+            </section>
+        </div>
     </div>
 </div>
 
 <script>
     const R2_DOMAIN = "https://pub-fca2435a027e41bf954b4bc4f46e560a.r2.dev"; 
+    const GALLERY_ID = "projectmx";
+    const HY_PARQUET_URL = "https://cdn.jsdelivr.net/npm/hyparquet@1.28.1/+esm";
+    const HY_PARQUET_COMPRESSORS_URL = "https://cdn.jsdelivr.net/npm/hyparquet-compressors@1.1.1/+esm";
 
     const PROJECT_START_DATE = "2026-06-07"; 
 
@@ -228,6 +307,12 @@
     
     let dailyTrendData = null;
     let hourlyRawData = [];
+
+    // 상세 본문 Parquet는 상세창을 열었을 때만 읽습니다.
+    // 같은 파일을 다시 요청하지 않도록 브라우저 메모리에 Promise 자체를 캐시합니다.
+    const parquetCache = new Map();
+    let parquetModulePromise = null;
+    let modalLoadSequence = 0;
 
     let currentRankingMode = 'total'; 
 
@@ -279,13 +364,21 @@
         if (tabId === 'trends' && dailyTrendData) renderTrendChart();
     }
 
-    async function fetchDailyData(dateStr) {
+    async function fetchDailyData(dateStr, forceRefresh = false) {
         const statusText = document.getElementById('status-text');
-        statusText.innerText = `${dateStr}의 데이터를 합산 중입니다`;
-        
+
+        // 새로고침 시 이전 상세 Parquet 캐시(404 포함)를 비워 새로 생성된 파일도 다시 확인합니다.
+        if (forceRefresh) parquetCache.clear();
+        statusText.innerText = forceRefresh
+            ? `${dateStr}의 최신 데이터를 다시 불러오는 중입니다`
+            : `${dateStr}의 데이터를 합산 중입니다`;
+        statusText.style.color = "#555";
+
+        // 강제 새로고침 시 URL을 매번 다르게 만들어 브라우저/중간 캐시의 오래된 응답을 피합니다.
+        const cacheBuster = forceRefresh ? `?refresh=${Date.now()}` : '';
         const promises = Array.from({length: 24}, (_, i) => {
             const hh = String(i).padStart(2, '0');
-            const url = `${R2_DOMAIN}/${dateStr}/${hh}h.json`;
+            const url = `${R2_DOMAIN}/${dateStr}/${hh}h.json${cacheBuster}`;
             return fetch(url, { cache: "no-store" }).then(r => r.ok ? r.json() : null).catch(() => null);
         });
 
@@ -318,13 +411,23 @@
                     hourPosts += u.post;
                     hourComments += u.comment;
                     
-                    if (userMap.has(u.id)) {
-                        const existing = userMap.get(u.id);
+                    const aggregateKey = u.user_key || u.id;
+                    if (userMap.has(aggregateKey)) {
+                        const existing = userMap.get(aggregateKey);
                         existing.post += u.post;
                         existing.comment += u.comment;
                         existing.total += u.total;
+
+                        // 같은 user_key에서 닉네임/표시 ID가 바뀌었다면 더 최근 시간대의 값을 표시합니다.
+                        if (u.nickname) existing.nickname = u.nickname;
+                        if (u.id) existing.id = u.id;
+                        if (u.display_id) existing.display_id = u.display_id;
+                        if (u.uid) existing.uid = u.uid;
+                        if (u.ip) existing.ip = u.ip;
+                        if (u.type) existing.type = u.type;
+                        if (u.user_key) existing.user_key = u.user_key;
                     } else {
-                        userMap.set(u.id, { ...u });
+                        userMap.set(aggregateKey, { ...u });
                     }
                 });
                 
@@ -361,6 +464,24 @@
 
         statusText.innerText = `실시간 데이터 반영엔 시간이 걸립니다`;
         statusText.style.color = "#555";
+    }
+
+    async function refreshCurrentData() {
+        const refreshBtn = document.getElementById('refresh-btn');
+        const dateInput = document.getElementById('date-picker');
+        const selectedDate = dateInput.value || todayKst;
+
+        if (refreshBtn.disabled) return;
+
+        refreshBtn.disabled = true;
+        refreshBtn.classList.add('loading');
+
+        try {
+            await fetchDailyData(selectedDate, true);
+        } finally {
+            refreshBtn.disabled = false;
+            refreshBtn.classList.remove('loading');
+        }
     }
 
     function renderTrendChart() {
@@ -601,7 +722,7 @@
             const tr = document.createElement('tr');
             if (isBookmarked) tr.style.background = "#fffacd"; 
             
-            tr.onclick = () => openModal(row.nickname, row.id);
+            tr.onclick = () => openModal(row);
             let bType = (row.type === "고닉") ? "bg-gonic" : (row.type === "반고닉" ? "bg-ban" : "bg-udong");
             
             const postWeight = currentRankingMode === 'post' ? 'font-weight:bold;' : '';
@@ -636,7 +757,7 @@
             const tr = document.createElement('tr');
             if (isBookmarked) tr.style.background = "#fffacd"; 
             
-            tr.onclick = () => openModal(row.nickname, row.id);
+            tr.onclick = () => openModal(row);
             let bType = (row.type === "고닉") ? "bg-gonic" : (row.type === "반고닉" ? "bg-ban" : "bg-udong");
             
             const safeNick = escapeHTML(row.nickname);
@@ -659,43 +780,307 @@
     }
 
     let modalChart = null;
-    function openModal(nick, id) {
-        document.getElementById('graph-modal').style.display = "block";
-        document.getElementById('modal-title').innerText = `${nick} (${id}) 상세 그래프`; 
-        
-        let lastValidIndex = -1;
-        for(let i = 23; i >= 0; i--) {
-            if(hourlyRawData[i] !== null) {
-                lastValidIndex = i;
-                break;
+
+    function resolveUserKey(user) {
+        if (!user) return '';
+        if (user.user_key) return String(user.user_key);
+        if (user.uid) return `id:${user.uid}`;
+        if (user.ip) return `ip:${user.ip}`;
+        if (user.type === '유동' && user.id) return String(user.id).startsWith('ip:') ? String(user.id) : `ip:${user.id}`;
+
+        const id = String(user.id || '');
+        if (id.startsWith('id:') || id.startsWith('ip:')) {
+            // 표시 ID가 id:닉네임(uid) 형태인 경우 완전히 복원할 수 없으므로
+            // 새 main.go가 저장하는 user_key가 없는 옛 JSON에서는 상세 Parquet 연결을 보장하지 않습니다.
+            return id.includes('(') ? '' : id;
+        }
+        return '';
+    }
+
+    function isSameUser(record, user, userKey) {
+        if (!record) return false;
+        if (userKey && record.user_key) return String(record.user_key) === userKey;
+        return String(record.id || record.display_id || '') === String(user.id || '');
+    }
+
+    function findUserInHour(hourData, user, userKey) {
+        if (!Array.isArray(hourData)) return null;
+        return hourData.find(record => isSameUser(record, user, userKey)) || null;
+    }
+
+    function getLastValidHour() {
+        for (let i = 23; i >= 0; i--) {
+            if (hourlyRawData[i] !== null && hourlyRawData[i] !== undefined) return i;
+        }
+        return -1;
+    }
+
+    async function getParquetModules() {
+        if (!parquetModulePromise) {
+            parquetModulePromise = Promise.all([
+                import(HY_PARQUET_URL),
+                import(HY_PARQUET_COMPRESSORS_URL)
+            ]).then(([hyparquet, compressorModule]) => ({
+                parquetReadObjects: hyparquet.parquetReadObjects,
+                compressors: compressorModule.compressors
+            }));
+        }
+        return parquetModulePromise;
+    }
+
+    async function loadParquetRows(url, columns) {
+        if (parquetCache.has(url)) return parquetCache.get(url);
+
+        const request = (async () => {
+            const response = await fetch(url, { cache: 'default' });
+            if (response.status === 404) return null;
+            if (!response.ok) throw new Error(`Parquet 요청 실패 (${response.status})`);
+
+            const arrayBuffer = await response.arrayBuffer();
+            if (!arrayBuffer || arrayBuffer.byteLength === 0) return [];
+
+            const { parquetReadObjects, compressors } = await getParquetModules();
+            return parquetReadObjects({
+                file: arrayBuffer,
+                compressors,
+                columns
+            });
+        })();
+
+        parquetCache.set(url, request);
+        try {
+            return await request;
+        } catch (error) {
+            // 일시적인 네트워크/파싱 오류는 다음 클릭에서 다시 시도할 수 있게 캐시에서 제거합니다.
+            parquetCache.delete(url);
+            throw error;
+        }
+    }
+
+    function detailParquetUrl(dateStr, hour, fileName) {
+        const hh = String(hour).padStart(2, '0');
+        return `${R2_DOMAIN}/content/gallery=${encodeURIComponent(GALLERY_ID)}/date=${dateStr}/hour=${hh}/${fileName}`;
+    }
+
+    function normalizeUnixMillis(value, fallbackDate) {
+        try {
+            if (typeof value === 'bigint') return Number(value);
+            const n = Number(value);
+            if (Number.isFinite(n) && n > 0) return n;
+        } catch (_) {}
+
+        const parsed = Date.parse(fallbackDate || '');
+        return Number.isFinite(parsed) ? parsed : 0;
+    }
+
+    function sortNewestFirst(rows) {
+        return rows.sort((a, b) => {
+            const aTime = normalizeUnixMillis(a.created_at_unix_ms, a.created_at);
+            const bTime = normalizeUnixMillis(b.created_at_unix_ms, b.created_at);
+            return bTime - aTime;
+        });
+    }
+
+    function cleanText(value) {
+        return value === null || value === undefined ? '' : String(value).trim();
+    }
+
+    function formatCreatedAt(value) {
+        const text = cleanText(value);
+        if (!text) return '작성 시간 없음';
+        return text.replace('T', ' ').replace(/Z$/, '');
+    }
+
+    function setActivityState(containerId, message, isError = false) {
+        const container = document.getElementById(containerId);
+        container.replaceChildren();
+        const state = document.createElement('div');
+        state.className = `activity-state${isError ? ' error' : ''}`;
+        state.textContent = message;
+        container.appendChild(state);
+    }
+
+    function createActivityLink(url, label) {
+        const safeUrl = cleanText(url);
+        if (!/^https?:\/\//i.test(safeUrl)) return null;
+        const link = document.createElement('a');
+        link.className = 'activity-item-link';
+        link.href = safeUrl;
+        link.target = '_blank';
+        link.rel = 'noopener noreferrer';
+        link.textContent = label;
+        return link;
+    }
+
+    function renderPostItems(posts) {
+        const container = document.getElementById('recent-posts');
+        container.replaceChildren();
+
+        if (!posts.length) {
+            setActivityState('recent-posts', '최근 게시글 내용 데이터가 없습니다.');
+            return;
+        }
+
+        posts.slice(0, 5).forEach(post => {
+            const item = document.createElement('article');
+            item.className = 'activity-item';
+
+            const title = document.createElement('div');
+            title.className = 'activity-item-title';
+            title.textContent = cleanText(post.title) || '제목이 없습니다.';
+            item.appendChild(title);
+
+            const meta = document.createElement('div');
+            meta.className = 'activity-item-meta';
+            const postNo = cleanText(post.post_no);
+            meta.textContent = `${formatCreatedAt(post.created_at)}${postNo ? ` · 글 ${postNo}` : ''}`;
+            item.appendChild(meta);
+
+            const body = document.createElement('div');
+            body.className = 'activity-item-content';
+            const content = cleanText(post.content);
+            if (content) {
+                body.textContent = content;
+            } else {
+                body.textContent = '내용이 없습니다.';
+                body.classList.add('empty');
+            }
+            item.appendChild(body);
+
+            const link = createActivityLink(post.url, '게시글 열기 ↗');
+            if (link) item.appendChild(link);
+            container.appendChild(item);
+        });
+    }
+
+    function renderCommentItems(comments) {
+        const container = document.getElementById('recent-comments');
+        container.replaceChildren();
+
+        if (!comments.length) {
+            setActivityState('recent-comments', '최근 댓글 내용 데이터가 없습니다.');
+            return;
+        }
+
+        comments.slice(0, 10).forEach(comment => {
+            const item = document.createElement('article');
+            item.className = 'activity-item';
+
+            const meta = document.createElement('div');
+            meta.className = 'activity-item-meta';
+            const postNo = cleanText(comment.post_no);
+            const commentNo = cleanText(comment.comment_no);
+            const ids = [postNo ? `글 ${postNo}` : '', commentNo ? `댓글 ${commentNo}` : ''].filter(Boolean).join(' · ');
+            meta.textContent = `${formatCreatedAt(comment.created_at)}${ids ? ` · ${ids}` : ''}`;
+            item.appendChild(meta);
+
+            const body = document.createElement('div');
+            body.className = 'activity-item-content';
+            const content = cleanText(comment.content);
+            if (content) {
+                body.textContent = content;
+            } else {
+                body.textContent = '내용이 없습니다.';
+                body.classList.add('empty');
+            }
+            item.appendChild(body);
+
+            const link = createActivityLink(comment.post_url, '원문 게시글 열기 ↗');
+            if (link) item.appendChild(link);
+            container.appendChild(item);
+        });
+    }
+
+    async function loadRecentUserActivity(user, requestSequence) {
+        const dateStr = document.getElementById('date-picker').value || todayKst;
+        const userKey = resolveUserKey(user);
+        const lastValidHour = getLastValidHour();
+        const posts = [];
+        const comments = [];
+
+        if (!userKey) {
+            setActivityState('recent-posts', '이 데이터에는 user_key가 없어 게시글 내용을 연결할 수 없습니다.');
+            setActivityState('recent-comments', '이 데이터에는 user_key가 없어 댓글 내용을 연결할 수 없습니다.');
+            return;
+        }
+
+        if (lastValidHour < 0) {
+            setActivityState('recent-posts', '최근 게시글 내용 데이터가 없습니다.');
+            setActivityState('recent-comments', '최근 댓글 내용 데이터가 없습니다.');
+            return;
+        }
+
+        // 최신 시간부터 역순으로 확인합니다. 시간별 집계에서 이 사용자의 활동이 있는 시간만
+        // Parquet를 요청하며, 게시글 5개/댓글 10개를 확보하면 해당 종류는 더 이상 읽지 않습니다.
+        for (let hour = lastValidHour; hour >= 0; hour--) {
+            if (requestSequence !== modalLoadSequence) return;
+            if (posts.length >= 5 && comments.length >= 10) break;
+
+            const hourUser = findUserInHour(hourlyRawData[hour], user, userKey);
+            if (!hourUser) continue;
+
+            const needPosts = posts.length < 5 && Number(hourUser.post || 0) > 0;
+            const needComments = comments.length < 10 && Number(hourUser.comment || 0) > 0;
+            if (!needPosts && !needComments) continue;
+
+            const postPromise = needPosts
+                ? loadParquetRows(detailParquetUrl(dateStr, hour, 'posts.parquet'), [
+                    'user_key', 'post_no', 'url', 'title', 'content', 'created_at', 'created_at_unix_ms'
+                ])
+                : Promise.resolve(null);
+
+            const commentPromise = needComments
+                ? loadParquetRows(detailParquetUrl(dateStr, hour, 'comments.parquet'), [
+                    'user_key', 'comment_no', 'post_no', 'post_url', 'content', 'created_at', 'created_at_unix_ms'
+                ])
+                : Promise.resolve(null);
+
+            const [postRows, commentRows] = await Promise.all([postPromise, commentPromise]);
+            if (requestSequence !== modalLoadSequence) return;
+
+            if (Array.isArray(postRows)) {
+                posts.push(...postRows.filter(row => String(row.user_key || '') === userKey));
+                sortNewestFirst(posts);
+                if (posts.length > 5) posts.length = 5;
+            }
+
+            if (Array.isArray(commentRows)) {
+                comments.push(...commentRows.filter(row => String(row.user_key || '') === userKey));
+                sortNewestFirst(comments);
+                if (comments.length > 10) comments.length = 10;
             }
         }
-        
+
+        if (requestSequence !== modalLoadSequence) return;
+        renderPostItems(sortNewestFirst(posts).slice(0, 5));
+        renderCommentItems(sortNewestFirst(comments).slice(0, 10));
+    }
+
+    function openModal(user) {
+        const requestSequence = ++modalLoadSequence;
+        const nick = user.nickname || '';
+        const id = user.id || user.display_id || '';
+        const userKey = resolveUserKey(user);
+
+        document.getElementById('graph-modal').style.display = 'block';
+        document.getElementById('modal-title').innerText = `${nick} (${id}) 상세 그래프`;
+        setActivityState('recent-posts', '최근 게시글을 불러오는 중...');
+        setActivityState('recent-comments', '최근 댓글을 불러오는 중...');
+
+        const lastValidIndex = getLastValidHour();
         const validLen = lastValidIndex >= 0 ? lastValidIndex + 1 : 0;
         const hours = Array.from({length: validLen}, (_, i) => `${i}시`);
         const userPosts = [];
         const userComments = [];
 
-        for(let i = 0; i < validLen; i++) {
-            const hourData = hourlyRawData[i];
-            if (hourData && hourData.length > 0) {
-                const userRecord = hourData.find(u => u.id === id);
-                if (userRecord) {
-                    userPosts.push(userRecord.post);
-                    userComments.push(userRecord.comment);
-                } else {
-                    userPosts.push(0);
-                    userComments.push(0);
-                }
-            } else {
-                userPosts.push(0);
-                userComments.push(0);
-            }
+        for (let i = 0; i < validLen; i++) {
+            const userRecord = findUserInHour(hourlyRawData[i], user, userKey);
+            userPosts.push(userRecord ? Number(userRecord.post || 0) : 0);
+            userComments.push(userRecord ? Number(userRecord.comment || 0) : 0);
         }
 
         if (modalChart) modalChart.dispose();
         modalChart = echarts.init(document.getElementById('chart-container'));
-        
         modalChart.setOption({
             tooltip: { trigger: 'axis' },
             legend: { data: ['게시글', '댓글'], top: '0%' },
@@ -707,6 +1092,13 @@
                 { name: '댓글', type: 'line', smooth: true, data: userComments, itemStyle: { color: '#ff4b4b' }, areaStyle: { opacity: 0.1 } }
             ]
         });
+
+        loadRecentUserActivity(user, requestSequence).catch(error => {
+            if (requestSequence !== modalLoadSequence) return;
+            console.error('상세 Parquet 로딩 실패:', error);
+            setActivityState('recent-posts', '게시글 상세 데이터를 불러오지 못했습니다.', true);
+            setActivityState('recent-comments', '댓글 상세 데이터를 불러오지 못했습니다.', true);
+        });
     }
 
     function toggleBookmark(id) {
@@ -716,7 +1108,10 @@
         executeSearch();
     }
 
-    function closeModal() { document.getElementById('graph-modal').style.display = "none"; }
+    function closeModal() {
+        modalLoadSequence++;
+        document.getElementById('graph-modal').style.display = "none";
+    }
     
     window.onload = () => fetchDailyData(todayKst);
 </script>
