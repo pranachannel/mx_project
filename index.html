@@ -183,7 +183,11 @@
                 gap: 4px; overflow-x: auto; flex-wrap: nowrap; -webkit-overflow-scrolling: touch;
                 scrollbar-width: thin; padding-bottom: 8px;
             }
-            .tab { flex: 0 0 auto; padding: 9px 10px; font-size: 13px; min-height: 40px; box-sizing: border-box; }
+            .tab {
+                flex: 0 0 auto; height: 40px; min-height: 0; padding: 0 10px; box-sizing: border-box;
+                display: inline-flex; align-items: center; justify-content: center;
+                font-size: 13px; line-height: 1;
+            }
             /* 모바일에서도 PC처럼 아이콘 + '새로고침' 문구를 함께 표시합니다. */
             .btn-refresh { flex: 0 0 auto; margin-left: auto; min-height: 40px; padding: 8px 11px; font-size: 12px; }
             .btn-refresh .refresh-icon { margin-right: 4px; font-size: 15px; }
@@ -307,7 +311,7 @@
                             <th style="text-align: center;">순위</th>
                             <th style="text-align: center;">⭐</th>
                             <th>닉네임</th>
-                            <th>ID (IP)</th>
+                            <th>UID(IP)</th>
                             <th>타입</th>
                             <th>글</th>
                             <th>댓글</th>
@@ -325,7 +329,7 @@
             <div class="controls-wrapper">
                 <button id="search-star-filter" class="btn-star-filter" onclick="toggleStarFilter('search')" title="즐겨찾기 유저만 보기">⭐</button>
                 
-                <input type="text" id="search-input" placeholder="검색할 닉네임 또는 ID 입력" style="flex: 1; box-sizing: border-box; margin:0; min-width: 200px;" onkeypress="if(event.key === 'Enter') executeSearch()">
+                <input type="text" id="search-input" placeholder="검색할 닉네임 또는 UID(IP) 입력" style="flex: 1; box-sizing: border-box; margin:0; min-width: 200px;" onkeypress="if(event.key === 'Enter') executeSearch()">
                 
                 <div style="display:flex; gap:5px;">
                     <button id="btn-type-gonic" class="btn-type gonic active" onclick="toggleSearchType('고닉')">고닉</button>
@@ -350,7 +354,7 @@
                         <tr>
                             <th class="sortable" style="text-align: center;" onclick="handleHeaderSort('search', 'bookmark')">⭐<span id="sort-search-bookmark"></span></th>
                             <th class="sortable" onclick="handleHeaderSort('search', 'nickname')">닉네임<span id="sort-search-nickname"></span></th>
-                            <th class="sortable" onclick="handleHeaderSort('search', 'id')">ID (IP)<span id="sort-search-id"></span></th>
+                            <th class="sortable" onclick="handleHeaderSort('search', 'id')">UID(IP)<span id="sort-search-id"></span></th>
                             <th class="sortable" onclick="handleHeaderSort('search', 'type')">타입<span id="sort-search-type">▲</span></th>
                             <th class="sortable" onclick="handleHeaderSort('search', 'post')">글<span id="sort-search-post"></span></th>
                             <th class="sortable" onclick="handleHeaderSort('search', 'comment')">댓글<span id="sort-search-comment"></span></th>
@@ -466,9 +470,40 @@
         });
     }
 
-    function formatDisplayId(value) {
-        // 내부 식별용 user_key/id의 "id:" 접두사는 화면에 노출하지 않습니다.
-        return cleanText(value).replace(/^id:/i, '');
+    function formatUserIdentity(user) {
+        if (!user) return '';
+
+        const type = cleanText(user.type);
+        const uid = cleanText(user.uid);
+        const ip = cleanText(user.ip);
+        const userKey = cleanText(user.user_key);
+        const legacyId = cleanText(user.id || user.display_id);
+
+        // 현재 main.go의 집계 JSON은 고닉/반고닉은 uid, 유동은 ip를 별도 필드로 저장합니다.
+        if (type === '유동') {
+            if (ip) return ip;
+            if (/^ip:/i.test(userKey)) return userKey.replace(/^ip:/i, '');
+            if (/^ip:/i.test(legacyId)) return legacyId.replace(/^ip:/i, '');
+            return legacyId;
+        }
+
+        if (type === '고닉' || type === '반고닉') {
+            if (uid) return uid;
+            if (/^id:/i.test(userKey)) return userKey.replace(/^id:/i, '');
+
+            // 구버전 display_id가 id:닉네임(UID) 형태라면 괄호 안 UID만 복원합니다.
+            const match = legacyId.match(/^id:.*\(([^()]*)\)$/i);
+            if (match && cleanText(match[1])) return cleanText(match[1]);
+            if (/^id:/i.test(legacyId)) return legacyId.replace(/^id:/i, '');
+            return legacyId;
+        }
+
+        // 타입이 없는 구버전 데이터에 대한 보수적 fallback입니다.
+        if (uid) return uid;
+        if (ip) return ip;
+        if (/^id:/i.test(userKey)) return userKey.replace(/^id:/i, '');
+        if (/^ip:/i.test(userKey)) return userKey.replace(/^ip:/i, '');
+        return legacyId.replace(/^(?:id|ip):/i, '');
     }
 
     function switchTab(tabId, el) {
@@ -741,6 +776,9 @@
             if (key === 'bookmark') {
                 valA = isUserBookmarked(a) ? 1 : 0;
                 valB = isUserBookmarked(b) ? 1 : 0;
+            } else if (key === 'id') {
+                valA = formatUserIdentity(a);
+                valB = formatUserIdentity(b);
             } else {
                 valA = a[key];
                 valB = b[key];
@@ -774,7 +812,11 @@
         let filtered = [...currentData];
         
         if (kw) {
-            filtered = filtered.filter(r => r.nickname.toLowerCase().includes(kw) || r.id.toLowerCase().includes(kw));
+            filtered = filtered.filter(r => {
+                const nickname = cleanText(r.nickname).toLowerCase();
+                const identity = formatUserIdentity(r).toLowerCase();
+                return nickname.includes(kw) || identity.includes(kw);
+            });
         }
         filtered = filtered.filter(r => searchTypes[r.type]);
         if (filterOnlyBookmarks.search) {
@@ -887,7 +929,7 @@
             const totalWeight = currentRankingMode === 'total' ? 'font-weight:bold;' : '';
 
             const safeNick = escapeHTML(row.nickname);
-            const safeId = escapeHTML(formatDisplayId(row.id || row.display_id || ''));
+            const safeId = escapeHTML(formatUserIdentity(row));
 
             tr.innerHTML = `
                 <td class="rank-number">${row.rank}위</td>
@@ -924,7 +966,7 @@
             let bType = (row.type === "고닉") ? "bg-gonic" : (row.type === "반고닉" ? "bg-ban" : "bg-udong");
             
             const safeNick = escapeHTML(row.nickname);
-            const safeId = escapeHTML(formatDisplayId(row.id || row.display_id || ''));
+            const safeId = escapeHTML(formatUserIdentity(row));
 
             tr.innerHTML = `
                 <td class="td-bookmark" title="클릭하여 즐겨찾기">
@@ -1713,7 +1755,7 @@
     function openModal(user) {
         const requestSequence = ++modalLoadSequence;
         const nick = cleanText(user.nickname) || '이름 없음';
-        const id = formatDisplayId(user.id || user.display_id);
+        const id = formatUserIdentity(user);
         const userKey = resolveUserKey(user);
         const modal = document.getElementById('graph-modal');
         const modalContent = modal.querySelector('.modal-content');
