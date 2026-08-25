@@ -142,6 +142,17 @@
             word-break: break-word; background: #f8f9fa; border-radius: 6px; padding: 9px; min-height: 20px;
         }
         .activity-item-content.empty { color: #999; font-style: italic; }
+        .activity-item-content.post-collapsible.collapsed {
+            max-height: calc((1.6em * 5) + 18px);
+            overflow: hidden;
+        }
+        .activity-content-toggle {
+            display: block; margin: 4px 0 2px; padding: 2px 0; border: 0; background: transparent;
+            color: #0069d9; font-size: 12px; font-weight: 700; cursor: pointer; text-decoration: underline;
+            text-underline-offset: 2px;
+        }
+        .activity-content-toggle[hidden] { display: none; }
+        .activity-content-toggle:hover { color: #004f9f; }
         .activity-inline-link {
             display: inline-flex; align-items: center; margin: 0 2px; color: #0069d9; text-decoration: underline;
             text-underline-offset: 2px; overflow-wrap: anywhere;
@@ -1149,7 +1160,100 @@
         }
     }
 
-    function createActivityLink(url, label, className = 'activity-item-link') {
+    function getUrlExtension(url) {
+        try {
+            const pathname = new URL(cleanText(url), window.location.href).pathname.toLowerCase();
+            const match = pathname.match(/\.([a-z0-9]+)$/i);
+            return match ? match[1] : '';
+        } catch (_) {
+            return '';
+        }
+    }
+
+    function isAnimatedImageUrl(url) {
+        // GIF/WebP/APNG는 오디오가 없는 움직이는 이미지 계열로 표시합니다.
+        return ['gif', 'webp', 'apng'].includes(getUrlExtension(url));
+    }
+
+    function inferMediaViewerKind(url, suggestedKind = 'image') {
+        const ext = getUrlExtension(url);
+        if (['gif', 'webp', 'apng', 'jpg', 'jpeg', 'png', 'bmp', 'avif', 'svg'].includes(ext)) return 'image';
+        if (['mp4', 'webm', 'm4v', 'mov', 'ogv', 'ogg'].includes(ext)) return 'video';
+        return suggestedKind === 'video' ? 'video' : 'image';
+    }
+
+    function mediaDisplayLabel(url, defaultLabel, sourceKind = 'image') {
+        // 댓글 미디어는 main.go의 저장 의미에 맞춰 항상 디시콘으로 보입니다.
+        if (defaultLabel === '디시콘') return '디시콘';
+        if (isAnimatedImageUrl(url)) return '움짤';
+        return sourceKind === 'video' ? '동영상' : defaultLabel;
+    }
+
+    function openMediaViewer(url, kind, title) {
+        const safeUrl = cleanText(url);
+        if (!isSafeHttpUrl(safeUrl)) return false;
+
+        const viewer = window.open('', '_blank');
+        if (!viewer) return false;
+
+        try { viewer.opener = null; } catch (_) {}
+        const doc = viewer.document;
+        doc.title = cleanText(title) || '미디어 보기';
+        doc.documentElement.style.background = '#111';
+        doc.documentElement.style.colorScheme = 'dark';
+        doc.body.style.margin = '0';
+        doc.body.style.minHeight = '100vh';
+        doc.body.style.display = 'flex';
+        doc.body.style.alignItems = 'center';
+        doc.body.style.justifyContent = 'center';
+        doc.body.style.background = '#111';
+        doc.body.style.color = '#eee';
+        doc.body.style.fontFamily = 'system-ui, sans-serif';
+
+        const wrap = doc.createElement('div');
+        wrap.style.width = '100%';
+        wrap.style.minHeight = '100vh';
+        wrap.style.boxSizing = 'border-box';
+        wrap.style.padding = '16px';
+        wrap.style.display = 'flex';
+        wrap.style.flexDirection = 'column';
+        wrap.style.alignItems = 'center';
+        wrap.style.justifyContent = 'center';
+        wrap.style.gap = '12px';
+
+        const mediaKind = inferMediaViewerKind(safeUrl, kind);
+        let media;
+        if (mediaKind === 'video') {
+            media = doc.createElement('video');
+            media.controls = true;
+            media.autoplay = true;
+            media.playsInline = true;
+            media.preload = 'metadata';
+        } else {
+            media = doc.createElement('img');
+            media.alt = cleanText(title) || '미디어';
+        }
+        media.src = safeUrl;
+        media.style.display = 'block';
+        media.style.maxWidth = '100%';
+        media.style.maxHeight = 'calc(100vh - 72px)';
+        media.style.objectFit = 'contain';
+
+        const status = doc.createElement('div');
+        status.style.fontSize = '13px';
+        status.style.color = '#bbb';
+        status.textContent = '';
+        media.addEventListener('error', () => {
+            status.textContent = '브라우저에서 바로 표시하지 못했습니다. 원본 서버의 MIME/CORS 설정을 확인해 주세요.';
+        });
+
+        wrap.appendChild(media);
+        wrap.appendChild(status);
+        doc.body.appendChild(wrap);
+        return true;
+    }
+
+    function createActivityLink(url, label, className = 'activity-item-link', viewerKind = '') {
         const safeUrl = cleanText(url);
         if (!isSafeHttpUrl(safeUrl)) return null;
         const link = document.createElement('a');
@@ -1158,6 +1262,13 @@
         link.target = '_blank';
         link.rel = 'noopener noreferrer';
         link.textContent = label;
+        if (viewerKind) {
+            link.addEventListener('click', event => {
+                if (openMediaViewer(safeUrl, viewerKind, label)) {
+                    event.preventDefault();
+                }
+            });
+        }
         return link;
     }
 
@@ -1214,7 +1325,8 @@
         if (tag === 'img') {
             const url = cleanText(node.getAttribute('src') || node.getAttribute('data-src') || node.getAttribute('data-original'));
             if (isSafeHttpUrl(url)) {
-                const link = createActivityLink(url, imageLabel, 'activity-inline-link');
+                const label = mediaDisplayLabel(url, imageLabel, 'image');
+                const link = createActivityLink(url, label, 'activity-inline-link', inferMediaViewerKind(url, 'image'));
                 if (link) {
                     container.appendChild(link);
                     seenUrls.add(url);
@@ -1230,9 +1342,10 @@
                 if (source) url = cleanText(source.getAttribute('src'));
             }
             if (isSafeHttpUrl(url)) {
-                // main.go는 댓글의 움직이는 디시콘(video)을 image로 저장합니다.
-                const label = allowVideo ? '동영상' : imageLabel;
-                const link = createActivityLink(url, label, 'activity-inline-link');
+                // 댓글의 video 기반 움직이는 디시콘은 계속 '디시콘', 게시글의 GIF/WebP 계열은 '움짤'로 표시합니다.
+                const defaultLabel = allowVideo ? '동영상' : imageLabel;
+                const label = mediaDisplayLabel(url, defaultLabel, 'video');
+                const link = createActivityLink(url, label, 'activity-inline-link', inferMediaViewerKind(url, 'video'));
                 if (link) {
                     container.appendChild(link);
                     seenUrls.add(url);
@@ -1309,19 +1422,27 @@
 
         imageUrls.forEach(url => {
             if (!seenUrls.has(url)) {
-                extras.push({ url, label: imageLabel });
+                extras.push({
+                    url,
+                    label: mediaDisplayLabel(url, imageLabel, 'image'),
+                    viewerKind: inferMediaViewerKind(url, 'image')
+                });
                 seenUrls.add(url);
             }
         });
         videoUrls.forEach(url => {
             if (!seenUrls.has(url)) {
-                extras.push({ url, label: '동영상' });
+                extras.push({
+                    url,
+                    label: mediaDisplayLabel(url, '동영상', 'video'),
+                    viewerKind: inferMediaViewerKind(url, 'video')
+                });
                 seenUrls.add(url);
             }
         });
         linkUrls.forEach(url => {
             if (!seenUrls.has(url)) {
-                extras.push({ url, label: '외부 링크' });
+                extras.push({ url, label: '외부 링크', viewerKind: '' });
                 seenUrls.add(url);
             }
         });
@@ -1337,7 +1458,7 @@
         const extraBox = document.createElement('div');
         extraBox.className = 'activity-media-links';
         extras.forEach(extra => {
-            const link = createActivityLink(extra.url, extra.label);
+            const link = createActivityLink(extra.url, extra.label, 'activity-item-link', extra.viewerKind || '');
             if (link) extraBox.appendChild(link);
         });
         return extraBox.childElementCount ? extraBox : null;
@@ -1355,12 +1476,57 @@
         return labels[cleanText(value)] || '';
     }
 
+    function contentTypeLabelForRow(row, imageLabel = '이미지', allowVideo = true) {
+        const type = cleanText(row && row.content_type);
+        if (imageLabel === '디시콘' && (type === 'image' || type === 'video')) return '디시콘';
+
+        if (type === 'image') {
+            const urls = normalizeUrlArray(row && row.image_urls);
+            if (urls.length > 0 && urls.every(isAnimatedImageUrl)) return '움짤';
+            return imageLabel;
+        }
+        if (type === 'video' && allowVideo) {
+            const urls = normalizeUrlArray(row && row.video_urls);
+            if (urls.length > 0 && urls.every(isAnimatedImageUrl)) return '움짤';
+            return '동영상';
+        }
+        return contentTypeLabel(type, imageLabel);
+    }
+
     function addMetaBadge(meta, label) {
         if (!label) return;
         const badge = document.createElement('span');
         badge.className = 'activity-type-badge';
         badge.textContent = label;
         meta.appendChild(badge);
+    }
+
+    function attachPostContentToggle(body) {
+        body.classList.add('post-collapsible', 'collapsed');
+
+        const toggle = document.createElement('button');
+        toggle.type = 'button';
+        toggle.className = 'activity-content-toggle';
+        toggle.textContent = '더보기';
+        toggle.hidden = true;
+        body.insertAdjacentElement('afterend', toggle);
+
+        const updateVisibility = () => {
+            if (!body.isConnected) return;
+            const overflowing = body.scrollHeight > body.clientHeight + 2;
+            toggle.hidden = !overflowing;
+            if (!overflowing) body.classList.remove('collapsed');
+        };
+
+        requestAnimationFrame(updateVisibility);
+
+        toggle.addEventListener('click', () => {
+            const isCollapsed = body.classList.toggle('collapsed');
+            toggle.textContent = isCollapsed ? '더보기' : '접기';
+            if (isCollapsed) {
+                body.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+            }
+        });
     }
 
     function renderPostItems(posts) {
@@ -1393,13 +1559,14 @@
             const metaText = document.createElement('span');
             metaText.textContent = parts.join(' · ');
             meta.appendChild(metaText);
-            addMetaBadge(meta, contentTypeLabel(post.content_type));
+            addMetaBadge(meta, contentTypeLabelForRow(post, '이미지', true));
             item.appendChild(meta);
 
             const body = document.createElement('div');
             body.className = 'activity-item-content';
             const extras = renderStoredContent(post, body, true, '이미지');
             item.appendChild(body);
+            attachPostContentToggle(body);
             if (extras) item.appendChild(extras);
 
             const link = createActivityLink(preferredPostOpenUrl(post.url, post.post_no), '게시글 열기 ↗');
@@ -1436,7 +1603,7 @@
             } else if (relation === 'comment_on_post') {
                 addMetaBadge(meta, '댓글');
             }
-            addMetaBadge(meta, contentTypeLabel(comment.content_type, '디시콘'));
+            addMetaBadge(meta, contentTypeLabelForRow(comment, '디시콘', false));
             item.appendChild(meta);
 
             const body = document.createElement('div');
