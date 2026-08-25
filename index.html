@@ -159,21 +159,30 @@
 
         @media (max-width: 720px) {
             .main { padding: 0.8rem; }
-            .header { align-items: stretch; gap: 12px; margin-bottom: 1.2rem; flex-direction: column; }
-            .header h1 { font-size: 1.45rem !important; line-height: 1.3; }
-            .filters { width: 100%; }
-            input[type="text"].date-picker-box { width: 100%; box-sizing: border-box; min-height: 44px; font-size: 16px; }
+            /* PC와 동일하게 제목-날짜 선택기를 같은 행에 유지합니다. */
+            .header { align-items: center; gap: 10px; margin-bottom: 1.2rem; flex-direction: row; }
+            .header h1 { flex: 1 1 auto; min-width: 0; font-size: 1.18rem !important; line-height: 1.3; }
+            .filters { flex: 0 0 auto; width: auto; }
+            input[type="text"].date-picker-box {
+                width: 126px; box-sizing: border-box; min-height: 40px; font-size: 14px;
+                padding: 8px 10px; border-width: 2px;
+            }
 
             .tab-container {
                 gap: 4px; overflow-x: auto; flex-wrap: nowrap; -webkit-overflow-scrolling: touch;
                 scrollbar-width: thin; padding-bottom: 8px;
             }
             .tab { flex: 0 0 auto; padding: 9px 10px; font-size: 13px; min-height: 40px; box-sizing: border-box; }
-            .btn-refresh { flex: 0 0 auto; margin-left: 2px; min-width: 42px; min-height: 40px; padding: 8px 10px; }
-            .btn-refresh .refresh-icon { margin-right: 0; font-size: 16px; }
-            .btn-refresh .refresh-text { display: none; }
+            /* 모바일에서도 PC처럼 아이콘 + '새로고침' 문구를 함께 표시합니다. */
+            .btn-refresh { flex: 0 0 auto; margin-left: auto; min-height: 40px; padding: 8px 11px; font-size: 12px; }
+            .btn-refresh .refresh-icon { margin-right: 4px; font-size: 15px; }
+            .btn-refresh .refresh-text { display: inline; }
 
-            .metrics-grid { grid-template-columns: 1fr; gap: 10px; }
+            /* 세 요약 지표를 PC와 동일하게 한 행의 3개 카드로 유지합니다. */
+            .metrics-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+            .metric-item { padding: 0.8rem 0.65rem; min-width: 0; }
+            .metric-label { font-size: 0.72rem; white-space: nowrap; }
+            .metric-value { font-size: 1.35rem; margin-top: 4px; overflow-wrap: anywhere; }
             .st-card { padding: 1rem; }
             .controls-wrapper { align-items: stretch; }
             .controls-wrapper input[type="text"] { min-height: 44px; font-size: 16px; }
@@ -427,7 +436,7 @@
         defaultDate: todayKst,
         minDate: PROJECT_START_DATE,
         maxDate: "today",
-        disableMobile: false,
+        disableMobile: true,
         onChange: function(selectedDates, dateStr, instance) {
             fetchDailyData(dateStr);
         }
@@ -444,6 +453,11 @@
                 "'": '&#39;'
             }[match];
         });
+    }
+
+    function formatDisplayId(value) {
+        // 내부 식별용 user_key/id의 "id:" 접두사는 화면에 노출하지 않습니다.
+        return cleanText(value).replace(/^id:/i, '');
     }
 
     function switchTab(tabId, el) {
@@ -577,7 +591,7 @@
         currentData = Array.from(userMap.values());
 
         if (currentData.length === 0) {
-            statusText.innerText = `이 시간대의 데이터가 없습니다`;
+            statusText.innerText = `아직 수집된 데이터가 전혀 없습니다`;
             statusText.style.color = "red";
             updateMetrics(true);
             renderRankingTable([]);
@@ -862,7 +876,7 @@
             const totalWeight = currentRankingMode === 'total' ? 'font-weight:bold;' : '';
 
             const safeNick = escapeHTML(row.nickname);
-            const safeId = escapeHTML(row.id || row.display_id || '');
+            const safeId = escapeHTML(formatDisplayId(row.id || row.display_id || ''));
 
             tr.innerHTML = `
                 <td class="rank-number">${row.rank}위</td>
@@ -899,7 +913,7 @@
             let bType = (row.type === "고닉") ? "bg-gonic" : (row.type === "반고닉" ? "bg-ban" : "bg-udong");
             
             const safeNick = escapeHTML(row.nickname);
-            const safeId = escapeHTML(row.id || row.display_id || '');
+            const safeId = escapeHTML(formatDisplayId(row.id || row.display_id || ''));
 
             tr.innerHTML = `
                 <td class="td-bookmark" title="클릭하여 즐겨찾기">
@@ -1183,7 +1197,7 @@
         if (!last || last.nodeName !== 'BR') container.appendChild(document.createElement('br'));
     }
 
-    function appendStoredHtmlNode(node, container, seenUrls, allowVideo) {
+    function appendStoredHtmlNode(node, container, seenUrls, allowVideo, imageLabel = '이미지') {
         if (node.nodeType === Node.TEXT_NODE) {
             container.appendChild(document.createTextNode(node.nodeValue || ''));
             return;
@@ -1200,7 +1214,7 @@
         if (tag === 'img') {
             const url = cleanText(node.getAttribute('src') || node.getAttribute('data-src') || node.getAttribute('data-original'));
             if (isSafeHttpUrl(url)) {
-                const link = createActivityLink(url, '이미지', 'activity-inline-link');
+                const link = createActivityLink(url, imageLabel, 'activity-inline-link');
                 if (link) {
                     container.appendChild(link);
                     seenUrls.add(url);
@@ -1209,14 +1223,16 @@
             return;
         }
 
-        if (tag === 'video' && allowVideo) {
+        if (tag === 'video') {
             let url = cleanText(node.getAttribute('src'));
             if (!url) {
                 const source = node.querySelector('source[src]');
                 if (source) url = cleanText(source.getAttribute('src'));
             }
             if (isSafeHttpUrl(url)) {
-                const link = createActivityLink(url, '동영상', 'activity-inline-link');
+                // main.go는 댓글의 움직이는 디시콘(video)을 image로 저장합니다.
+                const label = allowVideo ? '동영상' : imageLabel;
+                const link = createActivityLink(url, label, 'activity-inline-link');
                 if (link) {
                     container.appendChild(link);
                     seenUrls.add(url);
@@ -1233,7 +1249,7 @@
             // 이미지/영상이 링크로 감싸져 있어도 실제 미디어 URL을 "이미지"/"동영상"으로 표시합니다.
             if (node.querySelector('img, video, source')) {
                 for (const child of node.childNodes) {
-                    appendStoredHtmlNode(child, container, seenUrls, allowVideo);
+                    appendStoredHtmlNode(child, container, seenUrls, allowVideo, imageLabel);
                 }
                 return;
             }
@@ -1252,7 +1268,7 @@
 
         const blockTags = new Set(['div', 'p', 'li', 'section', 'article', 'blockquote', 'pre']);
         for (const child of node.childNodes) {
-            appendStoredHtmlNode(child, container, seenUrls, allowVideo);
+            appendStoredHtmlNode(child, container, seenUrls, allowVideo, imageLabel);
         }
         if (blockTags.has(tag)) appendBreakIfNeeded(container);
     }
@@ -1262,7 +1278,7 @@
         return Boolean(container.querySelector('a'));
     }
 
-    function renderStoredContent(row, body, allowVideo) {
+    function renderStoredContent(row, body, allowVideo, imageLabel = '이미지') {
         const seenUrls = new Set();
         const storedHtml = cleanText(row.content_html);
 
@@ -1272,7 +1288,7 @@
                 const root = parsed.getElementById('stored-content-root');
                 if (root) {
                     for (const child of root.childNodes) {
-                        appendStoredHtmlNode(child, body, seenUrls, allowVideo);
+                        appendStoredHtmlNode(child, body, seenUrls, allowVideo, imageLabel);
                     }
                 }
             } catch (error) {
@@ -1293,7 +1309,7 @@
 
         imageUrls.forEach(url => {
             if (!seenUrls.has(url)) {
-                extras.push({ url, label: '이미지' });
+                extras.push({ url, label: imageLabel });
                 seenUrls.add(url);
             }
         });
@@ -1327,10 +1343,10 @@
         return extraBox.childElementCount ? extraBox : null;
     }
 
-    function contentTypeLabel(value) {
+    function contentTypeLabel(value, imageLabel = '이미지') {
         const labels = {
             text: '텍스트',
-            image: '이미지',
+            image: imageLabel,
             video: '동영상',
             link: '링크',
             mixed: '혼합',
@@ -1382,7 +1398,7 @@
 
             const body = document.createElement('div');
             body.className = 'activity-item-content';
-            const extras = renderStoredContent(post, body, true);
+            const extras = renderStoredContent(post, body, true, '이미지');
             item.appendChild(body);
             if (extras) item.appendChild(extras);
 
@@ -1420,12 +1436,12 @@
             } else if (relation === 'comment_on_post') {
                 addMetaBadge(meta, '댓글');
             }
-            addMetaBadge(meta, contentTypeLabel(comment.content_type));
+            addMetaBadge(meta, contentTypeLabel(comment.content_type, '디시콘'));
             item.appendChild(meta);
 
             const body = document.createElement('div');
             body.className = 'activity-item-content';
-            const extras = renderStoredContent(comment, body, false);
+            const extras = renderStoredContent(comment, body, false, '디시콘');
             item.appendChild(body);
             if (extras) item.appendChild(extras);
 
@@ -1530,7 +1546,7 @@
     function openModal(user) {
         const requestSequence = ++modalLoadSequence;
         const nick = cleanText(user.nickname) || '이름 없음';
-        const id = cleanText(user.id || user.display_id);
+        const id = formatDisplayId(user.id || user.display_id);
         const userKey = resolveUserKey(user);
         const modal = document.getElementById('graph-modal');
         const modalContent = modal.querySelector('.modal-content');
