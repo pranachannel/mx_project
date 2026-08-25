@@ -80,14 +80,35 @@
         .page-btn:disabled { background: #f9f9f9; color: #ccc; cursor: not-allowed; border-color: #eee; }
 
         .modal {
-            display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%;
+            display: none; position: fixed; z-index: 1000; inset: 0;
             background: rgba(0,0,0,0.5); overflow-y: auto; padding: 24px 0; box-sizing: border-box;
         }
         .modal-content {
-            background: white; margin: 0 auto; padding: 25px; border-radius: 10px; width: 90%; max-width: 900px;
-            max-height: calc(100vh - 48px); overflow-y: auto; box-sizing: border-box;
+            background: white; margin: 0 auto; padding: 0 25px 25px; border-radius: 10px; width: 90%; max-width: 900px;
+            max-height: calc(100vh - 48px); overflow-y: auto; box-sizing: border-box; position: relative;
+            -webkit-overflow-scrolling: touch;
         }
-        #chart-container { width: 100%; height: 350px; }
+        .modal-header {
+            position: sticky; top: 0; z-index: 8; display: flex; align-items: center; gap: 12px;
+            min-height: 58px; background: white; border-bottom: 1px solid #eee; padding: 0 48px 0 0;
+        }
+        .modal-header h3 { margin: 0; font-size: 18px; line-height: 1.35; overflow-wrap: anywhere; }
+        .modal-close {
+            position: absolute; right: 0; top: 7px; width: 44px; height: 44px; border: 0; border-radius: 8px;
+            background: transparent; color: #555; cursor: pointer; font-size: 30px; line-height: 1;
+        }
+        .modal-close:hover { background: #f1f3f5; color: #111; }
+        .modal-section { scroll-margin-top: 112px; }
+        .modal-section-nav {
+            display: none; position: sticky; top: 58px; z-index: 7; gap: 6px; padding: 8px 0;
+            background: white; border-bottom: 1px solid #eee;
+        }
+        .modal-section-nav button {
+            min-height: 40px; border: 1px solid #ddd; background: #fff; border-radius: 7px;
+            font-size: 13px; font-weight: 700; color: #555; cursor: pointer;
+        }
+        .modal-section-nav button:active { background: #eee; }
+        #chart-container { width: 100%; height: 350px; margin-top: 12px; }
 
         .activity-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 20px; }
         .activity-panel { border: 1px solid #e5e7eb; border-radius: 9px; background: #fafafa; overflow: hidden; min-width: 0; }
@@ -97,31 +118,92 @@
         }
         .activity-panel-header h4 { margin: 0; font-size: 15px; }
         .activity-limit { font-size: 11px; color: #888; white-space: nowrap; }
-        .activity-list { max-height: 360px; overflow-y: auto; padding: 8px; box-sizing: border-box; }
+        .activity-list {
+            max-height: 390px; overflow-y: auto; padding: 8px; box-sizing: border-box;
+            -webkit-overflow-scrolling: touch; overscroll-behavior: contain;
+        }
         .activity-item { background: white; border: 1px solid #e9ecef; border-radius: 8px; padding: 11px 12px; margin-bottom: 8px; }
         .activity-item:last-child { margin-bottom: 0; }
-        .activity-item-title { font-size: 14px; font-weight: 700; color: #30323a; margin-bottom: 5px; line-height: 1.4; overflow-wrap: anywhere; }
-        .activity-item-meta { font-size: 11px; color: #888; margin-bottom: 7px; display: flex; gap: 8px; flex-wrap: wrap; }
+        .activity-item-title {
+            font-size: 14px; font-weight: 700; color: #30323a; margin-bottom: 5px; line-height: 1.4;
+            overflow-wrap: anywhere; word-break: break-word;
+        }
+        .activity-item-meta {
+            font-size: 11px; color: #888; margin-bottom: 7px; display: flex; gap: 6px;
+            align-items: center; flex-wrap: wrap; line-height: 1.5;
+        }
+        .activity-type-badge {
+            display: inline-flex; align-items: center; min-height: 20px; padding: 1px 6px;
+            border: 1px solid #ddd; border-radius: 999px; background: #f7f7f7; color: #666;
+            font-size: 10px; font-weight: 700;
+        }
         .activity-item-content {
-            font-size: 13px; color: #444; line-height: 1.55; white-space: pre-wrap; overflow-wrap: anywhere;
-            background: #f8f9fa; border-radius: 6px; padding: 9px;
+            font-size: 13px; color: #444; line-height: 1.6; white-space: pre-wrap; overflow-wrap: anywhere;
+            word-break: break-word; background: #f8f9fa; border-radius: 6px; padding: 9px; min-height: 20px;
         }
         .activity-item-content.empty { color: #999; font-style: italic; }
-        .activity-item-link { display: inline-block; margin-top: 7px; font-size: 12px; color: #0069d9; text-decoration: none; }
+        .activity-inline-link {
+            display: inline-flex; align-items: center; margin: 0 2px; color: #0069d9; text-decoration: underline;
+            text-underline-offset: 2px; overflow-wrap: anywhere;
+        }
+        .activity-media-links { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+        .activity-media-links .activity-item-link { margin-top: 0; }
+        .activity-item-link {
+            display: inline-flex; align-items: center; min-height: 32px; padding: 0 2px; margin-top: 7px;
+            font-size: 12px; color: #0069d9; text-decoration: none; overflow-wrap: anywhere;
+        }
         .activity-item-link:hover { text-decoration: underline; }
         .activity-state { padding: 28px 12px; text-align: center; color: #888; font-size: 13px; line-height: 1.5; }
         .activity-state.error { color: #c0392b; }
+        body.modal-open { overflow: hidden; }
 
         @media (max-width: 720px) {
-            .main { padding: 1rem; }
+            .main { padding: 0.8rem; }
+            .header { align-items: stretch; gap: 12px; margin-bottom: 1.2rem; flex-direction: column; }
+            .header h1 { font-size: 1.45rem !important; line-height: 1.3; }
+            .filters { width: 100%; }
+            input[type="text"].date-picker-box { width: 100%; box-sizing: border-box; min-height: 44px; font-size: 16px; }
+
+            .tab-container {
+                gap: 4px; overflow-x: auto; flex-wrap: nowrap; -webkit-overflow-scrolling: touch;
+                scrollbar-width: thin; padding-bottom: 8px;
+            }
+            .tab { flex: 0 0 auto; padding: 9px 10px; font-size: 13px; min-height: 40px; box-sizing: border-box; }
+            .btn-refresh { flex: 0 0 auto; margin-left: 2px; min-width: 42px; min-height: 40px; padding: 8px 10px; }
+            .btn-refresh .refresh-icon { margin-right: 0; font-size: 16px; }
+            .btn-refresh .refresh-text { display: none; }
+
             .metrics-grid { grid-template-columns: 1fr; gap: 10px; }
-            .tab { padding: 9px 10px; font-size: 13px; }
-            .btn-refresh { padding: 8px 10px; }
-            .modal { padding: 10px 0; }
-            .modal-content { width: 96%; padding: 16px; max-height: calc(100vh - 20px); }
-            #chart-container { height: 300px; }
-            .activity-grid { grid-template-columns: 1fr; }
-            .activity-list { max-height: 320px; }
+            .st-card { padding: 1rem; }
+            .controls-wrapper { align-items: stretch; }
+            .controls-wrapper input[type="text"] { min-height: 44px; font-size: 16px; }
+            .btn-search, .btn-star-filter, .btn-rank, .btn-type { min-height: 42px; }
+
+            .table-responsive { overscroll-behavior-x: contain; }
+            table { min-width: 700px; }
+            td, th { padding: 11px 9px; }
+            table tbody tr { touch-action: manipulation; }
+
+            .modal { padding: 0; overflow: hidden; }
+            .modal-content {
+                width: 100%; height: 100%; max-width: none; max-height: none; margin: 0; border-radius: 0;
+                padding: 0 14px 24px; overflow-y: auto; overscroll-behavior-y: contain;
+            }
+            .modal-header { min-height: 56px; padding-right: 46px; }
+            .modal-header h3 { font-size: 16px; }
+            .modal-close { right: 0; top: 6px; }
+            .modal-section-nav { display: grid; grid-template-columns: repeat(3, 1fr); top: 56px; }
+            .modal-section { scroll-margin-top: 108px; }
+            #chart-container { height: 285px; margin-top: 8px; }
+
+            .activity-grid { grid-template-columns: 1fr; gap: 14px; margin-top: 14px; }
+            .activity-panel { overflow: visible; }
+            .activity-list { max-height: none; overflow: visible; padding: 8px 0; }
+            .activity-panel-header { position: sticky; top: 104px; z-index: 5; border: 1px solid #e5e7eb; border-radius: 8px; }
+            .activity-item { padding: 12px; margin-bottom: 10px; }
+            .activity-item-title { font-size: 15px; }
+            .activity-item-content { font-size: 14px; line-height: 1.65; padding: 10px; }
+            .activity-item-link { min-height: 44px; font-size: 13px; }
         }
 
         .btn-search { background: var(--primary-color); color: white; border: 1px solid var(--primary-color); padding: 10px 40px; border-radius: 5px; cursor: pointer; font-weight: bold; font-size: 14px; }
@@ -159,7 +241,7 @@
         <div class="tab" onclick="switchTab('ranking', this)">유저 랭킹</div>
         <div class="tab" onclick="switchTab('search', this)">유저 검색</div>
         <button id="refresh-btn" class="btn-refresh" type="button" onclick="refreshCurrentData()" title="현재 선택 날짜의 최신 데이터를 다시 불러옵니다">
-            <span class="refresh-icon">↻</span>새로고침
+            <span class="refresh-icon">↻</span><span class="refresh-text">새로고침</span>
         </button>
     </div>
 
@@ -263,14 +345,25 @@
     </div>
 </div>
 
-<div id="graph-modal" class="modal">
+<div id="graph-modal" class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
     <div class="modal-content">
-        <span style="cursor:pointer; float:right; font-size:24px;" onclick="closeModal()">&times;</span>
-        <h3 id="modal-title" style="margin-top:0; margin-bottom: 20px;">유저 활동 분석</h3>
-        <div id="chart-container"></div>
+        <div class="modal-header">
+            <h3 id="modal-title">유저 활동 분석</h3>
+            <button class="modal-close" type="button" onclick="closeModal()" aria-label="상세창 닫기">&times;</button>
+        </div>
+
+        <nav class="modal-section-nav" aria-label="상세 정보 바로가기">
+            <button type="button" onclick="scrollModalSection('modal-chart-section')">그래프</button>
+            <button type="button" onclick="scrollModalSection('modal-posts-section')">게시글</button>
+            <button type="button" onclick="scrollModalSection('modal-comments-section')">댓글</button>
+        </nav>
+
+        <section id="modal-chart-section" class="modal-section">
+            <div id="chart-container"></div>
+        </section>
 
         <div class="activity-grid">
-            <section class="activity-panel">
+            <section id="modal-posts-section" class="activity-panel modal-section">
                 <div class="activity-panel-header">
                     <h4>최근 게시글</h4>
                     <span class="activity-limit">최대 5개</span>
@@ -280,7 +373,7 @@
                 </div>
             </section>
 
-            <section class="activity-panel">
+            <section id="modal-comments-section" class="activity-panel modal-section">
                 <div class="activity-panel-header">
                     <h4>최근 댓글</h4>
                     <span class="activity-limit">최대 10개</span>
@@ -334,7 +427,7 @@
         defaultDate: todayKst,
         minDate: PROJECT_START_DATE,
         maxDate: "today",
-        disableMobile: true,
+        disableMobile: false,
         onChange: function(selectedDates, dateStr, instance) {
             fetchDailyData(dateStr);
         }
@@ -364,6 +457,41 @@
         if (tabId === 'trends' && dailyTrendData) renderTrendChart();
     }
 
+    function withRefreshToken(url, token) {
+        if (!token) return url;
+        return `${url}${url.includes('?') ? '&' : '?'}refresh=${encodeURIComponent(token)}`;
+    }
+
+    function aggregateJsonCandidates(dateStr, hour) {
+        const hh = String(hour).padStart(2, '0');
+        return [
+            // main.go v4 현재 구조: 2026-08-25/13h/13h.json
+            `${R2_DOMAIN}/${dateStr}/${hh}h/${hh}h.json`,
+            // 이전 대시보드 데이터 호환: 2026-08-25/13h.json
+            `${R2_DOMAIN}/${dateStr}/${hh}h.json`
+        ];
+    }
+
+    async function fetchJsonFromCandidates(candidates, refreshToken = '') {
+        let lastError = null;
+        for (const baseUrl of candidates) {
+            const url = withRefreshToken(baseUrl, refreshToken);
+            try {
+                const response = await fetch(url, { cache: 'no-store' });
+                if (response.status === 404) continue;
+                if (!response.ok) {
+                    lastError = new Error(`JSON 요청 실패 (${response.status})`);
+                    continue;
+                }
+                return await response.json();
+            } catch (error) {
+                lastError = error;
+            }
+        }
+        if (lastError) console.warn('시간대 JSON을 불러오지 못했습니다:', lastError);
+        return null;
+    }
+
     async function fetchDailyData(dateStr, forceRefresh = false) {
         const statusText = document.getElementById('status-text');
 
@@ -374,17 +502,14 @@
             : `${dateStr}의 데이터를 합산 중입니다`;
         statusText.style.color = "#555";
 
-        // 강제 새로고침 시 URL을 매번 다르게 만들어 브라우저/중간 캐시의 오래된 응답을 피합니다.
-        const cacheBuster = forceRefresh ? `?refresh=${Date.now()}` : '';
-        const promises = Array.from({length: 24}, (_, i) => {
-            const hh = String(i).padStart(2, '0');
-            const url = `${R2_DOMAIN}/${dateStr}/${hh}h.json${cacheBuster}`;
-            return fetch(url, { cache: "no-store" }).then(r => r.ok ? r.json() : null).catch(() => null);
-        });
+        const refreshToken = forceRefresh ? String(Date.now()) : '';
+        const promises = Array.from({length: 24}, (_, i) =>
+            fetchJsonFromCandidates(aggregateJsonCandidates(dateStr, i), refreshToken)
+        );
 
         const results = await Promise.all(promises);
         hourlyRawData = results;
-        
+
         let lastValidIndex = -1;
         for(let i = 23; i >= 0; i--) {
             if(results[i] !== null) {
@@ -402,21 +527,23 @@
         for (let i = 0; i <= lastValidIndex; i++) {
             const data = results[i];
             xAxisLabels.push(`${i}시`);
-            
+
             if (data && data.length > 0) {
                 let hourPosts = 0;
                 let hourComments = 0;
-                
+
                 data.forEach(u => {
-                    hourPosts += u.post;
-                    hourComments += u.comment;
-                    
-                    const aggregateKey = u.user_key || u.id;
+                    hourPosts += Number(u.post || 0);
+                    hourComments += Number(u.comment || 0);
+
+                    const aggregateKey = u.user_key || u.id || u.display_id;
+                    if (!aggregateKey) return;
+
                     if (userMap.has(aggregateKey)) {
                         const existing = userMap.get(aggregateKey);
-                        existing.post += u.post;
-                        existing.comment += u.comment;
-                        existing.total += u.total;
+                        existing.post += Number(u.post || 0);
+                        existing.comment += Number(u.comment || 0);
+                        existing.total += Number(u.total ?? (Number(u.post || 0) + Number(u.comment || 0)));
 
                         // 같은 user_key에서 닉네임/표시 ID가 바뀌었다면 더 최근 시간대의 값을 표시합니다.
                         if (u.nickname) existing.nickname = u.nickname;
@@ -427,10 +554,15 @@
                         if (u.type) existing.type = u.type;
                         if (u.user_key) existing.user_key = u.user_key;
                     } else {
-                        userMap.set(aggregateKey, { ...u });
+                        userMap.set(aggregateKey, {
+                            ...u,
+                            post: Number(u.post || 0),
+                            comment: Number(u.comment || 0),
+                            total: Number(u.total ?? (Number(u.post || 0) + Number(u.comment || 0)))
+                        });
                     }
                 });
-                
+
                 trendPosts.push(hourPosts);
                 trendComments.push(hourComments);
                 trendUsers.push(data.length);
@@ -449,10 +581,10 @@
             statusText.style.color = "red";
             updateMetrics(true);
             renderRankingTable([]);
-            
+
             searchFilteredData = [];
             renderSearchTablePage(); 
-            
+
             if (activeTab === 'trends') renderTrendChart();
             return;
         }
@@ -582,8 +714,8 @@
         return data.sort((a, b) => {
             let valA, valB;
             if (key === 'bookmark') {
-                valA = bookmarks.includes(a.id) ? 1 : 0;
-                valB = bookmarks.includes(b.id) ? 1 : 0;
+                valA = isUserBookmarked(a) ? 1 : 0;
+                valB = isUserBookmarked(b) ? 1 : 0;
             } else {
                 valA = a[key];
                 valB = b[key];
@@ -603,12 +735,12 @@
         displayData.forEach((u, index) => { u.rank = index + 1; });
         
         if (filterOnlyBookmarks.ranking) {
-            displayData = displayData.filter(r => bookmarks.includes(r.id));
+            displayData = displayData.filter(isUserBookmarked);
         }
         displayData = displayData.slice(0, 50);
 
-        const bookmarkedUsers = displayData.filter(r => bookmarks.includes(r.id));
-        const normalUsers = displayData.filter(r => !bookmarks.includes(r.id));
+        const bookmarkedUsers = displayData.filter(isUserBookmarked);
+        const normalUsers = displayData.filter(r => !isUserBookmarked(r));
         renderRankingTable([...bookmarkedUsers, ...normalUsers]);
     }
 
@@ -621,13 +753,13 @@
         }
         filtered = filtered.filter(r => searchTypes[r.type]);
         if (filterOnlyBookmarks.search) {
-            filtered = filtered.filter(r => bookmarks.includes(r.id));
+            filtered = filtered.filter(isUserBookmarked);
         }
         
         filtered = sortData(filtered, sortStates.search.key, sortStates.search.order);
 
-        const bookmarkedUsers = filtered.filter(r => bookmarks.includes(r.id));
-        const normalUsers = filtered.filter(r => !bookmarks.includes(r.id));
+        const bookmarkedUsers = filtered.filter(isUserBookmarked);
+        const normalUsers = filtered.filter(r => !isUserBookmarked(r));
         
         searchFilteredData = [...bookmarkedUsers, ...normalUsers];
         searchCurrentPage = 1; 
@@ -718,7 +850,7 @@
         const tbody = document.getElementById('ranking-body');
         tbody.innerHTML = '';
         data.forEach(row => {
-            const isBookmarked = bookmarks.includes(row.id);
+            const isBookmarked = isUserBookmarked(row);
             const tr = document.createElement('tr');
             if (isBookmarked) tr.style.background = "#fffacd"; 
             
@@ -730,12 +862,11 @@
             const totalWeight = currentRankingMode === 'total' ? 'font-weight:bold;' : '';
 
             const safeNick = escapeHTML(row.nickname);
-            const safeId = escapeHTML(row.id);
-            const jsSafeId = row.id.replace(/'/g, "\\'");
+            const safeId = escapeHTML(row.id || row.display_id || '');
 
             tr.innerHTML = `
                 <td class="rank-number">${row.rank}위</td>
-                <td class="td-bookmark" onclick="event.stopPropagation(); toggleBookmark('${jsSafeId}')" title="클릭하여 즐겨찾기">
+                <td class="td-bookmark" title="클릭하여 즐겨찾기">
                     <input type="checkbox" class="star-checkbox" ${isBookmarked ? 'checked' : ''}>
                 </td>
                 <td title="${safeNick}">${safeNick}</td>
@@ -745,6 +876,13 @@
                 <td style="${commentWeight}">${row.comment}</td>
                 <td style="${totalWeight}">${row.total}</td>
             `;
+            const bookmarkCell = tr.querySelector('.td-bookmark');
+            if (bookmarkCell) {
+                bookmarkCell.addEventListener('click', event => {
+                    event.stopPropagation();
+                    toggleBookmarkUser(row);
+                });
+            }
             tbody.appendChild(tr);
         });
     }
@@ -753,7 +891,7 @@
         const tbody = document.getElementById('search-body');
         tbody.innerHTML = '';
         data.forEach(row => {
-            const isBookmarked = bookmarks.includes(row.id);
+            const isBookmarked = isUserBookmarked(row);
             const tr = document.createElement('tr');
             if (isBookmarked) tr.style.background = "#fffacd"; 
             
@@ -761,11 +899,10 @@
             let bType = (row.type === "고닉") ? "bg-gonic" : (row.type === "반고닉" ? "bg-ban" : "bg-udong");
             
             const safeNick = escapeHTML(row.nickname);
-            const safeId = escapeHTML(row.id);
-            const jsSafeId = row.id.replace(/'/g, "\\'");
+            const safeId = escapeHTML(row.id || row.display_id || '');
 
             tr.innerHTML = `
-                <td class="td-bookmark" onclick="event.stopPropagation(); toggleBookmark('${jsSafeId}')" title="클릭하여 즐겨찾기">
+                <td class="td-bookmark" title="클릭하여 즐겨찾기">
                     <input type="checkbox" class="star-checkbox" ${isBookmarked ? 'checked' : ''}>
                 </td>
                 <td title="${safeNick}">${safeNick}</td>
@@ -775,6 +912,13 @@
                 <td>${row.comment}</td>
                 <td>${row.total}</td>
             `;
+            const bookmarkCell = tr.querySelector('.td-bookmark');
+            if (bookmarkCell) {
+                bookmarkCell.addEventListener('click', event => {
+                    event.stopPropagation();
+                    toggleBookmarkUser(row);
+                });
+            }
             tbody.appendChild(tr);
         });
     }
@@ -795,6 +939,40 @@
             return id.includes('(') ? '' : id;
         }
         return '';
+    }
+
+    function bookmarkKey(user) {
+        if (!user) return '';
+        return cleanText(resolveUserKey(user) || user.id || user.display_id);
+    }
+
+    function bookmarkAliases(user) {
+        const keys = new Set();
+        const primary = bookmarkKey(user);
+        const id = cleanText(user && (user.id || user.display_id));
+        if (primary) keys.add(primary);
+        if (id) keys.add(id);
+        return Array.from(keys);
+    }
+
+    function isUserBookmarked(user) {
+        return bookmarkAliases(user).some(key => bookmarks.includes(key));
+    }
+
+    function toggleBookmarkUser(user) {
+        const aliases = bookmarkAliases(user);
+        if (!aliases.length) return;
+
+        const alreadyBookmarked = aliases.some(key => bookmarks.includes(key));
+        if (alreadyBookmarked) {
+            bookmarks = bookmarks.filter(saved => !aliases.includes(saved));
+        } else {
+            bookmarks = [...bookmarks, aliases[0]];
+        }
+
+        localStorage.setItem('user_bookmarks', JSON.stringify(bookmarks));
+        sortAndRenderRanking();
+        executeSearch();
     }
 
     function isSameUser(record, user, userKey) {
@@ -829,7 +1007,8 @@
     }
 
     async function loadParquetRows(url, columns) {
-        if (parquetCache.has(url)) return parquetCache.get(url);
+        const cacheKey = `${url}::${columns.join(',')}`;
+        if (parquetCache.has(cacheKey)) return parquetCache.get(cacheKey);
 
         const request = (async () => {
             const response = await fetch(url, { cache: 'default' });
@@ -847,19 +1026,51 @@
             });
         })();
 
-        parquetCache.set(url, request);
+        parquetCache.set(cacheKey, request);
         try {
             return await request;
         } catch (error) {
-            // 일시적인 네트워크/파싱 오류는 다음 클릭에서 다시 시도할 수 있게 캐시에서 제거합니다.
-            parquetCache.delete(url);
+            // 일시적인 네트워크/파싱 오류 또는 구버전 컬럼 불일치는 다른 스키마로 다시 시도할 수 있게 제거합니다.
+            parquetCache.delete(cacheKey);
             throw error;
         }
     }
 
-    function detailParquetUrl(dateStr, hour, fileName) {
+    function detailParquetCandidates(dateStr, hour, fileName) {
         const hh = String(hour).padStart(2, '0');
-        return `${R2_DOMAIN}/content/gallery=${encodeURIComponent(GALLERY_ID)}/date=${dateStr}/hour=${hh}/${fileName}`;
+        return [
+            // main.go v4 현재 구조: 날짜/HHh/posts.parquet, comments.parquet
+            `${R2_DOMAIN}/${dateStr}/${hh}h/${fileName}`,
+            // 바로 이전 상세 데이터 구조와의 호환
+            `${R2_DOMAIN}/content/gallery=${encodeURIComponent(GALLERY_ID)}/date=${dateStr}/hour=${hh}/${fileName}`
+        ];
+    }
+
+    async function loadParquetFromCandidates(candidates, preferredColumns, legacyColumns = preferredColumns) {
+        let lastError = null;
+
+        for (const url of candidates) {
+            try {
+                const rows = await loadParquetRows(url, preferredColumns);
+                if (rows !== null) return rows;
+                continue;
+            } catch (error) {
+                lastError = error;
+            }
+
+            // 구버전 Parquet에 새 컬럼이 없으면 기존 핵심 컬럼만 다시 읽습니다.
+            if (legacyColumns.join(',') !== preferredColumns.join(',')) {
+                try {
+                    const rows = await loadParquetRows(url, legacyColumns);
+                    if (rows !== null) return rows;
+                } catch (error) {
+                    lastError = error;
+                }
+            }
+        }
+
+        if (lastError) throw lastError;
+        return null;
     }
 
     function normalizeUnixMillis(value, fallbackDate) {
@@ -888,6 +1099,19 @@
     function formatCreatedAt(value) {
         const text = cleanText(value);
         if (!text) return '작성 시간 없음';
+        const parsed = Date.parse(text);
+        if (Number.isFinite(parsed)) {
+            try {
+                return new Intl.DateTimeFormat('ko-KR', {
+                    timeZone: 'Asia/Seoul',
+                    month: '2-digit',
+                    day: '2-digit',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    hour12: false
+                }).format(new Date(parsed));
+            } catch (_) {}
+        }
         return text.replace('T', ' ').replace(/Z$/, '');
     }
 
@@ -900,16 +1124,227 @@
         container.appendChild(state);
     }
 
-    function createActivityLink(url, label) {
+    function isSafeHttpUrl(value) {
+        const text = cleanText(value);
+        if (!text) return false;
+        try {
+            const parsed = new URL(text, window.location.href);
+            return parsed.protocol === 'http:' || parsed.protocol === 'https:';
+        } catch (_) {
+            return false;
+        }
+    }
+
+    function createActivityLink(url, label, className = 'activity-item-link') {
         const safeUrl = cleanText(url);
-        if (!/^https?:\/\//i.test(safeUrl)) return null;
+        if (!isSafeHttpUrl(safeUrl)) return null;
         const link = document.createElement('a');
-        link.className = 'activity-item-link';
+        link.className = className;
         link.href = safeUrl;
         link.target = '_blank';
         link.rel = 'noopener noreferrer';
         link.textContent = label;
         return link;
+    }
+
+    function preferredPostOpenUrl(originalUrl, postNo) {
+        const no = cleanText(postNo);
+        const preferMobile = window.matchMedia &&
+            window.matchMedia('(max-width: 900px), (pointer: coarse)').matches;
+
+        if (preferMobile && no) {
+            return `https://m.dcinside.com/board/${encodeURIComponent(GALLERY_ID)}/${encodeURIComponent(no)}`;
+        }
+        return cleanText(originalUrl);
+    }
+
+    function normalizeUrlArray(value) {
+        if (Array.isArray(value)) {
+            return value.map(cleanText).filter(isSafeHttpUrl);
+        }
+        if (value && typeof value !== 'string' && typeof value[Symbol.iterator] === 'function') {
+            try {
+                return Array.from(value).map(cleanText).filter(isSafeHttpUrl);
+            } catch (_) {}
+        }
+        const text = cleanText(value);
+        if (!text) return [];
+        if (text.startsWith('[')) {
+            try {
+                const parsed = JSON.parse(text);
+                if (Array.isArray(parsed)) return parsed.map(cleanText).filter(isSafeHttpUrl);
+            } catch (_) {}
+        }
+        return isSafeHttpUrl(text) ? [text] : [];
+    }
+
+    function appendBreakIfNeeded(container) {
+        const last = container.lastChild;
+        if (!last || last.nodeName !== 'BR') container.appendChild(document.createElement('br'));
+    }
+
+    function appendStoredHtmlNode(node, container, seenUrls, allowVideo) {
+        if (node.nodeType === Node.TEXT_NODE) {
+            container.appendChild(document.createTextNode(node.nodeValue || ''));
+            return;
+        }
+        if (node.nodeType !== Node.ELEMENT_NODE) return;
+
+        const tag = node.tagName.toLowerCase();
+
+        if (tag === 'br') {
+            container.appendChild(document.createElement('br'));
+            return;
+        }
+
+        if (tag === 'img') {
+            const url = cleanText(node.getAttribute('src') || node.getAttribute('data-src') || node.getAttribute('data-original'));
+            if (isSafeHttpUrl(url)) {
+                const link = createActivityLink(url, '이미지', 'activity-inline-link');
+                if (link) {
+                    container.appendChild(link);
+                    seenUrls.add(url);
+                }
+            }
+            return;
+        }
+
+        if (tag === 'video' && allowVideo) {
+            let url = cleanText(node.getAttribute('src'));
+            if (!url) {
+                const source = node.querySelector('source[src]');
+                if (source) url = cleanText(source.getAttribute('src'));
+            }
+            if (isSafeHttpUrl(url)) {
+                const link = createActivityLink(url, '동영상', 'activity-inline-link');
+                if (link) {
+                    container.appendChild(link);
+                    seenUrls.add(url);
+                }
+            }
+            return;
+        }
+
+        if (tag === 'source') {
+            return;
+        }
+
+        if (tag === 'a') {
+            // 이미지/영상이 링크로 감싸져 있어도 실제 미디어 URL을 "이미지"/"동영상"으로 표시합니다.
+            if (node.querySelector('img, video, source')) {
+                for (const child of node.childNodes) {
+                    appendStoredHtmlNode(child, container, seenUrls, allowVideo);
+                }
+                return;
+            }
+
+            const url = cleanText(node.getAttribute('href'));
+            const label = cleanText(node.textContent) || '링크';
+            if (isSafeHttpUrl(url)) {
+                const link = createActivityLink(url, label, 'activity-inline-link');
+                if (link) {
+                    container.appendChild(link);
+                    seenUrls.add(url);
+                    return;
+                }
+            }
+        }
+
+        const blockTags = new Set(['div', 'p', 'li', 'section', 'article', 'blockquote', 'pre']);
+        for (const child of node.childNodes) {
+            appendStoredHtmlNode(child, container, seenUrls, allowVideo);
+        }
+        if (blockTags.has(tag)) appendBreakIfNeeded(container);
+    }
+
+    function hasVisibleContent(container) {
+        if (cleanText(container.textContent)) return true;
+        return Boolean(container.querySelector('a'));
+    }
+
+    function renderStoredContent(row, body, allowVideo) {
+        const seenUrls = new Set();
+        const storedHtml = cleanText(row.content_html);
+
+        if (storedHtml) {
+            try {
+                const parsed = new DOMParser().parseFromString(`<div id="stored-content-root">${storedHtml}</div>`, 'text/html');
+                const root = parsed.getElementById('stored-content-root');
+                if (root) {
+                    for (const child of root.childNodes) {
+                        appendStoredHtmlNode(child, body, seenUrls, allowVideo);
+                    }
+                }
+            } catch (error) {
+                console.warn('저장 본문 HTML 변환 실패:', error);
+            }
+        }
+
+        // content_html이 없는 이전 Parquet는 정제된 텍스트를 그대로 사용합니다.
+        if (!hasVisibleContent(body)) {
+            const plain = cleanText(row.content);
+            if (plain) body.textContent = plain;
+        }
+
+        const imageUrls = normalizeUrlArray(row.image_urls);
+        const videoUrls = allowVideo ? normalizeUrlArray(row.video_urls) : [];
+        const linkUrls = normalizeUrlArray(row.link_urls);
+        const extras = [];
+
+        imageUrls.forEach(url => {
+            if (!seenUrls.has(url)) {
+                extras.push({ url, label: '이미지' });
+                seenUrls.add(url);
+            }
+        });
+        videoUrls.forEach(url => {
+            if (!seenUrls.has(url)) {
+                extras.push({ url, label: '동영상' });
+                seenUrls.add(url);
+            }
+        });
+        linkUrls.forEach(url => {
+            if (!seenUrls.has(url)) {
+                extras.push({ url, label: '외부 링크' });
+                seenUrls.add(url);
+            }
+        });
+
+        if (!hasVisibleContent(body) && extras.length === 0) {
+            body.textContent = '내용이 없습니다.';
+            body.classList.add('empty');
+            return null;
+        }
+
+        if (!extras.length) return null;
+
+        const extraBox = document.createElement('div');
+        extraBox.className = 'activity-media-links';
+        extras.forEach(extra => {
+            const link = createActivityLink(extra.url, extra.label);
+            if (link) extraBox.appendChild(link);
+        });
+        return extraBox.childElementCount ? extraBox : null;
+    }
+
+    function contentTypeLabel(value) {
+        const labels = {
+            text: '텍스트',
+            image: '이미지',
+            video: '동영상',
+            link: '링크',
+            mixed: '혼합',
+            empty: '빈 내용'
+        };
+        return labels[cleanText(value)] || '';
+    }
+
+    function addMetaBadge(meta, label) {
+        if (!label) return;
+        const badge = document.createElement('span');
+        badge.className = 'activity-type-badge';
+        badge.textContent = label;
+        meta.appendChild(badge);
     }
 
     function renderPostItems(posts) {
@@ -933,21 +1368,25 @@
             const meta = document.createElement('div');
             meta.className = 'activity-item-meta';
             const postNo = cleanText(post.post_no);
-            meta.textContent = `${formatCreatedAt(post.created_at)}${postNo ? ` · 글 ${postNo}` : ''}`;
+            const commentCount = Number(post.comment_count);
+            const parts = [
+                formatCreatedAt(post.created_at),
+                postNo ? `글 ${postNo}` : '',
+                Number.isFinite(commentCount) && commentCount >= 0 ? `댓글 ${commentCount}` : ''
+            ].filter(Boolean);
+            const metaText = document.createElement('span');
+            metaText.textContent = parts.join(' · ');
+            meta.appendChild(metaText);
+            addMetaBadge(meta, contentTypeLabel(post.content_type));
             item.appendChild(meta);
 
             const body = document.createElement('div');
             body.className = 'activity-item-content';
-            const content = cleanText(post.content);
-            if (content) {
-                body.textContent = content;
-            } else {
-                body.textContent = '내용이 없습니다.';
-                body.classList.add('empty');
-            }
+            const extras = renderStoredContent(post, body, true);
             item.appendChild(body);
+            if (extras) item.appendChild(extras);
 
-            const link = createActivityLink(post.url, '게시글 열기 ↗');
+            const link = createActivityLink(preferredPostOpenUrl(post.url, post.post_no), '게시글 열기 ↗');
             if (link) item.appendChild(link);
             container.appendChild(item);
         });
@@ -970,26 +1409,48 @@
             meta.className = 'activity-item-meta';
             const postNo = cleanText(comment.post_no);
             const commentNo = cleanText(comment.comment_no);
-            const ids = [postNo ? `글 ${postNo}` : '', commentNo ? `댓글 ${commentNo}` : ''].filter(Boolean).join(' · ');
-            meta.textContent = `${formatCreatedAt(comment.created_at)}${ids ? ` · ${ids}` : ''}`;
+            const ids = [postNo ? `글 ${postNo}` : '', commentNo ? `댓글 ${commentNo}` : ''].filter(Boolean);
+            const metaText = document.createElement('span');
+            metaText.textContent = [formatCreatedAt(comment.created_at), ...ids].join(' · ');
+            meta.appendChild(metaText);
+
+            const relation = cleanText(comment.relation_type);
+            if (relation === 'reply_to_comment' || Number(comment.depth) > 0) {
+                addMetaBadge(meta, '답글');
+            } else if (relation === 'comment_on_post') {
+                addMetaBadge(meta, '댓글');
+            }
+            addMetaBadge(meta, contentTypeLabel(comment.content_type));
             item.appendChild(meta);
 
             const body = document.createElement('div');
             body.className = 'activity-item-content';
-            const content = cleanText(comment.content);
-            if (content) {
-                body.textContent = content;
-            } else {
-                body.textContent = '내용이 없습니다.';
-                body.classList.add('empty');
-            }
+            const extras = renderStoredContent(comment, body, false);
             item.appendChild(body);
+            if (extras) item.appendChild(extras);
 
-            const link = createActivityLink(comment.post_url, '원문 게시글 열기 ↗');
+            const link = createActivityLink(preferredPostOpenUrl(comment.post_url, comment.post_no), '원문 게시글 열기 ↗');
             if (link) item.appendChild(link);
             container.appendChild(item);
         });
     }
+
+    const POST_COLUMNS_CURRENT = [
+        'user_key', 'post_no', 'url', 'title', 'content', 'content_html',
+        'image_urls', 'video_urls', 'link_urls', 'content_type',
+        'created_at', 'created_at_unix_ms', 'comment_count'
+    ];
+    const POST_COLUMNS_LEGACY = [
+        'user_key', 'post_no', 'url', 'title', 'content', 'created_at', 'created_at_unix_ms'
+    ];
+    const COMMENT_COLUMNS_CURRENT = [
+        'user_key', 'comment_no', 'post_no', 'post_url', 'parent_comment_no', 'depth',
+        'relation_type', 'content', 'content_html', 'image_urls', 'link_urls', 'content_type',
+        'created_at', 'created_at_unix_ms'
+    ];
+    const COMMENT_COLUMNS_LEGACY = [
+        'user_key', 'comment_no', 'post_no', 'post_url', 'content', 'created_at', 'created_at_unix_ms'
+    ];
 
     async function loadRecentUserActivity(user, requestSequence) {
         const dateStr = document.getElementById('date-picker').value || todayKst;
@@ -999,8 +1460,8 @@
         const comments = [];
 
         if (!userKey) {
-            setActivityState('recent-posts', '이 시간대엔 데이터가 없어 게시글 내용을 연결할 수 없습니다.');
-            setActivityState('recent-comments', '이 시간대엔 데이터가 없어 댓글 내용을 연결할 수 없습니다.');
+            setActivityState('recent-posts', '이 데이터에는 user_key가 없어 게시글 내용을 연결할 수 없습니다.');
+            setActivityState('recent-comments', '이 데이터에는 user_key가 없어 댓글 내용을 연결할 수 없습니다.');
             return;
         }
 
@@ -1010,8 +1471,8 @@
             return;
         }
 
-        // 최신 시간부터 역순으로 확인합니다. 시간별 집계에서 이 사용자의 활동이 있는 시간만
-        // Parquet를 요청하며, 게시글 5개/댓글 10개를 확보하면 해당 종류는 더 이상 읽지 않습니다.
+        // 최신 시간부터 역순으로 확인합니다. 집계에서 이 사용자가 실제 활동한 시간의
+        // Parquet만 읽고, 게시글 5개/댓글 10개가 모이면 더 오래된 파일은 읽지 않습니다.
         for (let hour = lastValidHour; hour >= 0; hour--) {
             if (requestSequence !== modalLoadSequence) return;
             if (posts.length >= 5 && comments.length >= 10) break;
@@ -1024,15 +1485,19 @@
             if (!needPosts && !needComments) continue;
 
             const postPromise = needPosts
-                ? loadParquetRows(detailParquetUrl(dateStr, hour, 'posts.parquet'), [
-                    'user_key', 'post_no', 'url', 'title', 'content', 'created_at', 'created_at_unix_ms'
-                ])
+                ? loadParquetFromCandidates(
+                    detailParquetCandidates(dateStr, hour, 'posts.parquet'),
+                    POST_COLUMNS_CURRENT,
+                    POST_COLUMNS_LEGACY
+                )
                 : Promise.resolve(null);
 
             const commentPromise = needComments
-                ? loadParquetRows(detailParquetUrl(dateStr, hour, 'comments.parquet'), [
-                    'user_key', 'comment_no', 'post_no', 'post_url', 'content', 'created_at', 'created_at_unix_ms'
-                ])
+                ? loadParquetFromCandidates(
+                    detailParquetCandidates(dateStr, hour, 'comments.parquet'),
+                    COMMENT_COLUMNS_CURRENT,
+                    COMMENT_COLUMNS_LEGACY
+                )
                 : Promise.resolve(null);
 
             const [postRows, commentRows] = await Promise.all([postPromise, commentPromise]);
@@ -1056,14 +1521,27 @@
         renderCommentItems(sortNewestFirst(comments).slice(0, 10));
     }
 
+    function scrollModalSection(sectionId) {
+        const section = document.getElementById(sectionId);
+        if (!section) return;
+        section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
     function openModal(user) {
         const requestSequence = ++modalLoadSequence;
-        const nick = user.nickname || '';
-        const id = user.id || user.display_id || '';
+        const nick = cleanText(user.nickname) || '이름 없음';
+        const id = cleanText(user.id || user.display_id);
         const userKey = resolveUserKey(user);
+        const modal = document.getElementById('graph-modal');
+        const modalContent = modal.querySelector('.modal-content');
 
-        document.getElementById('graph-modal').style.display = 'block';
-        document.getElementById('modal-title').innerText = `${nick} (${id}) 상세 그래프`;
+        modal.style.display = 'block';
+        document.body.classList.add('modal-open');
+        if (modalContent) modalContent.scrollTop = 0;
+
+        document.getElementById('modal-title').innerText = id
+            ? `${nick} (${id}) 상세 그래프`
+            : `${nick} 상세 그래프`;
         setActivityState('recent-posts', '최근 게시글을 불러오는 중...');
         setActivityState('recent-comments', '최근 댓글을 불러오는 중...');
 
@@ -1086,11 +1564,14 @@
             legend: { data: ['게시글', '댓글'], top: '0%' },
             grid: { left: '3%', right: '4%', bottom: '5%', containLabel: true },
             xAxis: { type: 'category', boundaryGap: false, data: hours },
-            yAxis: { type: 'value' },
+            yAxis: { type: 'value', minInterval: 1 },
             series: [
                 { name: '게시글', type: 'line', smooth: true, data: userPosts, itemStyle: { color: '#007bff' }, areaStyle: { opacity: 0.1 } },
                 { name: '댓글', type: 'line', smooth: true, data: userComments, itemStyle: { color: '#ff4b4b' }, areaStyle: { opacity: 0.1 } }
             ]
+        });
+        requestAnimationFrame(() => {
+            if (modalChart) modalChart.resize();
         });
 
         loadRecentUserActivity(user, requestSequence).catch(error => {
@@ -1101,18 +1582,27 @@
         });
     }
 
-    function toggleBookmark(id) {
-        bookmarks = bookmarks.includes(id) ? bookmarks.filter(b => b !== id) : [...bookmarks, id];
-        localStorage.setItem('user_bookmarks', JSON.stringify(bookmarks));
-        sortAndRenderRanking();
-        executeSearch();
-    }
-
     function closeModal() {
         modalLoadSequence++;
-        document.getElementById('graph-modal').style.display = "none";
+        const modal = document.getElementById('graph-modal');
+        modal.style.display = "none";
+        document.body.classList.remove('modal-open');
     }
-    
+
+    document.getElementById('graph-modal').addEventListener('click', event => {
+        if (event.target === event.currentTarget) closeModal();
+    });
+
+    document.addEventListener('keydown', event => {
+        if (event.key === 'Escape' && document.getElementById('graph-modal').style.display === 'block') {
+            closeModal();
+        }
+    });
+
+    window.addEventListener('resize', () => {
+        if (modalChart) modalChart.resize();
+    });
+
     window.onload = () => fetchDailyData(todayKst);
 </script>
 
