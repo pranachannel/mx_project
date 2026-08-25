@@ -577,7 +577,7 @@
         currentData = Array.from(userMap.values());
 
         if (currentData.length === 0) {
-            statusText.innerText = `아직 수집된 데이터가 전혀 없습니다`;
+            statusText.innerText = `이 시간대의 데이터가 없습니다`;
             statusText.style.color = "red";
             updateMetrics(true);
             renderRankingTable([]);
