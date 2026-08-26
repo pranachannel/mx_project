@@ -413,6 +413,9 @@
 <script>
     const R2_DOMAIN = "https://pub-fca2435a027e41bf954b4bc4f46e560a.r2.dev"; 
     const GALLERY_ID = "projectmx";
+    // Cloudflare Worker를 배포한 뒤 주소를 넣으면 dcimg 계열 핫링크/Referer 차단을
+    // 우회해 이미지·움짤·동영상을 뷰어 안에서 표시할 수 있습니다. 비어 있으면 원본 URL을 직접 사용합니다.
+    const MEDIA_RELAY_URL = "";
     const HY_PARQUET_URL = "https://cdn.jsdelivr.net/npm/hyparquet@1.28.1/+esm";
     const HY_PARQUET_COMPRESSORS_URL = "https://cdn.jsdelivr.net/npm/hyparquet-compressors@1.1.1/+esm";
 
@@ -1224,14 +1227,34 @@
         return suggestedKind === 'video' ? 'video' : 'image';
     }
 
-    function mediaDisplayLabel(url, defaultLabel, sourceKind = 'image') {
-        // 댓글 미디어는 main.go의 저장 의미에 맞춰 항상 디시콘으로 보입니다.
+    function mediaDisplayLabel(url, defaultLabel, sourceKind = 'image', storedType = '') {
+        const type = cleanText(storedType);
+        if (type === 'dccon') return '디시콘';
+        if (type === 'animated_image') return '움짤';
+        if (type === 'video') return '동영상';
+        if (type === 'image') return '이미지';
+
+        // 구버전 Parquet에는 data-media-type/새 컬럼이 없으므로 URL 확장자로 보완합니다.
         if (defaultLabel === '디시콘') return '디시콘';
         if (isAnimatedImageUrl(url)) return '움짤';
         return sourceKind === 'video' ? '동영상' : defaultLabel;
     }
 
-    function openMediaViewer(url, kind, title) {
+    function mediaRelayUrl(originalUrl, referer = '') {
+        const relayBase = cleanText(MEDIA_RELAY_URL);
+        const safeOriginal = cleanText(originalUrl);
+        if (!relayBase || !isSafeHttpUrl(relayBase) || !isSafeHttpUrl(safeOriginal)) return safeOriginal;
+        try {
+            const relay = new URL(relayBase, window.location.href);
+            relay.searchParams.set('url', safeOriginal);
+            if (isSafeHttpUrl(referer)) relay.searchParams.set('referer', cleanText(referer));
+            return relay.toString();
+        } catch (_) {
+            return safeOriginal;
+        }
+    }
+
+    function openMediaViewer(url, kind, title, referer = '') {
         const safeUrl = cleanText(url);
         if (!isSafeHttpUrl(safeUrl)) return false;
 
@@ -1263,7 +1286,11 @@
         wrap.style.justifyContent = 'center';
         wrap.style.gap = '12px';
 
-        const mediaKind = inferMediaViewerKind(safeUrl, kind);
+        // GIF/WebP/APNG처럼 '움짤'로 분류된 항목은 원본 HTML이 video 태그였더라도
+        // 반드시 <img>로 표시합니다. 브라우저가 이미지 자체의 애니메이션을 재생합니다.
+        const mediaKind = cleanText(title) === '움짤'
+            ? 'image'
+            : inferMediaViewerKind(safeUrl, kind);
         let media;
         if (mediaKind === 'video') {
             media = doc.createElement('video');
@@ -1275,7 +1302,8 @@
             media = doc.createElement('img');
             media.alt = cleanText(title) || '미디어';
         }
-        media.src = safeUrl;
+        const displayUrl = mediaRelayUrl(safeUrl, referer);
+        media.src = displayUrl;
         media.style.display = 'block';
         media.style.maxWidth = '100%';
         media.style.maxHeight = 'calc(100vh - 72px)';
@@ -1286,16 +1314,26 @@
         status.style.color = '#bbb';
         status.textContent = '';
         media.addEventListener('error', () => {
-            status.textContent = '브라우저에서 바로 표시하지 못했습니다. 원본 서버의 MIME/CORS 설정을 확인해 주세요.';
+            status.textContent = '브라우저에서 바로 표시하지 못했습니다. 원본 서버의 외부 표시 차단(Referer/핫링크), 응답 형식(MIME), 또는 미디어 전송 정책 때문에 실패했을 수 있습니다.';
         });
+
+        const directLink = doc.createElement('a');
+        directLink.href = safeUrl;
+        directLink.target = '_blank';
+        directLink.rel = 'noopener noreferrer';
+        directLink.textContent = '원본 URL 직접 열기 ↗';
+        directLink.style.color = '#9ecbff';
+        directLink.style.fontSize = '13px';
+        directLink.style.textDecoration = 'none';
 
         wrap.appendChild(media);
         wrap.appendChild(status);
+        wrap.appendChild(directLink);
         doc.body.appendChild(wrap);
         return true;
     }
 
-    function createActivityLink(url, label, className = 'activity-item-link', viewerKind = '') {
+    function createActivityLink(url, label, className = 'activity-item-link', viewerKind = '', referer = '') {
         const safeUrl = cleanText(url);
         if (!isSafeHttpUrl(safeUrl)) return null;
         const link = document.createElement('a');
@@ -1306,7 +1344,7 @@
         link.textContent = label;
         if (viewerKind) {
             link.addEventListener('click', event => {
-                if (openMediaViewer(safeUrl, viewerKind, label)) {
+                if (openMediaViewer(safeUrl, viewerKind, label, referer)) {
                     event.preventDefault();
                 }
             });
@@ -1350,7 +1388,13 @@
         if (!last || last.nodeName !== 'BR') container.appendChild(document.createElement('br'));
     }
 
-    function appendStoredHtmlNode(node, container, seenUrls, allowVideo, imageLabel = '이미지') {
+    function storedMediaType(node, fallbackTag = '') {
+        const marked = cleanText(node && node.getAttribute ? node.getAttribute('data-media-type') : '');
+        if (['image', 'animated_image', 'video', 'dccon'].includes(marked)) return marked;
+        return fallbackTag;
+    }
+
+    function appendStoredHtmlNode(node, container, seenUrls, allowVideo, imageLabel = '이미지', referer = '') {
         if (node.nodeType === Node.TEXT_NODE) {
             container.appendChild(document.createTextNode(node.nodeValue || ''));
             return;
@@ -1367,8 +1411,10 @@
         if (tag === 'img') {
             const url = cleanText(node.getAttribute('src') || node.getAttribute('data-src') || node.getAttribute('data-original'));
             if (isSafeHttpUrl(url)) {
-                const label = mediaDisplayLabel(url, imageLabel, 'image');
-                const link = createActivityLink(url, label, 'activity-inline-link', inferMediaViewerKind(url, 'image'));
+                const type = storedMediaType(node, isAnimatedImageUrl(url) ? 'animated_image' : 'image');
+                const label = mediaDisplayLabel(url, imageLabel, 'image', type);
+                const viewerKind = type === 'video' ? 'video' : 'image';
+                const link = createActivityLink(url, label, 'activity-inline-link', viewerKind, referer);
                 if (link) {
                     container.appendChild(link);
                     seenUrls.add(url);
@@ -1379,15 +1425,19 @@
 
         if (tag === 'video') {
             let url = cleanText(node.getAttribute('src'));
+            let sourceNode = null;
             if (!url) {
-                const source = node.querySelector('source[src]');
-                if (source) url = cleanText(source.getAttribute('src'));
+                sourceNode = node.querySelector('source[src]');
+                if (sourceNode) url = cleanText(sourceNode.getAttribute('src'));
             }
             if (isSafeHttpUrl(url)) {
-                // 댓글의 video 기반 움직이는 디시콘은 계속 '디시콘', 게시글의 GIF/WebP 계열은 '움짤'로 표시합니다.
-                const defaultLabel = allowVideo ? '동영상' : imageLabel;
-                const label = mediaDisplayLabel(url, defaultLabel, 'video');
-                const link = createActivityLink(url, label, 'activity-inline-link', inferMediaViewerKind(url, 'video'));
+                const markedNode = sourceNode || node;
+                let fallbackType = isAnimatedImageUrl(url) ? 'animated_image' : 'video';
+                if (!allowVideo && imageLabel === '디시콘') fallbackType = 'dccon'; // 구버전 댓글 호환
+                const type = storedMediaType(markedNode, storedMediaType(node, fallbackType));
+                const label = mediaDisplayLabel(url, imageLabel, 'video', type);
+                const viewerKind = type === 'video' ? 'video' : 'image';
+                const link = createActivityLink(url, label, 'activity-inline-link', viewerKind, referer);
                 if (link) {
                     container.appendChild(link);
                     seenUrls.add(url);
@@ -1396,15 +1446,12 @@
             return;
         }
 
-        if (tag === 'source') {
-            return;
-        }
+        if (tag === 'source') return;
 
         if (tag === 'a') {
-            // 이미지/영상이 링크로 감싸져 있어도 실제 미디어 URL을 "이미지"/"동영상"으로 표시합니다.
             if (node.querySelector('img, video, source')) {
                 for (const child of node.childNodes) {
-                    appendStoredHtmlNode(child, container, seenUrls, allowVideo, imageLabel);
+                    appendStoredHtmlNode(child, container, seenUrls, allowVideo, imageLabel, referer);
                 }
                 return;
             }
@@ -1423,7 +1470,7 @@
 
         const blockTags = new Set(['div', 'p', 'li', 'section', 'article', 'blockquote', 'pre']);
         for (const child of node.childNodes) {
-            appendStoredHtmlNode(child, container, seenUrls, allowVideo, imageLabel);
+            appendStoredHtmlNode(child, container, seenUrls, allowVideo, imageLabel, referer);
         }
         if (blockTags.has(tag)) appendBreakIfNeeded(container);
     }
@@ -1436,6 +1483,7 @@
     function renderStoredContent(row, body, allowVideo, imageLabel = '이미지') {
         const seenUrls = new Set();
         const storedHtml = cleanText(row.content_html);
+        const referer = cleanText(row.url || row.post_url);
 
         if (storedHtml) {
             try {
@@ -1443,7 +1491,7 @@
                 const root = parsed.getElementById('stored-content-root');
                 if (root) {
                     for (const child of root.childNodes) {
-                        appendStoredHtmlNode(child, body, seenUrls, allowVideo, imageLabel);
+                        appendStoredHtmlNode(child, body, seenUrls, allowVideo, imageLabel, referer);
                     }
                 }
             } catch (error) {
@@ -1451,40 +1499,34 @@
             }
         }
 
-        // content_html이 없는 이전 Parquet는 정제된 텍스트를 그대로 사용합니다.
         if (!hasVisibleContent(body)) {
             const plain = cleanText(row.content);
             if (plain) body.textContent = plain;
         }
 
         const imageUrls = normalizeUrlArray(row.image_urls);
-        const videoUrls = allowVideo ? normalizeUrlArray(row.video_urls) : [];
+        const animatedImageUrls = normalizeUrlArray(row.animated_image_urls);
+        const videoUrls = normalizeUrlArray(row.video_urls);
+        const dcconUrls = normalizeUrlArray(row.dccon_urls);
         const linkUrls = normalizeUrlArray(row.link_urls);
         const extras = [];
 
-        imageUrls.forEach(url => {
+        const addExtra = (url, label, viewerKind) => {
             if (!seenUrls.has(url)) {
-                extras.push({
-                    url,
-                    label: mediaDisplayLabel(url, imageLabel, 'image'),
-                    viewerKind: inferMediaViewerKind(url, 'image')
-                });
+                extras.push({ url, label, viewerKind, referer });
                 seenUrls.add(url);
             }
-        });
-        videoUrls.forEach(url => {
-            if (!seenUrls.has(url)) {
-                extras.push({
-                    url,
-                    label: mediaDisplayLabel(url, '동영상', 'video'),
-                    viewerKind: inferMediaViewerKind(url, 'video')
-                });
-                seenUrls.add(url);
-            }
-        });
+        };
+
+        imageUrls.forEach(url => addExtra(url, mediaDisplayLabel(url, imageLabel, 'image', 'image'), 'image'));
+        animatedImageUrls.forEach(url => addExtra(url, '움짤', 'image'));
+        if (allowVideo || videoUrls.length > 0) {
+            videoUrls.forEach(url => addExtra(url, '동영상', 'video'));
+        }
+        dcconUrls.forEach(url => addExtra(url, '디시콘', 'image'));
         linkUrls.forEach(url => {
             if (!seenUrls.has(url)) {
-                extras.push({ url, label: '외부 링크', viewerKind: '' });
+                extras.push({ url, label: '외부 링크', viewerKind: '', referer: '' });
                 seenUrls.add(url);
             }
         });
@@ -1500,7 +1542,7 @@
         const extraBox = document.createElement('div');
         extraBox.className = 'activity-media-links';
         extras.forEach(extra => {
-            const link = createActivityLink(extra.url, extra.label, 'activity-item-link', extra.viewerKind || '');
+            const link = createActivityLink(extra.url, extra.label, 'activity-item-link', extra.viewerKind || '', extra.referer || '');
             if (link) extraBox.appendChild(link);
         });
         return extraBox.childElementCount ? extraBox : null;
@@ -1510,7 +1552,9 @@
         const labels = {
             text: '텍스트',
             image: imageLabel,
+            animated_image: '움짤',
             video: '동영상',
+            dccon: '디시콘',
             link: '링크',
             mixed: '혼합',
             empty: '빈 내용'
@@ -1520,8 +1564,9 @@
 
     function contentTypeLabelForRow(row, imageLabel = '이미지', allowVideo = true) {
         const type = cleanText(row && row.content_type);
-        if (imageLabel === '디시콘' && (type === 'image' || type === 'video')) return '디시콘';
+        if (['animated_image', 'dccon'].includes(type)) return contentTypeLabel(type, imageLabel);
 
+        // 구버전 파일은 animated_image_urls/dccon_urls가 없으므로 기존 방식으로 추정합니다.
         if (type === 'image') {
             const urls = normalizeUrlArray(row && row.image_urls);
             if (urls.length > 0 && urls.every(isAnimatedImageUrl)) return '움짤';
@@ -1645,12 +1690,14 @@
             } else if (relation === 'comment_on_post') {
                 addMetaBadge(meta, '댓글');
             }
-            addMetaBadge(meta, contentTypeLabelForRow(comment, '디시콘', false));
+            const isLegacyCommentMedia = !Object.prototype.hasOwnProperty.call(comment, 'dccon_urls');
+            const commentImageLabel = isLegacyCommentMedia ? '디시콘' : '이미지';
+            addMetaBadge(meta, contentTypeLabelForRow(comment, commentImageLabel, true));
             item.appendChild(meta);
 
             const body = document.createElement('div');
             body.className = 'activity-item-content';
-            const extras = renderStoredContent(comment, body, false, '디시콘');
+            const extras = renderStoredContent(comment, body, true, commentImageLabel);
             item.appendChild(body);
             if (extras) item.appendChild(extras);
 
@@ -1662,7 +1709,7 @@
 
     const POST_COLUMNS_CURRENT = [
         'user_key', 'post_no', 'url', 'title', 'content', 'content_html',
-        'image_urls', 'video_urls', 'link_urls', 'content_type',
+        'image_urls', 'animated_image_urls', 'video_urls', 'link_urls', 'content_type',
         'created_at', 'created_at_unix_ms', 'comment_count'
     ];
     const POST_COLUMNS_LEGACY = [
@@ -1670,7 +1717,7 @@
     ];
     const COMMENT_COLUMNS_CURRENT = [
         'user_key', 'comment_no', 'post_no', 'post_url', 'parent_comment_no', 'depth',
-        'relation_type', 'content', 'content_html', 'image_urls', 'link_urls', 'content_type',
+        'relation_type', 'content', 'content_html', 'image_urls', 'animated_image_urls', 'video_urls', 'dccon_urls', 'link_urls', 'content_type',
         'created_at', 'created_at_unix_ms'
     ];
     const COMMENT_COLUMNS_LEGACY = [
