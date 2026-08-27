@@ -1232,11 +1232,10 @@
         if (type === 'video') return '동영상';
         if (type === 'image' || type === 'animated_image') return '이미지';
 
-        // 구버전 데이터에서 GIF/WebP/APNG가 별도 타입으로 저장되지 않았더라도
-        // 움직이는 이미지는 동영상이 아니라 이미지로 표시합니다.
-        if (defaultLabel === '디시콘') return '디시콘';
+        // GIF/WebP/APNG 같은 움직이는 이미지는 어떤 경우에도 동영상으로 표시하지 않습니다.
         if (isAnimatedImageUrl(url)) return '이미지';
-        return sourceKind === 'video' ? '동영상' : defaultLabel;
+        if (defaultLabel === '디시콘') return '디시콘';
+        return sourceKind === 'video' ? '동영상' : '이미지';
     }
 
     function openMediaViewer(url, kind, title, referer = '') {
@@ -1277,8 +1276,11 @@
         // - dccon: 디시콘이 영상 컨테이너를 쓰더라도 별도 범주를 유지하고,
         //          영상 파일이면 컨트롤 없는 반복 재생으로 이미지처럼 보여줌
         let mediaKind;
-        if (kind === 'dccon') {
-            mediaKind = 'dccon';
+        if (kind === 'dccon_motion') {
+            // 분류는 디시콘이지만 원본이 video 태그인 움직이는 디시콘을 재생하기 위한 내부 렌더링 모드입니다.
+            mediaKind = 'dccon_motion';
+        } else if (kind === 'dccon') {
+            mediaKind = inferMediaViewerKind(safeUrl, 'image') === 'video' ? 'dccon_motion' : 'dccon';
         } else if (kind === 'image') {
             mediaKind = 'image';
         } else {
@@ -1292,7 +1294,8 @@
             media.autoplay = true;
             media.playsInline = true;
             media.preload = 'metadata';
-        } else if (mediaKind === 'dccon' && inferMediaViewerKind(safeUrl, 'image') === 'video') {
+        } else if (mediaKind === 'dccon_motion') {
+            // 사용자에게는 끝까지 '디시콘'으로 분류합니다. video 태그는 렌더링 수단일 뿐입니다.
             media = doc.createElement('video');
             media.controls = false;
             media.autoplay = true;
@@ -1390,13 +1393,77 @@
         if (!last || last.nodeName !== 'BR') container.appendChild(document.createElement('br'));
     }
 
-    function storedMediaType(node, fallbackTag = '') {
-        const marked = cleanText(node && node.getAttribute ? node.getAttribute('data-media-type') : '');
-        if (['image', 'animated_image', 'video', 'dccon'].includes(marked)) return marked;
-        return fallbackTag;
+    function normalizedStoredMediaType(value) {
+        const type = cleanText(value);
+        if (type === 'dccon') return 'dccon';
+        if (type === 'video') return 'video';
+        if (type === 'image' || type === 'animated_image') return 'image';
+        return '';
     }
 
-    function appendStoredHtmlNode(node, container, seenUrls, allowVideo, imageLabel = '이미지', referer = '') {
+    function mediaTypePriority(type) {
+        if (type === 'dccon') return 30;
+        // 이미지/animated_image 배열에 명시된 값은 video fallback보다 우선합니다.
+        if (type === 'image') return 20;
+        if (type === 'video') return 10;
+        return 0;
+    }
+
+    function buildStoredMediaTypeMap(row) {
+        const map = new Map();
+        const put = (url, requestedType) => {
+            const safeUrl = cleanText(url);
+            if (!isSafeHttpUrl(safeUrl)) return;
+            let type = normalizedStoredMediaType(requestedType);
+            if (!type) return;
+            // 움직이는 이미지가 과거 데이터의 video_urls에 들어 있어도 이미지로 보정합니다.
+            if (type === 'video' && isAnimatedImageUrl(safeUrl)) type = 'image';
+            const current = map.get(safeUrl) || '';
+            if (mediaTypePriority(type) >= mediaTypePriority(current)) map.set(safeUrl, type);
+        };
+
+        normalizeUrlArray(row && row.image_urls).forEach(url => put(url, 'image'));
+        normalizeUrlArray(row && row.animated_image_urls).forEach(url => put(url, 'image'));
+        normalizeUrlArray(row && row.video_urls).forEach(url => put(url, 'video'));
+        // 디시콘이 다른 배열에도 중복되어 있다면 항상 디시콘 판정이 최우선입니다.
+        normalizeUrlArray(row && row.dccon_urls).forEach(url => put(url, 'dccon'));
+        return map;
+    }
+
+    function storedMediaType(node, fallbackTag = '') {
+        const marked = cleanText(node && node.getAttribute ? node.getAttribute('data-media-type') : '');
+        const normalized = normalizedStoredMediaType(marked);
+        return normalized || normalizedStoredMediaType(fallbackTag);
+    }
+
+    function resolvedStoredMediaType(node, url, fallbackType, typeMap) {
+        const safeUrl = cleanText(url);
+        const mapped = typeMap && typeMap.get(safeUrl);
+        const marked = storedMediaType(node, '');
+
+        // 우선순위: 디시콘 > 명시적 이미지/animated_image > 배열 이미지 > 명시적 영상 > 배열 영상.
+        // 이렇게 해야 <video data-media-type="animated_image"> 같은 구버전 데이터도 동영상으로 되돌아가지 않습니다.
+        if (mapped === 'dccon' || marked === 'dccon') return 'dccon';
+        if (marked === 'image' || mapped === 'image') return 'image';
+        if (marked === 'video' || mapped === 'video') return 'video';
+
+        const fallback = normalizedStoredMediaType(fallbackType) || 'image';
+        if (fallback === 'video' && isAnimatedImageUrl(safeUrl)) return 'image';
+        return fallback;
+    }
+
+    function viewerKindForStoredMedia(type, sourceTag, url) {
+        if (type === 'dccon') {
+            // content_html에서 video 태그로 저장된 움직이는 디시콘은 분류는 dccon으로 유지하고
+            // 뷰어에서만 반복재생 가능한 내부 모드를 사용합니다.
+            if (sourceTag === 'video' || inferMediaViewerKind(url, 'image') === 'video') return 'dccon_motion';
+            return 'dccon';
+        }
+        if (type === 'video') return 'video';
+        return 'image';
+    }
+
+    function appendStoredHtmlNode(node, container, seenUrls, allowVideo, imageLabel = '이미지', referer = '', typeMap = null) {
         if (node.nodeType === Node.TEXT_NODE) {
             container.appendChild(document.createTextNode(node.nodeValue || ''));
             return;
@@ -1413,9 +1480,10 @@
         if (tag === 'img') {
             const url = cleanText(node.getAttribute('src') || node.getAttribute('data-src') || node.getAttribute('data-original'));
             if (isSafeHttpUrl(url)) {
-                const type = storedMediaType(node, isAnimatedImageUrl(url) ? 'animated_image' : 'image');
+                const fallback = isAnimatedImageUrl(url) ? 'image' : 'image';
+                const type = resolvedStoredMediaType(node, url, fallback, typeMap);
                 const label = mediaDisplayLabel(url, imageLabel, 'image', type);
-                const viewerKind = type === 'dccon' ? 'dccon' : (type === 'video' ? 'video' : 'image');
+                const viewerKind = viewerKindForStoredMedia(type, 'img', url);
                 const link = createActivityLink(url, label, 'activity-inline-link', viewerKind, referer);
                 if (link) {
                     container.appendChild(link);
@@ -1433,12 +1501,17 @@
                 if (sourceNode) url = cleanText(sourceNode.getAttribute('src'));
             }
             if (isSafeHttpUrl(url)) {
+                // 배열의 dccon_urls 판정을 최우선으로 하고, 그 다음 data-media-type을 봅니다.
+                // 따라서 움직이는 디시콘이 video 태그여도 '동영상'으로 재분류되지 않습니다.
                 const markedNode = sourceNode || node;
-                let fallbackType = isAnimatedImageUrl(url) ? 'animated_image' : 'video';
-                if (!allowVideo && imageLabel === '디시콘') fallbackType = 'dccon'; // 구버전 댓글 호환
-                const type = storedMediaType(markedNode, storedMediaType(node, fallbackType));
+                const fallback = isAnimatedImageUrl(url) ? 'image' : 'video';
+                let type = resolvedStoredMediaType(markedNode, url, fallback, typeMap);
+                if (!typeMap?.has(url)) {
+                    const parentMarked = storedMediaType(node, '');
+                    if (parentMarked === 'dccon') type = 'dccon';
+                }
                 const label = mediaDisplayLabel(url, imageLabel, 'video', type);
-                const viewerKind = type === 'dccon' ? 'dccon' : (type === 'video' ? 'video' : 'image');
+                const viewerKind = viewerKindForStoredMedia(type, 'video', url);
                 const link = createActivityLink(url, label, 'activity-inline-link', viewerKind, referer);
                 if (link) {
                     container.appendChild(link);
@@ -1453,7 +1526,7 @@
         if (tag === 'a') {
             if (node.querySelector('img, video, source')) {
                 for (const child of node.childNodes) {
-                    appendStoredHtmlNode(child, container, seenUrls, allowVideo, imageLabel, referer);
+                    appendStoredHtmlNode(child, container, seenUrls, allowVideo, imageLabel, referer, typeMap);
                 }
                 return;
             }
@@ -1472,7 +1545,7 @@
 
         const blockTags = new Set(['div', 'p', 'li', 'section', 'article', 'blockquote', 'pre']);
         for (const child of node.childNodes) {
-            appendStoredHtmlNode(child, container, seenUrls, allowVideo, imageLabel, referer);
+            appendStoredHtmlNode(child, container, seenUrls, allowVideo, imageLabel, referer, typeMap);
         }
         if (blockTags.has(tag)) appendBreakIfNeeded(container);
     }
@@ -1486,6 +1559,7 @@
         const seenUrls = new Set();
         const storedHtml = cleanText(row.content_html);
         const referer = cleanText(row.url || row.post_url);
+        const typeMap = buildStoredMediaTypeMap(row);
 
         if (storedHtml) {
             try {
@@ -1493,7 +1567,7 @@
                 const root = parsed.getElementById('stored-content-root');
                 if (root) {
                     for (const child of root.childNodes) {
-                        appendStoredHtmlNode(child, body, seenUrls, allowVideo, imageLabel, referer);
+                        appendStoredHtmlNode(child, body, seenUrls, allowVideo, imageLabel, referer, typeMap);
                     }
                 }
             } catch (error) {
@@ -1513,19 +1587,21 @@
         const linkUrls = normalizeUrlArray(row.link_urls);
         const extras = [];
 
-        const addExtra = (url, label, viewerKind) => {
-            if (!seenUrls.has(url)) {
-                extras.push({ url, label, viewerKind, referer });
-                seenUrls.add(url);
-            }
+        const addMediaExtra = (url, fallbackType) => {
+            if (seenUrls.has(url)) return;
+            const type = typeMap.get(url) || normalizedStoredMediaType(fallbackType) || 'image';
+            const label = mediaDisplayLabel(url, imageLabel, fallbackType === 'video' ? 'video' : 'image', type);
+            const viewerKind = viewerKindForStoredMedia(type, '', url);
+            extras.push({ url, label, viewerKind, referer });
+            seenUrls.add(url);
         };
 
-        imageUrls.forEach(url => addExtra(url, mediaDisplayLabel(url, imageLabel, 'image', 'image'), 'image'));
-        animatedImageUrls.forEach(url => addExtra(url, '이미지', 'image'));
-        if (allowVideo || videoUrls.length > 0) {
-            videoUrls.forEach(url => addExtra(url, '동영상', 'video'));
-        }
-        dcconUrls.forEach(url => addExtra(url, '디시콘', 'dccon'));
+        // 배열 순서와 무관하게 typeMap의 우선순위를 사용하므로 같은 URL이 image_urls와
+        // dccon_urls 양쪽에 있어도 반드시 '디시콘'으로 표시됩니다.
+        imageUrls.forEach(url => addMediaExtra(url, 'image'));
+        animatedImageUrls.forEach(url => addMediaExtra(url, 'image'));
+        videoUrls.forEach(url => addMediaExtra(url, isAnimatedImageUrl(url) ? 'image' : 'video'));
+        dcconUrls.forEach(url => addMediaExtra(url, 'dccon'));
         linkUrls.forEach(url => {
             if (!seenUrls.has(url)) {
                 extras.push({ url, label: '외부 링크', viewerKind: '', referer: '' });
@@ -1566,16 +1642,16 @@
 
     function contentTypeLabelForRow(row, imageLabel = '이미지', allowVideo = true) {
         const type = cleanText(row && row.content_type);
+        const typeMap = buildStoredMediaTypeMap(row || {});
+        const values = Array.from(typeMap.values());
 
         if (type === 'dccon') return '디시콘';
-        if (type === 'animated_image') return '이미지';
-        if (type === 'image') return imageLabel;
+        if (type === 'animated_image' || type === 'image') return '이미지';
 
         if (type === 'video' && allowVideo) {
-            // 구버전 데이터에서 GIF/WebP/APNG가 video_urls에 들어간 경우에도
-            // 실제 파일이 움직이는 이미지면 이미지로 표시합니다.
-            const urls = normalizeUrlArray(row && row.video_urls);
-            if (urls.length > 0 && urls.every(isAnimatedImageUrl)) return '이미지';
+            // dccon_urls에 같은 URL이 있으면 디시콘이 최우선입니다.
+            if (values.length > 0 && values.every(value => value === 'dccon')) return '디시콘';
+            if (values.length > 0 && values.every(value => value === 'image')) return '이미지';
             return '동영상';
         }
 
