@@ -413,9 +413,8 @@
 <script>
     const R2_DOMAIN = "https://pub-fca2435a027e41bf954b4bc4f46e560a.r2.dev"; 
     const GALLERY_ID = "projectmx";
-    // Cloudflare Worker를 배포한 뒤 주소를 넣으면 dcimg 계열 핫링크/Referer 차단을
-    // 우회해 이미지·움짤·동영상을 뷰어 안에서 표시할 수 있습니다. 비어 있으면 원본 URL을 직접 사용합니다.
-    const MEDIA_RELAY_URL = "";
+    // 미디어 URL은 main.go가 저장한 값을 그대로 사용합니다.
+    // Worker가 필요한 게시글 3번 유형 이미지는 main.go가 이미 서명된 Worker URL로 저장합니다.
     const HY_PARQUET_URL = "https://cdn.jsdelivr.net/npm/hyparquet@1.28.1/+esm";
     const HY_PARQUET_COMPRESSORS_URL = "https://cdn.jsdelivr.net/npm/hyparquet-compressors@1.1.1/+esm";
 
@@ -1216,7 +1215,7 @@
     }
 
     function isAnimatedImageUrl(url) {
-        // GIF/WebP/APNG는 오디오가 없는 움직이는 이미지 계열로 표시합니다.
+        // GIF/WebP/APNG는 움직일 수 있지만 화면에서는 모두 일반 '이미지' 범주로 취급합니다.
         return ['gif', 'webp', 'apng'].includes(getUrlExtension(url));
     }
 
@@ -1230,28 +1229,14 @@
     function mediaDisplayLabel(url, defaultLabel, sourceKind = 'image', storedType = '') {
         const type = cleanText(storedType);
         if (type === 'dccon') return '디시콘';
-        if (type === 'animated_image') return '움짤';
         if (type === 'video') return '동영상';
-        if (type === 'image') return '이미지';
+        if (type === 'image' || type === 'animated_image') return '이미지';
 
-        // 구버전 Parquet에는 data-media-type/새 컬럼이 없으므로 URL 확장자로 보완합니다.
+        // 구버전 데이터에서 GIF/WebP/APNG가 별도 타입으로 저장되지 않았더라도
+        // 움직이는 이미지는 동영상이 아니라 이미지로 표시합니다.
         if (defaultLabel === '디시콘') return '디시콘';
-        if (isAnimatedImageUrl(url)) return '움짤';
+        if (isAnimatedImageUrl(url)) return '이미지';
         return sourceKind === 'video' ? '동영상' : defaultLabel;
-    }
-
-    function mediaRelayUrl(originalUrl, referer = '') {
-        const relayBase = cleanText(MEDIA_RELAY_URL);
-        const safeOriginal = cleanText(originalUrl);
-        if (!relayBase || !isSafeHttpUrl(relayBase) || !isSafeHttpUrl(safeOriginal)) return safeOriginal;
-        try {
-            const relay = new URL(relayBase, window.location.href);
-            relay.searchParams.set('url', safeOriginal);
-            if (isSafeHttpUrl(referer)) relay.searchParams.set('referer', cleanText(referer));
-            return relay.toString();
-        } catch (_) {
-            return safeOriginal;
-        }
     }
 
     function openMediaViewer(url, kind, title, referer = '') {
@@ -1286,11 +1271,20 @@
         wrap.style.justifyContent = 'center';
         wrap.style.gap = '12px';
 
-        // GIF/WebP/APNG처럼 '움짤'로 분류된 항목은 원본 HTML이 video 태그였더라도
-        // 반드시 <img>로 표시합니다. 브라우저가 이미지 자체의 애니메이션을 재생합니다.
-        const mediaKind = cleanText(title) === '움짤'
-            ? 'image'
-            : inferMediaViewerKind(safeUrl, kind);
+        // 세 범주를 분리합니다.
+        // - image: GIF/WebP/APNG를 포함해 항상 이미지 방식으로 표시
+        // - video: 실제 동영상으로 표시
+        // - dccon: 디시콘이 영상 컨테이너를 쓰더라도 별도 범주를 유지하고,
+        //          영상 파일이면 컨트롤 없는 반복 재생으로 이미지처럼 보여줌
+        let mediaKind;
+        if (kind === 'dccon') {
+            mediaKind = 'dccon';
+        } else if (kind === 'image') {
+            mediaKind = 'image';
+        } else {
+            mediaKind = inferMediaViewerKind(safeUrl, kind);
+        }
+
         let media;
         if (mediaKind === 'video') {
             media = doc.createElement('video');
@@ -1298,12 +1292,20 @@
             media.autoplay = true;
             media.playsInline = true;
             media.preload = 'metadata';
+        } else if (mediaKind === 'dccon' && inferMediaViewerKind(safeUrl, 'image') === 'video') {
+            media = doc.createElement('video');
+            media.controls = false;
+            media.autoplay = true;
+            media.loop = true;
+            media.muted = true;
+            media.playsInline = true;
+            media.preload = 'auto';
         } else {
             media = doc.createElement('img');
             media.alt = cleanText(title) || '미디어';
         }
-        const displayUrl = mediaRelayUrl(safeUrl, referer);
-        media.src = displayUrl;
+        // main.go가 필요한 경우 이미 서명 Worker URL로 저장했으므로 그대로 사용합니다.
+        media.src = safeUrl;
         media.style.display = 'block';
         media.style.maxWidth = '100%';
         media.style.maxHeight = 'calc(100vh - 72px)';
@@ -1413,7 +1415,7 @@
             if (isSafeHttpUrl(url)) {
                 const type = storedMediaType(node, isAnimatedImageUrl(url) ? 'animated_image' : 'image');
                 const label = mediaDisplayLabel(url, imageLabel, 'image', type);
-                const viewerKind = type === 'video' ? 'video' : 'image';
+                const viewerKind = type === 'dccon' ? 'dccon' : (type === 'video' ? 'video' : 'image');
                 const link = createActivityLink(url, label, 'activity-inline-link', viewerKind, referer);
                 if (link) {
                     container.appendChild(link);
@@ -1436,7 +1438,7 @@
                 if (!allowVideo && imageLabel === '디시콘') fallbackType = 'dccon'; // 구버전 댓글 호환
                 const type = storedMediaType(markedNode, storedMediaType(node, fallbackType));
                 const label = mediaDisplayLabel(url, imageLabel, 'video', type);
-                const viewerKind = type === 'video' ? 'video' : 'image';
+                const viewerKind = type === 'dccon' ? 'dccon' : (type === 'video' ? 'video' : 'image');
                 const link = createActivityLink(url, label, 'activity-inline-link', viewerKind, referer);
                 if (link) {
                     container.appendChild(link);
@@ -1519,11 +1521,11 @@
         };
 
         imageUrls.forEach(url => addExtra(url, mediaDisplayLabel(url, imageLabel, 'image', 'image'), 'image'));
-        animatedImageUrls.forEach(url => addExtra(url, '움짤', 'image'));
+        animatedImageUrls.forEach(url => addExtra(url, '이미지', 'image'));
         if (allowVideo || videoUrls.length > 0) {
             videoUrls.forEach(url => addExtra(url, '동영상', 'video'));
         }
-        dcconUrls.forEach(url => addExtra(url, '디시콘', 'image'));
+        dcconUrls.forEach(url => addExtra(url, '디시콘', 'dccon'));
         linkUrls.forEach(url => {
             if (!seenUrls.has(url)) {
                 extras.push({ url, label: '외부 링크', viewerKind: '', referer: '' });
@@ -1552,7 +1554,7 @@
         const labels = {
             text: '텍스트',
             image: imageLabel,
-            animated_image: '움짤',
+            animated_image: '이미지',
             video: '동영상',
             dccon: '디시콘',
             link: '링크',
@@ -1564,19 +1566,19 @@
 
     function contentTypeLabelForRow(row, imageLabel = '이미지', allowVideo = true) {
         const type = cleanText(row && row.content_type);
-        if (['animated_image', 'dccon'].includes(type)) return contentTypeLabel(type, imageLabel);
 
-        // 구버전 파일은 animated_image_urls/dccon_urls가 없으므로 기존 방식으로 추정합니다.
-        if (type === 'image') {
-            const urls = normalizeUrlArray(row && row.image_urls);
-            if (urls.length > 0 && urls.every(isAnimatedImageUrl)) return '움짤';
-            return imageLabel;
-        }
+        if (type === 'dccon') return '디시콘';
+        if (type === 'animated_image') return '이미지';
+        if (type === 'image') return imageLabel;
+
         if (type === 'video' && allowVideo) {
+            // 구버전 데이터에서 GIF/WebP/APNG가 video_urls에 들어간 경우에도
+            // 실제 파일이 움직이는 이미지면 이미지로 표시합니다.
             const urls = normalizeUrlArray(row && row.video_urls);
-            if (urls.length > 0 && urls.every(isAnimatedImageUrl)) return '움짤';
+            if (urls.length > 0 && urls.every(isAnimatedImageUrl)) return '이미지';
             return '동영상';
         }
+
         return contentTypeLabel(type, imageLabel);
     }
 
@@ -1690,8 +1692,10 @@
             } else if (relation === 'comment_on_post') {
                 addMetaBadge(meta, '댓글');
             }
-            const isLegacyCommentMedia = !Object.prototype.hasOwnProperty.call(comment, 'dccon_urls');
-            const commentImageLabel = isLegacyCommentMedia ? '디시콘' : '이미지';
+            // 새 main.go는 일반 이미지와 디시콘을 별도 컬럼으로 저장합니다.
+            // 구버전 데이터는 두 종류를 완전히 복원할 수 없으므로 image_urls는 '이미지'로만 표시해
+            // 일반 이미지를 디시콘으로 잘못 표기하지 않습니다.
+            const commentImageLabel = '이미지';
             addMetaBadge(meta, contentTypeLabelForRow(comment, commentImageLabel, true));
             item.appendChild(meta);
 
