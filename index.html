@@ -1115,27 +1115,32 @@
         ];
     }
 
-    async function loadParquetFromCandidates(candidates, preferredColumns, legacyColumns = preferredColumns) {
+    async function loadParquetFromCandidates(candidates, columnSets) {
         let lastError = null;
+        const normalizedSets = Array.isArray(columnSets?.[0]) ? columnSets : [columnSets];
+        const uniqueSets = [];
+        const seen = new Set();
+        for (const columns of normalizedSets) {
+            if (!Array.isArray(columns) || columns.length === 0) continue;
+            const key = columns.join(',');
+            if (seen.has(key)) continue;
+            seen.add(key);
+            uniqueSets.push(columns);
+        }
 
         for (const url of candidates) {
-            try {
-                const rows = await loadParquetRows(url, preferredColumns);
-                if (rows !== null) return rows;
-                continue;
-            } catch (error) {
-                lastError = error;
-            }
-
-            // 구버전 Parquet에 새 컬럼이 없으면 기존 핵심 컬럼만 다시 읽습니다.
-            if (legacyColumns.join(',') !== preferredColumns.join(',')) {
+            let fileExists = true;
+            for (const columns of uniqueSets) {
                 try {
-                    const rows = await loadParquetRows(url, legacyColumns);
+                    const rows = await loadParquetRows(url, columns);
                     if (rows !== null) return rows;
+                    fileExists = false;
+                    break;
                 } catch (error) {
                     lastError = error;
                 }
             }
+            if (!fileExists) continue;
         }
 
         if (lastError) throw lastError;
@@ -1204,9 +1209,67 @@
         }
     }
 
+    function decodeBase64UrlUtf8(value) {
+        const text = cleanText(value);
+        if (!text) return '';
+        try {
+            const normalized = text.replace(/-/g, '+').replace(/_/g, '/');
+            const padded = normalized + '='.repeat((4 - (normalized.length % 4)) % 4);
+            const binary = atob(padded);
+            const bytes = Uint8Array.from(binary, ch => ch.charCodeAt(0));
+            return new TextDecoder('utf-8', { fatal: false }).decode(bytes);
+        } catch (_) {
+            return '';
+        }
+    }
+
+    function relayOriginalMediaUrl(url) {
+        const safeUrl = cleanText(url);
+        if (!isSafeHttpUrl(safeUrl)) return '';
+        try {
+            const parsed = new URL(safeUrl, window.location.href);
+
+            // 현재 서명 Worker 형식: /image?s=<base64url(original)>&p=...&sig=...
+            const encodedSource = cleanText(parsed.searchParams.get('s'));
+            if (encodedSource) {
+                const decoded = cleanText(decodeBase64UrlUtf8(encodedSource));
+                if (isSafeHttpUrl(decoded)) return decoded;
+            }
+
+            // 과거 시험용/레거시 relay 형식도 읽기 전용으로 지원합니다.
+            // 새 URL을 이 형식으로 생성하지는 않습니다.
+            for (const key of ['url', 'source', 'src']) {
+                const candidate = cleanText(parsed.searchParams.get(key));
+                if (isSafeHttpUrl(candidate)) return candidate;
+            }
+        } catch (_) {}
+        return '';
+    }
+
+    function effectiveMediaSourceUrl(url) {
+        const safeUrl = cleanText(url);
+        if (!isSafeHttpUrl(safeUrl)) return '';
+        return relayOriginalMediaUrl(safeUrl) || safeUrl;
+    }
+
+    function isDcconMediaUrl(url) {
+        const effective = effectiveMediaSourceUrl(url);
+        if (!effective) return false;
+        try {
+            const parsed = new URL(effective, window.location.href);
+            const host = parsed.hostname.toLowerCase();
+            const path = parsed.pathname.toLowerCase();
+            return /^(?:dcimg\d+|dccdn\d+|image)\.dcinside\.(?:com|co\.kr)$/.test(host) &&
+                (path === '/dccon.php' || path.endsWith('/dccon.php'));
+        } catch (_) {
+            return false;
+        }
+    }
+
     function getUrlExtension(url) {
         try {
-            const pathname = new URL(cleanText(url), window.location.href).pathname.toLowerCase();
+            const effective = effectiveMediaSourceUrl(url) || cleanText(url);
+            const pathname = new URL(effective, window.location.href).pathname.toLowerCase();
             const match = pathname.match(/\.([a-z0-9]+)$/i);
             return match ? match[1] : '';
         } catch (_) {
@@ -1227,6 +1290,9 @@
     }
 
     function mediaDisplayLabel(url, defaultLabel, sourceKind = 'image', storedType = '') {
+        // 과거 Parquet에서 dccon_urls/data-media-type 정보가 없거나 잘못 저장됐더라도
+        // direct dccon.php 또는 Worker의 s= 안 원본이 dccon.php이면 디시콘이 최우선입니다.
+        if (isDcconMediaUrl(url)) return '디시콘';
         const type = cleanText(storedType);
         if (type === 'dccon') return '디시콘';
         if (type === 'video') return '동영상';
@@ -1238,18 +1304,14 @@
         return sourceKind === 'video' ? '동영상' : '이미지';
     }
 
-    function openMediaViewer(url, kind, title, referer = '') {
+    function renderMediaViewerDocument(doc, url, kind, title) {
         const safeUrl = cleanText(url);
         if (!isSafeHttpUrl(safeUrl)) return false;
 
-        const viewer = window.open('', '_blank');
-        if (!viewer) return false;
-
-        try { viewer.opener = null; } catch (_) {}
-        const doc = viewer.document;
         doc.title = cleanText(title) || '미디어 보기';
         doc.documentElement.style.background = '#111';
         doc.documentElement.style.colorScheme = 'dark';
+        doc.body.replaceChildren();
         doc.body.style.margin = '0';
         doc.body.style.minHeight = '100vh';
         doc.body.style.display = 'flex';
@@ -1270,14 +1332,8 @@
         wrap.style.justifyContent = 'center';
         wrap.style.gap = '12px';
 
-        // 세 범주를 분리합니다.
-        // - image: GIF/WebP/APNG를 포함해 항상 이미지 방식으로 표시
-        // - video: 실제 동영상으로 표시
-        // - dccon: 디시콘이 영상 컨테이너를 쓰더라도 별도 범주를 유지하고,
-        //          영상 파일이면 컨트롤 없는 반복 재생으로 이미지처럼 보여줌
         let mediaKind;
         if (kind === 'dccon_motion') {
-            // 분류는 디시콘이지만 원본이 video 태그인 움직이는 디시콘을 재생하기 위한 내부 렌더링 모드입니다.
             mediaKind = 'dccon_motion';
         } else if (kind === 'dccon') {
             mediaKind = inferMediaViewerKind(safeUrl, 'image') === 'video' ? 'dccon_motion' : 'dccon';
@@ -1287,55 +1343,115 @@
             mediaKind = inferMediaViewerKind(safeUrl, kind);
         }
 
-        let media;
-        if (mediaKind === 'video') {
-            media = doc.createElement('video');
-            media.controls = true;
-            media.autoplay = true;
-            media.playsInline = true;
-            media.preload = 'metadata';
-        } else if (mediaKind === 'dccon_motion') {
-            // 사용자에게는 끝까지 '디시콘'으로 분류합니다. video 태그는 렌더링 수단일 뿐입니다.
-            media = doc.createElement('video');
-            media.controls = false;
-            media.autoplay = true;
-            media.loop = true;
-            media.muted = true;
-            media.playsInline = true;
-            media.preload = 'auto';
-        } else {
-            media = doc.createElement('img');
-            media.alt = cleanText(title) || '미디어';
-        }
+        // 렌더링 수단과 사용자에게 보여주는 분류를 분리합니다.
+        // dccon_motion은 내부적으로 video 태그를 쓰더라도 분류는 끝까지 '디시콘'입니다.
+        const classification = mediaKind === 'dccon' || mediaKind === 'dccon_motion'
+            ? '디시콘'
+            : (mediaKind === 'video' ? '동영상' : '이미지');
+        const badge = doc.createElement('div');
+        badge.textContent = classification;
+        badge.style.fontSize = '13px';
+        badge.style.fontWeight = '700';
+        badge.style.padding = '5px 10px';
+        badge.style.borderRadius = '999px';
+        badge.style.background = '#2b2b2b';
+        badge.style.color = '#fff';
+
+        const createViewerMediaElement = renderKind => {
+            let element;
+            if (renderKind === 'video' || renderKind === 'dccon_motion') {
+                element = doc.createElement('video');
+                element.controls = renderKind === 'video';
+                element.autoplay = true;
+                element.loop = renderKind === 'dccon_motion';
+                element.muted = renderKind === 'dccon_motion';
+                element.playsInline = true;
+                element.preload = renderKind === 'video' ? 'metadata' : 'auto';
+            } else {
+                element = doc.createElement('img');
+                element.alt = cleanText(title) || '미디어';
+            }
+            element.style.display = 'block';
+            element.style.maxWidth = '100%';
+            element.style.maxHeight = 'calc(100vh - 120px)';
+            element.style.objectFit = 'contain';
+            return element;
+        };
+
+        let media = createViewerMediaElement(mediaKind);
+
         // main.go가 필요한 경우 이미 서명 Worker URL로 저장했으므로 그대로 사용합니다.
         media.src = safeUrl;
-        media.style.display = 'block';
-        media.style.maxWidth = '100%';
-        media.style.maxHeight = 'calc(100vh - 72px)';
-        media.style.objectFit = 'contain';
 
         const status = doc.createElement('div');
         status.style.fontSize = '13px';
         status.style.color = '#bbb';
+        status.style.textAlign = 'center';
         status.textContent = '';
-        media.addEventListener('error', () => {
-            status.textContent = '브라우저에서 바로 표시하지 못했습니다. 원본 서버의 외부 표시 차단(Referer/핫링크), 응답 형식(MIME), 또는 미디어 전송 정책 때문에 실패했을 수 있습니다.';
-        });
+
+        // dccon.php는 URL 확장자만으로 실제 응답이 image/*인지 video/*인지 확정할 수 없습니다.
+        // 신규 데이터에는 data-media-type/sourceTag가 있지만, 과거 데이터에서 그 정보가 사라진
+        // 경우까지 호환하기 위해 디시콘에 한해서 img <-> video 자동 fallback을 한 번 허용합니다.
+        let dcconFallbackTried = false;
+        const bindMediaErrorFallback = element => {
+            element.addEventListener('error', () => {
+                const isDccon = mediaKind === 'dccon' || mediaKind === 'dccon_motion';
+                if (isDccon && !dcconFallbackTried) {
+                    dcconFallbackTried = true;
+                    const replacementKind = element.tagName.toLowerCase() === 'video' ? 'dccon' : 'dccon_motion';
+                    const replacement = createViewerMediaElement(replacementKind);
+                    bindMediaErrorFallback(replacement);
+                    element.replaceWith(replacement);
+                    media = replacement;
+                    replacement.src = safeUrl;
+                    return;
+                }
+                status.textContent = '미디어를 표시하지 못했습니다. 새로 수집된 데이터인지와 Worker 배포 상태를 확인해 주세요.';
+            });
+        };
+        bindMediaErrorFallback(media);
 
         const directLink = doc.createElement('a');
         directLink.href = safeUrl;
         directLink.target = '_blank';
         directLink.rel = 'noopener noreferrer';
-        directLink.textContent = '원본 URL 직접 열기 ↗';
+        directLink.textContent = '미디어 URL 직접 열기 ↗';
         directLink.style.color = '#9ecbff';
         directLink.style.fontSize = '13px';
         directLink.style.textDecoration = 'none';
 
+        wrap.appendChild(badge);
         wrap.appendChild(media);
         wrap.appendChild(status);
         wrap.appendChild(directLink);
         doc.body.appendChild(wrap);
         return true;
+    }
+
+    function openMediaViewer(url, kind, title, referer = '') {
+        const safeUrl = cleanText(url);
+        if (!isSafeHttpUrl(safeUrl)) return false;
+
+        // about:blank에 document.write 하지 않고 현재 대시보드의 hash 기반 뷰어를 엽니다.
+        // hash는 서버로 전송되지 않으므로 서명 Worker URL도 R2 요청 로그에 포함되지 않습니다.
+        const params = new URLSearchParams();
+        params.set('url', safeUrl);
+        params.set('kind', cleanText(kind) || 'image');
+        params.set('title', cleanText(title) || '미디어 보기');
+        const viewerUrl = new URL(window.location.href);
+        viewerUrl.hash = `media-viewer?${params.toString()}`;
+        const viewer = window.open(viewerUrl.toString(), '_blank', 'noopener');
+        return Boolean(viewer);
+    }
+
+    function renderStandaloneMediaViewerFromHash() {
+        const hash = String(window.location.hash || '');
+        if (!hash.startsWith('#media-viewer?')) return false;
+        const params = new URLSearchParams(hash.slice('#media-viewer?'.length));
+        const url = cleanText(params.get('url'));
+        const kind = cleanText(params.get('kind')) || 'image';
+        const title = cleanText(params.get('title')) || '미디어 보기';
+        return renderMediaViewerDocument(document, url, kind, title);
     }
 
     function createActivityLink(url, label, className = 'activity-item-link', viewerKind = '', referer = '') {
@@ -1416,8 +1532,14 @@
             if (!isSafeHttpUrl(safeUrl)) return;
             let type = normalizedStoredMediaType(requestedType);
             if (!type) return;
-            // 움직이는 이미지가 과거 데이터의 video_urls에 들어 있어도 이미지로 보정합니다.
-            if (type === 'video' && isAnimatedImageUrl(safeUrl)) type = 'image';
+            // dccon_urls가 없던 구버전/오분류 데이터도 URL에서 복구합니다.
+            // Worker URL이면 s= 원본 URL까지 확인합니다.
+            if (isDcconMediaUrl(safeUrl)) {
+                type = 'dccon';
+            } else if (type === 'video' && isAnimatedImageUrl(safeUrl)) {
+                // 움직이는 이미지가 과거 데이터의 video_urls에 들어 있어도 이미지로 보정합니다.
+                type = 'image';
+            }
             const current = map.get(safeUrl) || '';
             if (mediaTypePriority(type) >= mediaTypePriority(current)) map.set(safeUrl, type);
         };
@@ -1441,6 +1563,10 @@
         const mapped = typeMap && typeMap.get(safeUrl);
         const marked = storedMediaType(node, '');
 
+        // 가장 강한 호환성 신호: 원본 URL 자체가 dccon.php이면 과거의 잘못된
+        // data-media-type=video/image 또는 배열 위치보다 디시콘 판정을 우선합니다.
+        if (isDcconMediaUrl(safeUrl)) return 'dccon';
+
         // 우선순위: 디시콘 > 명시적 이미지/animated_image > 배열 이미지 > 명시적 영상 > 배열 영상.
         // 이렇게 해야 <video data-media-type="animated_image"> 같은 구버전 데이터도 동영상으로 되돌아가지 않습니다.
         if (mapped === 'dccon' || marked === 'dccon') return 'dccon';
@@ -1453,7 +1579,7 @@
     }
 
     function viewerKindForStoredMedia(type, sourceTag, url) {
-        if (type === 'dccon') {
+        if (type === 'dccon' || isDcconMediaUrl(url)) {
             // content_html에서 video 태그로 저장된 움직이는 디시콘은 분류는 dccon으로 유지하고
             // 뷰어에서만 반복재생 가능한 내부 모드를 사용합니다.
             if (sourceTag === 'video' || inferMediaViewerKind(url, 'image') === 'video') return 'dccon_motion';
@@ -1646,6 +1772,9 @@
         const values = Array.from(typeMap.values());
 
         if (type === 'dccon') return '디시콘';
+        // 구버전 row의 content_type이 image/video로 잘못 저장됐어도 URL 판정에서
+        // 모든 실제 미디어가 dccon으로 복구되면 행 배지도 디시콘으로 보정합니다.
+        if (values.length > 0 && values.every(value => value === 'dccon')) return '디시콘';
         if (type === 'animated_image' || type === 'image') return '이미지';
 
         if (type === 'video' && allowVideo) {
@@ -1789,6 +1918,12 @@
 
     const POST_COLUMNS_CURRENT = [
         'user_key', 'post_no', 'url', 'title', 'content', 'content_html',
+        'image_urls', 'animated_image_urls', 'video_urls', 'dccon_urls', 'link_urls', 'content_type',
+        'created_at', 'created_at_unix_ms', 'comment_count'
+    ];
+    // dccon_urls가 게시글 스키마에 추가되기 직전 버전과도 호환합니다.
+    const POST_COLUMNS_PRE_DCCON = [
+        'user_key', 'post_no', 'url', 'title', 'content', 'content_html',
         'image_urls', 'animated_image_urls', 'video_urls', 'link_urls', 'content_type',
         'created_at', 'created_at_unix_ms', 'comment_count'
     ];
@@ -1798,6 +1933,12 @@
     const COMMENT_COLUMNS_CURRENT = [
         'user_key', 'comment_no', 'post_no', 'post_url', 'parent_comment_no', 'depth',
         'relation_type', 'content', 'content_html', 'image_urls', 'animated_image_urls', 'video_urls', 'dccon_urls', 'link_urls', 'content_type',
+        'created_at', 'created_at_unix_ms'
+    ];
+    // dccon_urls가 댓글 스키마에 추가되기 직전 버전과도 호환합니다.
+    const COMMENT_COLUMNS_PRE_DCCON = [
+        'user_key', 'comment_no', 'post_no', 'post_url', 'parent_comment_no', 'depth',
+        'relation_type', 'content', 'content_html', 'image_urls', 'animated_image_urls', 'video_urls', 'link_urls', 'content_type',
         'created_at', 'created_at_unix_ms'
     ];
     const COMMENT_COLUMNS_LEGACY = [
@@ -1839,16 +1980,14 @@
             const postPromise = needPosts
                 ? loadParquetFromCandidates(
                     detailParquetCandidates(dateStr, hour, 'posts.parquet'),
-                    POST_COLUMNS_CURRENT,
-                    POST_COLUMNS_LEGACY
+                    [POST_COLUMNS_CURRENT, POST_COLUMNS_PRE_DCCON, POST_COLUMNS_LEGACY]
                 )
                 : Promise.resolve(null);
 
             const commentPromise = needComments
                 ? loadParquetFromCandidates(
                     detailParquetCandidates(dateStr, hour, 'comments.parquet'),
-                    COMMENT_COLUMNS_CURRENT,
-                    COMMENT_COLUMNS_LEGACY
+                    [COMMENT_COLUMNS_CURRENT, COMMENT_COLUMNS_PRE_DCCON, COMMENT_COLUMNS_LEGACY]
                 )
                 : Promise.resolve(null);
 
@@ -1941,21 +2080,23 @@
         document.body.classList.remove('modal-open');
     }
 
-    document.getElementById('graph-modal').addEventListener('click', event => {
-        if (event.target === event.currentTarget) closeModal();
-    });
+    if (!renderStandaloneMediaViewerFromHash()) {
+        document.getElementById('graph-modal').addEventListener('click', event => {
+            if (event.target === event.currentTarget) closeModal();
+        });
 
-    document.addEventListener('keydown', event => {
-        if (event.key === 'Escape' && document.getElementById('graph-modal').style.display === 'block') {
-            closeModal();
-        }
-    });
+        document.addEventListener('keydown', event => {
+            if (event.key === 'Escape' && document.getElementById('graph-modal').style.display === 'block') {
+                closeModal();
+            }
+        });
 
-    window.addEventListener('resize', () => {
-        if (modalChart) modalChart.resize();
-    });
+        window.addEventListener('resize', () => {
+            if (modalChart) modalChart.resize();
+        });
 
-    window.onload = () => fetchDailyData(todayKst);
+        window.onload = () => fetchDailyData(todayKst);
+    }
 </script>
 
 </body>
