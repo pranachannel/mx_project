@@ -1343,20 +1343,6 @@
             mediaKind = inferMediaViewerKind(safeUrl, kind);
         }
 
-        // 렌더링 수단과 사용자에게 보여주는 분류를 분리합니다.
-        // dccon_motion은 내부적으로 video 태그를 쓰더라도 분류는 끝까지 '디시콘'입니다.
-        const classification = mediaKind === 'dccon' || mediaKind === 'dccon_motion'
-            ? '디시콘'
-            : (mediaKind === 'video' ? '동영상' : '이미지');
-        const badge = doc.createElement('div');
-        badge.textContent = classification;
-        badge.style.fontSize = '13px';
-        badge.style.fontWeight = '700';
-        badge.style.padding = '5px 10px';
-        badge.style.borderRadius = '999px';
-        badge.style.background = '#2b2b2b';
-        badge.style.color = '#fff';
-
         const createViewerMediaElement = renderKind => {
             let element;
             if (renderKind === 'video' || renderKind === 'dccon_motion') {
@@ -1411,37 +1397,25 @@
         };
         bindMediaErrorFallback(media);
 
-        const directLink = doc.createElement('a');
-        directLink.href = safeUrl;
-        directLink.target = '_blank';
-        directLink.rel = 'noopener noreferrer';
-        directLink.textContent = '미디어 URL 직접 열기 ↗';
-        directLink.style.color = '#9ecbff';
-        directLink.style.fontSize = '13px';
-        directLink.style.textDecoration = 'none';
-
-        wrap.appendChild(badge);
         wrap.appendChild(media);
         wrap.appendChild(status);
-        wrap.appendChild(directLink);
         doc.body.appendChild(wrap);
         return true;
     }
 
-    function openMediaViewer(url, kind, title, referer = '') {
+    function buildMediaViewerUrl(url, kind, title) {
         const safeUrl = cleanText(url);
-        if (!isSafeHttpUrl(safeUrl)) return false;
+        if (!isSafeHttpUrl(safeUrl)) return '';
 
-        // about:blank에 document.write 하지 않고 현재 대시보드의 hash 기반 뷰어를 엽니다.
-        // hash는 서버로 전송되지 않으므로 서명 Worker URL도 R2 요청 로그에 포함되지 않습니다.
+        // 실제 미디어 URL은 hash 안에만 넣습니다. hash는 서버 요청에 전송되지 않습니다.
+        // 링크 자체가 이 뷰어 URL만 가리키게 해 새 탭이 정확히 하나만 열리도록 합니다.
         const params = new URLSearchParams();
         params.set('url', safeUrl);
         params.set('kind', cleanText(kind) || 'image');
         params.set('title', cleanText(title) || '미디어 보기');
         const viewerUrl = new URL(window.location.href);
         viewerUrl.hash = `media-viewer?${params.toString()}`;
-        const viewer = window.open(viewerUrl.toString(), '_blank', 'noopener');
-        return Boolean(viewer);
+        return viewerUrl.toString();
     }
 
     function renderStandaloneMediaViewerFromHash() {
@@ -1457,19 +1431,23 @@
     function createActivityLink(url, label, className = 'activity-item-link', viewerKind = '', referer = '') {
         const safeUrl = cleanText(url);
         if (!isSafeHttpUrl(safeUrl)) return null;
+
         const link = document.createElement('a');
         link.className = className;
-        link.href = safeUrl;
         link.target = '_blank';
         link.rel = 'noopener noreferrer';
         link.textContent = label;
+
         if (viewerKind) {
-            link.addEventListener('click', event => {
-                if (openMediaViewer(safeUrl, viewerKind, label, referer)) {
-                    event.preventDefault();
-                }
-            });
+            const viewerUrl = buildMediaViewerUrl(safeUrl, viewerKind, label);
+            if (!viewerUrl) return null;
+            // 원본 미디어 URL이 아니라 전용 뷰어만 새 탭으로 엽니다.
+            // 별도의 click/window.open 핸들러를 두지 않아 정확히 한 탭만 열립니다.
+            link.href = viewerUrl;
+        } else {
+            link.href = safeUrl;
         }
+
         return link;
     }
 
