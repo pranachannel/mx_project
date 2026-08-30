@@ -168,6 +168,37 @@
         .activity-state.error { color: #c0392b; }
         body.modal-open { overflow: hidden; }
 
+        /* 미디어는 새 탭이 아니라 현재 페이지 위의 라이트박스에서 표시합니다. */
+        .media-lightbox {
+            display: none; position: fixed; z-index: 2200; inset: 0;
+            background: rgba(0, 0, 0, 0.86); padding: 20px; box-sizing: border-box;
+            align-items: center; justify-content: center;
+        }
+        .media-lightbox.open { display: flex; }
+        .media-lightbox-panel {
+            position: relative; width: min(1100px, 100%); height: min(900px, calc(100vh - 40px));
+            display: flex; align-items: center; justify-content: center;
+            border-radius: 10px; overflow: hidden; background: #111;
+        }
+        .media-lightbox-stage {
+            width: 100%; height: 100%; min-width: 0; min-height: 0;
+            display: flex; align-items: center; justify-content: center; padding: 18px; box-sizing: border-box;
+        }
+        .media-lightbox-stage img,
+        .media-lightbox-stage video {
+            display: block; max-width: 100%; max-height: 100%; object-fit: contain;
+        }
+        .media-lightbox-close {
+            position: absolute; z-index: 2; right: 10px; top: 10px; width: 44px; height: 44px;
+            border: 0; border-radius: 999px; background: rgba(0,0,0,.58); color: white;
+            font-size: 30px; line-height: 1; cursor: pointer;
+        }
+        .media-lightbox-close:hover { background: rgba(0,0,0,.82); }
+        .media-lightbox-status {
+            position: absolute; left: 16px; right: 16px; bottom: 12px;
+            color: #ddd; font-size: 13px; text-align: center; pointer-events: none;
+        }
+
         @media (max-width: 720px) {
             .main { padding: 0.8rem; }
             /* PC와 동일하게 제목-날짜 선택기를 같은 행에 유지합니다. */
@@ -407,6 +438,14 @@
                 </div>
             </section>
         </div>
+    </div>
+</div>
+
+<div id="media-lightbox" class="media-lightbox" role="dialog" aria-modal="true" aria-hidden="true" aria-label="미디어 보기">
+    <div class="media-lightbox-panel" role="document">
+        <button id="media-lightbox-close" class="media-lightbox-close" type="button" aria-label="미디어 닫기">&times;</button>
+        <div id="media-lightbox-stage" class="media-lightbox-stage"></div>
+        <div id="media-lightbox-status" class="media-lightbox-status" aria-live="polite"></div>
     </div>
 </div>
 
@@ -1266,6 +1305,35 @@
         }
     }
 
+    function isGallviewLoadingPlaceholderUrl(url) {
+        const safeUrl = cleanText(url);
+        if (!safeUrl) return false;
+        try {
+            const parsed = new URL(safeUrl, window.location.href);
+            const name = parsed.pathname.split('/').pop().toLowerCase();
+            return name === 'gallview_loading_ori.gif';
+        } catch (_) {
+            return safeUrl.toLowerCase().includes('gallview_loading_ori.gif');
+        }
+    }
+
+    function preferredStoredImageUrl(node) {
+        if (!node || !node.getAttribute) return '';
+        const src = cleanText(node.getAttribute('src'));
+        const original = cleanText(node.getAttribute('data-original'));
+        const dataSrc = cleanText(node.getAttribute('data-src'));
+
+        if (isGallviewLoadingPlaceholderUrl(src)) {
+            if (isSafeHttpUrl(original) && !isGallviewLoadingPlaceholderUrl(original)) return original;
+            if (isSafeHttpUrl(dataSrc) && !isGallviewLoadingPlaceholderUrl(dataSrc)) return dataSrc;
+            return '';
+        }
+        if (isSafeHttpUrl(src)) return src;
+        if (isSafeHttpUrl(original)) return original;
+        if (isSafeHttpUrl(dataSrc)) return dataSrc;
+        return '';
+    }
+
     function getUrlExtension(url) {
         try {
             const effective = effectiveMediaSourceUrl(url) || cleanText(url);
@@ -1282,9 +1350,27 @@
         return ['gif', 'webp', 'apng'].includes(getUrlExtension(url));
     }
 
+    function isKnownImageMediaUrl(url) {
+        const effective = effectiveMediaSourceUrl(url);
+        if (!effective) return false;
+        const ext = getUrlExtension(effective);
+        if (['gif', 'webp', 'apng', 'jpg', 'jpeg', 'jpe', 'jfif', 'png', 'bmp', 'avif', 'svg', 'ico', 'tif', 'tiff', 'heic', 'heif'].includes(ext)) {
+            return true;
+        }
+        try {
+            const parsed = new URL(effective, window.location.href);
+            const host = parsed.hostname.toLowerCase();
+            const path = parsed.pathname.toLowerCase();
+            return /^(?:dcimg\d+|dccdn\d+|image)\.dcinside\.(?:com|co\.kr)$/.test(host) &&
+                (path === '/viewimage.php' || path.endsWith('/viewimage.php'));
+        } catch (_) {
+            return false;
+        }
+    }
+
     function inferMediaViewerKind(url, suggestedKind = 'image') {
+        if (isKnownImageMediaUrl(url)) return 'image';
         const ext = getUrlExtension(url);
-        if (['gif', 'webp', 'apng', 'jpg', 'jpeg', 'png', 'bmp', 'avif', 'svg'].includes(ext)) return 'image';
         if (['mp4', 'webm', 'm4v', 'mov', 'ogv', 'ogg'].includes(ext)) return 'video';
         return suggestedKind === 'video' ? 'video' : 'image';
     }
@@ -1295,6 +1381,9 @@
         if (isDcconMediaUrl(url)) return '디시콘';
         const type = cleanText(storedType);
         if (type === 'dccon') return '디시콘';
+        // URL 자체가 이미지임이 확실하면 과거의 잘못된 storedType=video보다 이미지 판정을 우선합니다.
+        // 특히 dcimg*/viewimage.php는 확장자가 없어도 이미지 엔드포인트입니다.
+        if (isKnownImageMediaUrl(url)) return '이미지';
         if (type === 'video') return '동영상';
         if (type === 'image' || type === 'animated_image') return '이미지';
 
@@ -1304,33 +1393,72 @@
         return sourceKind === 'video' ? '동영상' : '이미지';
     }
 
-    function renderMediaViewerDocument(doc, url, kind, title) {
+    let mediaLightboxPreviousFocus = null;
+    let mediaLightboxCurrentElement = null;
+
+    function createMediaLightboxElement(renderKind, title) {
+        let element;
+        if (renderKind === 'video' || renderKind === 'dccon_motion') {
+            element = document.createElement('video');
+            element.controls = renderKind === 'video';
+            element.autoplay = true;
+            element.loop = renderKind === 'dccon_motion';
+            element.muted = renderKind === 'dccon_motion';
+            element.playsInline = true;
+            element.preload = renderKind === 'video' ? 'metadata' : 'auto';
+        } else {
+            element = document.createElement('img');
+            element.alt = cleanText(title) || '미디어';
+        }
+        return element;
+    }
+
+    function stopMediaLightboxElement(element) {
+        if (!element) return;
+        try {
+            if (element.tagName && element.tagName.toLowerCase() === 'video') {
+                element.pause();
+            }
+            element.removeAttribute('src');
+            if (typeof element.load === 'function') element.load();
+        } catch (_) {}
+    }
+
+    function closeMediaLightbox() {
+        const lightbox = document.getElementById('media-lightbox');
+        const stage = document.getElementById('media-lightbox-stage');
+        const status = document.getElementById('media-lightbox-status');
+        if (!lightbox) return;
+
+        stopMediaLightboxElement(mediaLightboxCurrentElement);
+        mediaLightboxCurrentElement = null;
+        if (stage) stage.replaceChildren();
+        if (status) status.textContent = '';
+        lightbox.classList.remove('open');
+        lightbox.setAttribute('aria-hidden', 'true');
+
+        const previous = mediaLightboxPreviousFocus;
+        mediaLightboxPreviousFocus = null;
+        if (previous && typeof previous.focus === 'function' && document.contains(previous)) {
+            try { previous.focus({ preventScroll: true }); } catch (_) { previous.focus(); }
+        }
+    }
+
+    function openMediaLightbox(url, kind, title) {
         const safeUrl = cleanText(url);
         if (!isSafeHttpUrl(safeUrl)) return false;
 
-        doc.title = cleanText(title) || '미디어 보기';
-        doc.documentElement.style.background = '#111';
-        doc.documentElement.style.colorScheme = 'dark';
-        doc.body.replaceChildren();
-        doc.body.style.margin = '0';
-        doc.body.style.minHeight = '100vh';
-        doc.body.style.display = 'flex';
-        doc.body.style.alignItems = 'center';
-        doc.body.style.justifyContent = 'center';
-        doc.body.style.background = '#111';
-        doc.body.style.color = '#eee';
-        doc.body.style.fontFamily = 'system-ui, sans-serif';
+        const lightbox = document.getElementById('media-lightbox');
+        const stage = document.getElementById('media-lightbox-stage');
+        const status = document.getElementById('media-lightbox-status');
+        const closeButton = document.getElementById('media-lightbox-close');
+        if (!lightbox || !stage || !status) return false;
 
-        const wrap = doc.createElement('div');
-        wrap.style.width = '100%';
-        wrap.style.minHeight = '100vh';
-        wrap.style.boxSizing = 'border-box';
-        wrap.style.padding = '16px';
-        wrap.style.display = 'flex';
-        wrap.style.flexDirection = 'column';
-        wrap.style.alignItems = 'center';
-        wrap.style.justifyContent = 'center';
-        wrap.style.gap = '12px';
+        mediaLightboxPreviousFocus = document.activeElement;
+        stopMediaLightboxElement(mediaLightboxCurrentElement);
+        mediaLightboxCurrentElement = null;
+        stage.replaceChildren();
+        status.textContent = '';
 
         let mediaKind;
         if (kind === 'dccon_motion') {
@@ -1343,89 +1471,38 @@
             mediaKind = inferMediaViewerKind(safeUrl, kind);
         }
 
-        const createViewerMediaElement = renderKind => {
-            let element;
-            if (renderKind === 'video' || renderKind === 'dccon_motion') {
-                element = doc.createElement('video');
-                element.controls = renderKind === 'video';
-                element.autoplay = true;
-                element.loop = renderKind === 'dccon_motion';
-                element.muted = renderKind === 'dccon_motion';
-                element.playsInline = true;
-                element.preload = renderKind === 'video' ? 'metadata' : 'auto';
-            } else {
-                element = doc.createElement('img');
-                element.alt = cleanText(title) || '미디어';
-            }
-            element.style.display = 'block';
-            element.style.maxWidth = '100%';
-            element.style.maxHeight = 'calc(100vh - 120px)';
-            element.style.objectFit = 'contain';
-            return element;
-        };
-
-        let media = createViewerMediaElement(mediaKind);
-
-        // main.go가 필요한 경우 이미 서명 Worker URL로 저장했으므로 그대로 사용합니다.
-        media.src = safeUrl;
-
-        const status = doc.createElement('div');
-        status.style.fontSize = '13px';
-        status.style.color = '#bbb';
-        status.style.textAlign = 'center';
-        status.textContent = '';
-
-        // dccon.php는 URL 확장자만으로 실제 응답이 image/*인지 video/*인지 확정할 수 없습니다.
-        // 신규 데이터에는 data-media-type/sourceTag가 있지만, 과거 데이터에서 그 정보가 사라진
-        // 경우까지 호환하기 위해 디시콘에 한해서 img <-> video 자동 fallback을 한 번 허용합니다.
         let dcconFallbackTried = false;
-        const bindMediaErrorFallback = element => {
+        const mount = renderKind => {
+            stopMediaLightboxElement(mediaLightboxCurrentElement);
+            stage.replaceChildren();
+
+            const element = createMediaLightboxElement(renderKind, title);
+            mediaLightboxCurrentElement = element;
+
             element.addEventListener('error', () => {
                 const isDccon = mediaKind === 'dccon' || mediaKind === 'dccon_motion';
                 if (isDccon && !dcconFallbackTried) {
                     dcconFallbackTried = true;
                     const replacementKind = element.tagName.toLowerCase() === 'video' ? 'dccon' : 'dccon_motion';
-                    const replacement = createViewerMediaElement(replacementKind);
-                    bindMediaErrorFallback(replacement);
-                    element.replaceWith(replacement);
-                    media = replacement;
-                    replacement.src = safeUrl;
+                    mount(replacementKind);
                     return;
                 }
                 status.textContent = '미디어를 표시하지 못했습니다. 새로 수집된 데이터인지와 Worker 배포 상태를 확인해 주세요.';
-            });
+            }, { once: true });
+
+            stage.appendChild(element);
+            element.src = safeUrl;
+            if (element.tagName.toLowerCase() === 'video') {
+                const playPromise = element.play();
+                if (playPromise && typeof playPromise.catch === 'function') playPromise.catch(() => {});
+            }
         };
-        bindMediaErrorFallback(media);
 
-        wrap.appendChild(media);
-        wrap.appendChild(status);
-        doc.body.appendChild(wrap);
+        lightbox.classList.add('open');
+        lightbox.setAttribute('aria-hidden', 'false');
+        mount(mediaKind);
+        if (closeButton) closeButton.focus({ preventScroll: true });
         return true;
-    }
-
-    function buildMediaViewerUrl(url, kind, title) {
-        const safeUrl = cleanText(url);
-        if (!isSafeHttpUrl(safeUrl)) return '';
-
-        // 실제 미디어 URL은 hash 안에만 넣습니다. hash는 서버 요청에 전송되지 않습니다.
-        // 링크 자체가 이 뷰어 URL만 가리키게 해 새 탭이 정확히 하나만 열리도록 합니다.
-        const params = new URLSearchParams();
-        params.set('url', safeUrl);
-        params.set('kind', cleanText(kind) || 'image');
-        params.set('title', cleanText(title) || '미디어 보기');
-        const viewerUrl = new URL(window.location.href);
-        viewerUrl.hash = `media-viewer?${params.toString()}`;
-        return viewerUrl.toString();
-    }
-
-    function renderStandaloneMediaViewerFromHash() {
-        const hash = String(window.location.hash || '');
-        if (!hash.startsWith('#media-viewer?')) return false;
-        const params = new URLSearchParams(hash.slice('#media-viewer?'.length));
-        const url = cleanText(params.get('url'));
-        const kind = cleanText(params.get('kind')) || 'image';
-        const title = cleanText(params.get('title')) || '미디어 보기';
-        return renderMediaViewerDocument(document, url, kind, title);
     }
 
     function createActivityLink(url, label, className = 'activity-item-link', viewerKind = '', referer = '') {
@@ -1434,18 +1511,23 @@
 
         const link = document.createElement('a');
         link.className = className;
-        link.target = '_blank';
-        link.rel = 'noopener noreferrer';
         link.textContent = label;
 
         if (viewerKind) {
-            const viewerUrl = buildMediaViewerUrl(safeUrl, viewerKind, label);
-            if (!viewerUrl) return null;
-            // 원본 미디어 URL이 아니라 전용 뷰어만 새 탭으로 엽니다.
-            // 별도의 click/window.open 핸들러를 두지 않아 정확히 한 탭만 열립니다.
-            link.href = viewerUrl;
+            // 미디어는 같은 페이지의 라이트박스에서만 표시합니다.
+            // href에 원본/Worker URL을 넣지 않아 중클릭이나 브라우저 기본 동작으로 별도 탭이 열리는 것도 막습니다.
+            link.href = '#';
+            link.dataset.mediaViewer = '1';
+            link.addEventListener('click', event => {
+                event.preventDefault();
+                event.stopPropagation();
+                openMediaLightbox(safeUrl, viewerKind, label);
+            });
         } else {
+            // 게시글/외부 링크는 기존 동작을 유지합니다.
             link.href = safeUrl;
+            link.target = '_blank';
+            link.rel = 'noopener noreferrer';
         }
 
         return link;
@@ -1482,9 +1564,46 @@
         return isSafeHttpUrl(text) ? [text] : [];
     }
 
+    function normalizeDisplayLineBreaks(value) {
+        return String(value ?? '')
+            .replace(/\r\n?/g, '\n')
+            .replace(/[ \t]+\n/g, '\n')
+            .replace(/\n[ \t]+/g, '\n')
+            .replace(/\n{2,}/g, '\n');
+    }
+
+    function previousSignificantNode(container) {
+        let node = container.lastChild;
+        while (node && node.nodeType === Node.TEXT_NODE && !cleanText(node.nodeValue || '')) {
+            node = node.previousSibling;
+        }
+        return node;
+    }
+
     function appendBreakIfNeeded(container) {
-        const last = container.lastChild;
+        const last = previousSignificantNode(container);
         if (!last || last.nodeName !== 'BR') container.appendChild(document.createElement('br'));
+    }
+
+    function mediaIdentityKey(url) {
+        const safeUrl = cleanText(url);
+        if (!isSafeHttpUrl(safeUrl)) return safeUrl;
+        const effective = effectiveMediaSourceUrl(safeUrl) || safeUrl;
+        try {
+            const parsed = new URL(effective, window.location.href);
+            const host = parsed.hostname.toLowerCase();
+            const path = parsed.pathname.toLowerCase();
+            // Worker URL/원본 URL, img/video 표현이 달라도 같은 dccon.php?no= 값은 하나의 디시콘입니다.
+            if (/^(?:dcimg\d+|dccdn\d+|image)\.dcinside\.(?:com|co\.kr)$/.test(host) &&
+                (path === '/dccon.php' || path.endsWith('/dccon.php'))) {
+                const no = cleanText(parsed.searchParams.get('no'));
+                if (no) return `dccon:${no}`;
+            }
+            parsed.hash = '';
+            return parsed.href;
+        } catch (_) {
+            return effective;
+        }
     }
 
     function normalizedStoredMediaType(value) {
@@ -1514,12 +1633,17 @@
             // Worker URL이면 s= 원본 URL까지 확인합니다.
             if (isDcconMediaUrl(safeUrl)) {
                 type = 'dccon';
-            } else if (type === 'video' && isAnimatedImageUrl(safeUrl)) {
-                // 움직이는 이미지가 과거 데이터의 video_urls에 들어 있어도 이미지로 보정합니다.
+            } else if (type === 'video' && isKnownImageMediaUrl(safeUrl)) {
+                // WebP/GIF/APNG뿐 아니라 viewimage.php 및 일반 이미지 확장자가
+                // 과거 video_urls에 들어 있어도 이미지로 보정합니다.
                 type = 'image';
             }
-            const current = map.get(safeUrl) || '';
-            if (mediaTypePriority(type) >= mediaTypePriority(current)) map.set(safeUrl, type);
+            const canonical = mediaIdentityKey(safeUrl);
+            for (const key of [safeUrl, canonical]) {
+                if (!key) continue;
+                const current = map.get(key) || '';
+                if (mediaTypePriority(type) >= mediaTypePriority(current)) map.set(key, type);
+            }
         };
 
         normalizeUrlArray(row && row.image_urls).forEach(url => put(url, 'image'));
@@ -1538,12 +1662,14 @@
 
     function resolvedStoredMediaType(node, url, fallbackType, typeMap) {
         const safeUrl = cleanText(url);
-        const mapped = typeMap && typeMap.get(safeUrl);
+        const mapped = typeMap && (typeMap.get(safeUrl) || typeMap.get(mediaIdentityKey(safeUrl)));
         const marked = storedMediaType(node, '');
 
         // 가장 강한 호환성 신호: 원본 URL 자체가 dccon.php이면 과거의 잘못된
         // data-media-type=video/image 또는 배열 위치보다 디시콘 판정을 우선합니다.
         if (isDcconMediaUrl(safeUrl)) return 'dccon';
+        // URL이 이미지임이 확실하면 과거 data-media-type=video/video_urls보다 우선합니다.
+        if (isKnownImageMediaUrl(safeUrl)) return 'image';
 
         // 우선순위: 디시콘 > 명시적 이미지/animated_image > 배열 이미지 > 명시적 영상 > 배열 영상.
         // 이렇게 해야 <video data-media-type="animated_image"> 같은 구버전 데이터도 동영상으로 되돌아가지 않습니다.
@@ -1552,7 +1678,7 @@
         if (marked === 'video' || mapped === 'video') return 'video';
 
         const fallback = normalizedStoredMediaType(fallbackType) || 'image';
-        if (fallback === 'video' && isAnimatedImageUrl(safeUrl)) return 'image';
+        if (fallback === 'video' && isKnownImageMediaUrl(safeUrl)) return 'image';
         return fallback;
     }
 
@@ -1569,7 +1695,11 @@
 
     function appendStoredHtmlNode(node, container, seenUrls, allowVideo, imageLabel = '이미지', referer = '', typeMap = null) {
         if (node.nodeType === Node.TEXT_NODE) {
-            container.appendChild(document.createTextNode(node.nodeValue || ''));
+            const rawText = String(node.nodeValue || '');
+            // HTML 직렬화 과정에서 생긴 들여쓰기용 개행/공백은 화면에 빈 줄을 만들지 않습니다.
+            if (!cleanText(rawText) && /[\r\n]/.test(rawText)) return;
+            const normalizedText = normalizeDisplayLineBreaks(rawText);
+            if (normalizedText) container.appendChild(document.createTextNode(normalizedText));
             return;
         }
         if (node.nodeType !== Node.ELEMENT_NODE) return;
@@ -1577,21 +1707,24 @@
         const tag = node.tagName.toLowerCase();
 
         if (tag === 'br') {
-            container.appendChild(document.createElement('br'));
+            // 연속된 <br>은 한 번의 줄바꿈으로 축약합니다.
+            appendBreakIfNeeded(container);
             return;
         }
 
         if (tag === 'img') {
-            const url = cleanText(node.getAttribute('src') || node.getAttribute('data-src') || node.getAttribute('data-original'));
+            const url = preferredStoredImageUrl(node);
             if (isSafeHttpUrl(url)) {
-                const fallback = isAnimatedImageUrl(url) ? 'image' : 'image';
+                const identity = mediaIdentityKey(url);
+                if (seenUrls.has(identity)) return;
+                const fallback = 'image';
                 const type = resolvedStoredMediaType(node, url, fallback, typeMap);
                 const label = mediaDisplayLabel(url, imageLabel, 'image', type);
                 const viewerKind = viewerKindForStoredMedia(type, 'img', url);
                 const link = createActivityLink(url, label, 'activity-inline-link', viewerKind, referer);
                 if (link) {
                     container.appendChild(link);
-                    seenUrls.add(url);
+                    seenUrls.add(identity);
                 }
             }
             return;
@@ -1605,10 +1738,12 @@
                 if (sourceNode) url = cleanText(sourceNode.getAttribute('src'));
             }
             if (isSafeHttpUrl(url)) {
+                const identity = mediaIdentityKey(url);
+                if (seenUrls.has(identity)) return;
                 // 배열의 dccon_urls 판정을 최우선으로 하고, 그 다음 data-media-type을 봅니다.
                 // 따라서 움직이는 디시콘이 video 태그여도 '동영상'으로 재분류되지 않습니다.
                 const markedNode = sourceNode || node;
-                const fallback = isAnimatedImageUrl(url) ? 'image' : 'video';
+                const fallback = isKnownImageMediaUrl(url) ? 'image' : 'video';
                 let type = resolvedStoredMediaType(markedNode, url, fallback, typeMap);
                 if (!typeMap?.has(url)) {
                     const parentMarked = storedMediaType(node, '');
@@ -1619,7 +1754,7 @@
                 const link = createActivityLink(url, label, 'activity-inline-link', viewerKind, referer);
                 if (link) {
                     container.appendChild(link);
-                    seenUrls.add(url);
+                    seenUrls.add(identity);
                 }
             }
             return;
@@ -1641,7 +1776,7 @@
                 const link = createActivityLink(url, label, 'activity-inline-link');
                 if (link) {
                     container.appendChild(link);
-                    seenUrls.add(url);
+                    seenUrls.add(mediaIdentityKey(url));
                     return;
                 }
             }
@@ -1664,12 +1799,16 @@
         const storedHtml = cleanText(row.content_html);
         const referer = cleanText(row.url || row.post_url);
         const typeMap = buildStoredMediaTypeMap(row);
+        let storedHtmlHasMedia = false;
 
         if (storedHtml) {
             try {
                 const parsed = new DOMParser().parseFromString(`<div id="stored-content-root">${storedHtml}</div>`, 'text/html');
                 const root = parsed.getElementById('stored-content-root');
                 if (root) {
+                    // 실제로 미디어 태그가 저장돼 있다면 배열 기반 보조 링크는 만들지 않습니다.
+                    // 움직이는 디시콘의 video/source 표현이 여러 개여도 본문 렌더링만 사용합니다.
+                    storedHtmlHasMedia = Boolean(root.querySelector('img, video, source[src], source[data-src]'));
                     for (const child of root.childNodes) {
                         appendStoredHtmlNode(child, body, seenUrls, allowVideo, imageLabel, referer, typeMap);
                     }
@@ -1680,7 +1819,7 @@
         }
 
         if (!hasVisibleContent(body)) {
-            const plain = cleanText(row.content);
+            const plain = normalizeDisplayLineBreaks(cleanText(row.content));
             if (plain) body.textContent = plain;
         }
 
@@ -1692,24 +1831,32 @@
         const extras = [];
 
         const addMediaExtra = (url, fallbackType) => {
-            if (seenUrls.has(url)) return;
+            const key = mediaIdentityKey(url);
+            if (seenUrls.has(key)) return;
             const type = typeMap.get(url) || normalizedStoredMediaType(fallbackType) || 'image';
             const label = mediaDisplayLabel(url, imageLabel, fallbackType === 'video' ? 'video' : 'image', type);
             const viewerKind = viewerKindForStoredMedia(type, '', url);
             extras.push({ url, label, viewerKind, referer });
-            seenUrls.add(url);
+            seenUrls.add(key);
         };
 
-        // 배열 순서와 무관하게 typeMap의 우선순위를 사용하므로 같은 URL이 image_urls와
-        // dccon_urls 양쪽에 있어도 반드시 '디시콘'으로 표시됩니다.
-        imageUrls.forEach(url => addMediaExtra(url, 'image'));
-        animatedImageUrls.forEach(url => addMediaExtra(url, 'image'));
-        videoUrls.forEach(url => addMediaExtra(url, isAnimatedImageUrl(url) ? 'image' : 'video'));
-        dcconUrls.forEach(url => addMediaExtra(url, 'dccon'));
+        // content_html 안에 이미 이미지/영상/디시콘 링크가 렌더링된 경우에는
+        // 배열에서 같은 미디어 링크를 본문 아래에 다시 생성하지 않습니다.
+        // 구버전처럼 content_html에 미디어 자체가 없는 경우에만 배열을 fallback으로 사용합니다.
+        const hasInlineMedia = Boolean(body.querySelector('a.activity-inline-link[data-media-viewer="1"]'));
+        // content_html에 미디어 태그가 존재하면 렌더링 성공 여부와 무관하게 배열에서
+        // 두 번째 미디어 링크를 만들지 않습니다. 배열 fallback은 미디어 HTML이 없는 레거시 데이터에만 사용합니다.
+        if (!storedHtmlHasMedia && !hasInlineMedia) {
+            imageUrls.forEach(url => addMediaExtra(url, 'image'));
+            animatedImageUrls.forEach(url => addMediaExtra(url, 'image'));
+            videoUrls.forEach(url => addMediaExtra(url, isKnownImageMediaUrl(url) ? 'image' : 'video'));
+            dcconUrls.forEach(url => addMediaExtra(url, 'dccon'));
+        }
         linkUrls.forEach(url => {
-            if (!seenUrls.has(url)) {
+            const key = mediaIdentityKey(url);
+            if (!seenUrls.has(key)) {
                 extras.push({ url, label: '외부 링크', viewerKind: '', referer: '' });
-                seenUrls.add(url);
+                seenUrls.add(key);
             }
         });
 
@@ -1744,10 +1891,48 @@
         return labels[cleanText(value)] || '';
     }
 
+    function resolvedMediaTypesForRow(row) {
+        const typeMap = buildStoredMediaTypeMap(row || {});
+        const types = new Set(typeMap.values());
+        const storedHtml = cleanText(row && row.content_html);
+
+        if (storedHtml) {
+            try {
+                const parsed = new DOMParser().parseFromString(`<div id="row-media-root">${storedHtml}</div>`, 'text/html');
+                const root = parsed.getElementById('row-media-root');
+                if (root) {
+                    root.querySelectorAll('img').forEach(node => {
+                        const url = preferredStoredImageUrl(node);
+                        if (!isSafeHttpUrl(url)) return;
+                        types.add(resolvedStoredMediaType(node, url, 'image', typeMap));
+                    });
+                    root.querySelectorAll('video').forEach(node => {
+                        let sourceNode = null;
+                        let url = cleanText(node.getAttribute('src'));
+                        if (!url) {
+                            sourceNode = node.querySelector('source[src], source[data-src]');
+                            if (sourceNode) url = cleanText(sourceNode.getAttribute('src') || sourceNode.getAttribute('data-src'));
+                        }
+                        if (!isSafeHttpUrl(url)) return;
+                        const markedNode = sourceNode || node;
+                        const fallback = isKnownImageMediaUrl(url) ? 'image' : 'video';
+                        types.add(resolvedStoredMediaType(markedNode, url, fallback, typeMap));
+                    });
+                    root.querySelectorAll('source:not(video source)').forEach(node => {
+                        const url = cleanText(node.getAttribute('src') || node.getAttribute('data-src'));
+                        if (!isSafeHttpUrl(url)) return;
+                        const fallback = isKnownImageMediaUrl(url) ? 'image' : 'video';
+                        types.add(resolvedStoredMediaType(node, url, fallback, typeMap));
+                    });
+                }
+            } catch (_) {}
+        }
+        return Array.from(types).filter(Boolean);
+    }
+
     function contentTypeLabelForRow(row, imageLabel = '이미지', allowVideo = true) {
         const type = cleanText(row && row.content_type);
-        const typeMap = buildStoredMediaTypeMap(row || {});
-        const values = Array.from(typeMap.values());
+        const values = resolvedMediaTypesForRow(row || {});
 
         if (type === 'dccon') return '디시콘';
         // 구버전 row의 content_type이 image/video로 잘못 저장됐어도 URL 판정에서
@@ -2058,23 +2243,32 @@
         document.body.classList.remove('modal-open');
     }
 
-    if (!renderStandaloneMediaViewerFromHash()) {
-        document.getElementById('graph-modal').addEventListener('click', event => {
-            if (event.target === event.currentTarget) closeModal();
-        });
+    document.getElementById('graph-modal').addEventListener('click', event => {
+        if (event.target === event.currentTarget) closeModal();
+    });
 
-        document.addEventListener('keydown', event => {
-            if (event.key === 'Escape' && document.getElementById('graph-modal').style.display === 'block') {
-                closeModal();
-            }
-        });
+    document.getElementById('media-lightbox').addEventListener('click', event => {
+        if (event.target === event.currentTarget) closeMediaLightbox();
+    });
+    document.getElementById('media-lightbox-close').addEventListener('click', closeMediaLightbox);
 
-        window.addEventListener('resize', () => {
-            if (modalChart) modalChart.resize();
-        });
+    document.addEventListener('keydown', event => {
+        if (event.key !== 'Escape') return;
+        const mediaLightbox = document.getElementById('media-lightbox');
+        if (mediaLightbox.classList.contains('open')) {
+            closeMediaLightbox();
+            return;
+        }
+        if (document.getElementById('graph-modal').style.display === 'block') {
+            closeModal();
+        }
+    });
 
-        window.onload = () => fetchDailyData(todayKst);
-    }
+    window.addEventListener('resize', () => {
+        if (modalChart) modalChart.resize();
+    });
+
+    window.onload = () => fetchDailyData(todayKst);
 </script>
 
 </body>
