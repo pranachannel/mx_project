@@ -1362,7 +1362,8 @@
             const host = parsed.hostname.toLowerCase();
             const path = parsed.pathname.toLowerCase();
             return /^(?:dcimg\d+|dccdn\d+|image)\.dcinside\.(?:com|co\.kr)$/.test(host) &&
-                (path === '/viewimage.php' || path.endsWith('/viewimage.php'));
+                (path === '/viewimage.php' || path.endsWith('/viewimage.php') ||
+                 path === '/viewimagepop.php' || path.endsWith('/viewimagepop.php'));
         } catch (_) {
             return false;
         }
