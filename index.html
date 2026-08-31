@@ -1285,10 +1285,62 @@
         return '';
     }
 
+    function normalizeImagePopDisplayUrl(url) {
+        const safeUrl = cleanText(url);
+        if (!isSafeHttpUrl(safeUrl)) return '';
+        try {
+            const parsed = new URL(safeUrl, window.location.href);
+            const host = parsed.hostname.toLowerCase();
+            const path = parsed.pathname.toLowerCase();
+            if (host !== 'image.dcinside.com' ||
+                (path !== '/viewimagepop.php' && !path.endsWith('/viewimagepop.php'))) {
+                return parsed.href;
+            }
+
+            const no = cleanText(parsed.searchParams.get('no'));
+            if (!no) return parsed.href;
+
+            const direct = new URL('https://image.dcinside.com/viewimage.php');
+            // 최신/과거 데이터 모두를 위해 id가 없더라도 id=를 명시합니다.
+            direct.searchParams.set('id', cleanText(parsed.searchParams.get('id')));
+            direct.searchParams.set('no', no);
+            return direct.href;
+        } catch (_) {
+            return safeUrl;
+        }
+    }
+
+    // 실제 표시용 URL입니다. 과거 데이터가 viewimagePop.php를 저장했거나,
+    // 레거시 Worker URL의 s= 안에 viewimagePop.php가 들어 있어도 직접 이미지 URL로 복원합니다.
+    function displayMediaSourceUrl(url) {
+        const safeUrl = cleanText(url);
+        if (!isSafeHttpUrl(safeUrl)) return '';
+        const relayOriginal = relayOriginalMediaUrl(safeUrl);
+        const candidate = relayOriginal || safeUrl;
+        const normalized = normalizeImagePopDisplayUrl(candidate);
+
+        // 서명 Worker를 이미 사용하는 미디어는 그대로 Worker URL을 유지해야 서명이 깨지지 않습니다.
+        // 단, Worker 안 원본이 viewimagePop.php라면 그 URL은 Worker가 필요 없는 직접 이미지이므로
+        // 정규화된 직접 URL을 사용해 구버전 데이터까지 복구합니다.
+        if (relayOriginal) {
+            try {
+                const parsedOriginal = new URL(relayOriginal, window.location.href);
+                const path = parsedOriginal.pathname.toLowerCase();
+                if (parsedOriginal.hostname.toLowerCase() === 'image.dcinside.com' &&
+                    (path === '/viewimagepop.php' || path.endsWith('/viewimagepop.php'))) {
+                    return normalized;
+                }
+            } catch (_) {}
+            return safeUrl;
+        }
+        return normalized;
+    }
+
     function effectiveMediaSourceUrl(url) {
         const safeUrl = cleanText(url);
         if (!isSafeHttpUrl(safeUrl)) return '';
-        return relayOriginalMediaUrl(safeUrl) || safeUrl;
+        const original = relayOriginalMediaUrl(safeUrl) || safeUrl;
+        return normalizeImagePopDisplayUrl(original);
     }
 
     function isDcconMediaUrl(url) {
@@ -1324,13 +1376,13 @@
         const dataSrc = cleanText(node.getAttribute('data-src'));
 
         if (isGallviewLoadingPlaceholderUrl(src)) {
-            if (isSafeHttpUrl(original) && !isGallviewLoadingPlaceholderUrl(original)) return original;
-            if (isSafeHttpUrl(dataSrc) && !isGallviewLoadingPlaceholderUrl(dataSrc)) return dataSrc;
+            if (isSafeHttpUrl(original) && !isGallviewLoadingPlaceholderUrl(original)) return displayMediaSourceUrl(original);
+            if (isSafeHttpUrl(dataSrc) && !isGallviewLoadingPlaceholderUrl(dataSrc)) return displayMediaSourceUrl(dataSrc);
             return '';
         }
-        if (isSafeHttpUrl(src)) return src;
-        if (isSafeHttpUrl(original)) return original;
-        if (isSafeHttpUrl(dataSrc)) return dataSrc;
+        if (isSafeHttpUrl(src)) return displayMediaSourceUrl(src);
+        if (isSafeHttpUrl(original)) return displayMediaSourceUrl(original);
+        if (isSafeHttpUrl(dataSrc)) return displayMediaSourceUrl(dataSrc);
         return '';
     }
 
@@ -1448,6 +1500,8 @@
     function openMediaLightbox(url, kind, title) {
         const safeUrl = cleanText(url);
         if (!isSafeHttpUrl(safeUrl)) return false;
+        const displayUrl = displayMediaSourceUrl(safeUrl);
+        if (!isSafeHttpUrl(displayUrl)) return false;
 
         const lightbox = document.getElementById('media-lightbox');
         const stage = document.getElementById('media-lightbox-stage');
@@ -1465,11 +1519,11 @@
         if (kind === 'dccon_motion') {
             mediaKind = 'dccon_motion';
         } else if (kind === 'dccon') {
-            mediaKind = inferMediaViewerKind(safeUrl, 'image') === 'video' ? 'dccon_motion' : 'dccon';
+            mediaKind = inferMediaViewerKind(displayUrl, 'image') === 'video' ? 'dccon_motion' : 'dccon';
         } else if (kind === 'image') {
             mediaKind = 'image';
         } else {
-            mediaKind = inferMediaViewerKind(safeUrl, kind);
+            mediaKind = inferMediaViewerKind(displayUrl, kind);
         }
 
         let dcconFallbackTried = false;
@@ -1492,7 +1546,8 @@
             }, { once: true });
 
             stage.appendChild(element);
-            element.src = safeUrl;
+            if (element.tagName.toLowerCase() === 'img') element.referrerPolicy = 'no-referrer';
+            element.src = displayUrl;
             if (element.tagName.toLowerCase() === 'video') {
                 const playPromise = element.play();
                 if (playPromise && typeof playPromise.catch === 'function') playPromise.catch(() => {});
