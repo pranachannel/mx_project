@@ -185,7 +185,8 @@
             display: flex; align-items: center; justify-content: center; padding: 18px; box-sizing: border-box;
         }
         .media-lightbox-stage img,
-        .media-lightbox-stage video {
+        .media-lightbox-stage video,
+        .media-lightbox-stage canvas {
             display: block; max-width: 100%; max-height: 100%; object-fit: contain;
         }
         .media-lightbox-close {
@@ -1497,6 +1498,31 @@
         }
     }
 
+    function freezeLoadedImageToCanvas(image, stage, title) {
+        if (!image || !stage || !image.naturalWidth || !image.naturalHeight) return null;
+
+        const maxDimension = 1600;
+        const scale = Math.min(
+            1,
+            maxDimension / image.naturalWidth,
+            maxDimension / image.naturalHeight
+        );
+        const width = Math.max(1, Math.round(image.naturalWidth * scale));
+        const height = Math.max(1, Math.round(image.naturalHeight * scale));
+
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        canvas.setAttribute('role', 'img');
+        canvas.setAttribute('aria-label', cleanText(title) || '정지 이미지');
+
+        const context = canvas.getContext('2d', { alpha: true });
+        if (!context) return null;
+        context.drawImage(image, 0, 0, width, height);
+        stage.replaceChildren(canvas);
+        return canvas;
+    }
+
     function openMediaLightbox(url, kind, title) {
         const safeUrl = cleanText(url);
         if (!isSafeHttpUrl(safeUrl)) return false;
@@ -1533,6 +1559,22 @@
 
             const element = createMediaLightboxElement(renderKind, title);
             mediaLightboxCurrentElement = element;
+
+            if (element.tagName.toLowerCase() === 'img') {
+                element.addEventListener('load', () => {
+                    if (mediaLightboxCurrentElement !== element) return;
+                    try {
+                        const frozen = freezeLoadedImageToCanvas(element, stage, title);
+                        if (frozen) {
+                            element.removeAttribute('src');
+                            mediaLightboxCurrentElement = frozen;
+                            status.textContent = '';
+                        }
+                    } catch (error) {
+                        console.warn('정적 이미지 미리보기 변환 실패:', error);
+                    }
+                }, { once: true });
+            }
 
             element.addEventListener('error', () => {
                 const isDccon = mediaKind === 'dccon' || mediaKind === 'dccon_motion';
