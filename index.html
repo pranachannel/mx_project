@@ -3,10 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ProjectMX Dashboard</title>
+    <title>블루아카이브 갤러리 대시보드 | ProjectMX</title>
+    <meta name="description" content="ProjectMX 갤러리의 게시글, 댓글, 사용자 활동을 날짜와 시간대별로 확인하는 데이터 대시보드">
     
     <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;family=Noto+Sans+KR:wght@400;500;600;700;800&amp;family=JetBrains+Mono:wght@500;600;700&amp;display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
     <script src="https://npmcdn.com/flatpickr/dist/l10n/ko.js"></script>
 
@@ -281,44 +285,489 @@
         .status-msg { font-size: 0.85rem; margin-bottom: 1rem; font-weight: bold; }
         .rank-number { font-weight: bold; color: #666; font-size: 14px; text-align: center; }
     </style>
+
+    <style id="projectmx-modern-theme">
+        :root {
+            --primary-color: #2563eb;
+            --primary-strong: #1d4ed8;
+            --secondary-color: #7c3aed;
+            --success-color: #10b981;
+            --danger-color: #dc2626;
+            --ink: #142033;
+            --muted: #64748b;
+            --line: #dce4f0;
+            --line-soft: #edf1f7;
+            --surface: #ffffff;
+            --surface-subtle: #f7f9fc;
+            --bg-color: #f1f5fb;
+            --shadow-sm: 0 1px 2px rgba(15, 23, 42, .04), 0 8px 24px rgba(37, 99, 235, .04);
+            --shadow-lg: 0 24px 70px rgba(15, 23, 42, .20);
+        }
+
+        * { box-sizing: border-box; }
+        html { color-scheme: light; background: var(--bg-color); }
+        body {
+            min-width: 320px;
+            min-height: 100vh;
+            font-family: Inter, "Noto Sans KR", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            color: var(--ink);
+            background:
+                radial-gradient(circle at 12% -10%, rgba(37, 99, 235, .10), transparent 26rem),
+                linear-gradient(180deg, #f7f9fd 0, var(--bg-color) 22rem);
+            -webkit-font-smoothing: antialiased;
+        }
+        body::before {
+            content: "";
+            position: fixed;
+            inset: 0 0 auto;
+            height: 4px;
+            z-index: 2500;
+            background: linear-gradient(90deg, var(--primary-color), var(--secondary-color), var(--success-color));
+        }
+        button, input { font: inherit; }
+        button:focus-visible, input:focus-visible, [tabindex]:focus-visible {
+            outline: 3px solid rgba(37, 99, 235, .22);
+            outline-offset: 2px;
+        }
+
+        .main { max-width: 1400px; margin: 0 auto; padding: 28px 28px 38px; }
+        .header { align-items: flex-end; gap: 24px; margin-bottom: 18px; }
+        .brand-block { min-width: 0; }
+        .brand-eyebrow {
+            margin-bottom: 7px;
+            color: var(--primary-color);
+            font: 700 11px/1.2 "JetBrains Mono", monospace;
+            letter-spacing: .14em;
+            text-transform: uppercase;
+        }
+        .header h1 {
+            margin: 0 !important;
+            color: #172033;
+            font-size: clamp(1.55rem, 2.4vw, 2.15rem) !important;
+            line-height: 1.25;
+            letter-spacing: -.035em;
+        }
+        .header-description { margin: 7px 0 0; color: var(--muted); font-size: .875rem; line-height: 1.55; }
+        .filters { flex: 0 0 auto; }
+        .date-control { position: relative; display: flex; align-items: center; }
+        .date-control::before {
+            content: "";
+            position: absolute;
+            left: 14px;
+            width: 15px;
+            height: 15px;
+            pointer-events: none;
+            opacity: .65;
+            background: no-repeat center/contain url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23475569' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='4' width='18' height='17' rx='2'/%3E%3Cpath d='M16 2v4M8 2v4M3 10h18'/%3E%3C/svg%3E");
+        }
+        input[type="text"].date-picker-box {
+            width: 168px;
+            min-height: 44px;
+            padding: 10px 14px 10px 40px;
+            color: #334155;
+            background: rgba(255,255,255,.94);
+            border: 1px solid #cfd8e6;
+            border-radius: 10px;
+            box-shadow: 0 1px 2px rgba(15, 23, 42, .05);
+            font: 700 13px/1 "JetBrains Mono", monospace;
+            text-align: left;
+        }
+        input[type="text"].date-picker-box:hover { border-color: #94a3b8; }
+        input[type="text"].date-picker-box:focus { border-color: var(--primary-color); }
+
+        .tab-container {
+            gap: 6px;
+            margin-bottom: 12px;
+            padding: 0 0 13px;
+            border-bottom: 1px solid var(--line);
+        }
+        .tab {
+            min-height: 38px;
+            padding: 8px 15px;
+            border: 1px solid transparent;
+            border-radius: 8px;
+            color: #526074;
+            background: transparent;
+            font-size: 13px;
+            font-weight: 700;
+        }
+        .tab:hover { color: var(--ink); background: rgba(255,255,255,.75); border-color: var(--line); }
+        .tab.active {
+            color: #fff;
+            background: #202b3a;
+            border-color: #202b3a;
+            box-shadow: 0 5px 14px rgba(15, 23, 42, .16);
+        }
+        .btn-refresh {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 38px;
+            margin-left: auto;
+            padding: 8px 13px;
+            color: #475569;
+            background: rgba(255,255,255,.92);
+            border: 1px solid #cfd8e6;
+            border-radius: 9px;
+            box-shadow: 0 1px 2px rgba(15,23,42,.04);
+            font-size: 12px;
+        }
+        .btn-refresh:hover:not(:disabled) { color: var(--primary-color); background: #fff; border-color: #9fb5d8; }
+        .btn-refresh .refresh-icon { color: var(--primary-color); font-size: 18px; line-height: 1; }
+
+        .status-msg {
+            display: inline-flex;
+            align-items: center;
+            width: fit-content;
+            min-height: 30px;
+            margin: 0 0 18px;
+            padding: 6px 11px;
+            color: #526074;
+            background: rgba(255,255,255,.72);
+            border: 1px solid var(--line);
+            border-radius: 999px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        .status-msg::before {
+            content: "";
+            width: 7px;
+            height: 7px;
+            margin-right: 8px;
+            border-radius: 50%;
+            background: var(--success-color);
+            box-shadow: 0 0 0 4px rgba(16, 185, 129, .11);
+        }
+        .status-msg[data-state="loading"]::before { background: var(--primary-color); box-shadow: 0 0 0 4px rgba(37,99,235,.11); animation: status-pulse 1.15s ease-in-out infinite; }
+        .status-msg[data-state="error"] { color: var(--danger-color) !important; background: #fff7f7; border-color: #fecaca; }
+        .status-msg[data-state="error"]::before { background: var(--danger-color); box-shadow: 0 0 0 4px rgba(220,38,38,.10); }
+        @keyframes status-pulse { 50% { opacity: .4; transform: scale(.82); } }
+
+        .metrics-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; margin-bottom: 18px; }
+        .metric-item {
+            position: relative;
+            min-height: 142px;
+            padding: 20px;
+            overflow: hidden;
+            background: var(--surface);
+            border: 1px solid var(--line);
+            border-radius: 14px;
+            box-shadow: var(--shadow-sm);
+            text-align: left;
+        }
+        .metric-item::after {
+            content: "";
+            position: absolute;
+            right: -36px;
+            bottom: -54px;
+            width: 132px;
+            height: 132px;
+            border-radius: 50%;
+            background: rgba(37, 99, 235, .055);
+        }
+        .metric-item:nth-child(2)::after { background: rgba(124, 58, 237, .055); }
+        .metric-item:nth-child(3)::after { background: rgba(16, 185, 129, .06); }
+        .metric-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+        .metric-dot { width: 9px; height: 9px; flex: 0 0 auto; border-radius: 50%; background: var(--primary-color); }
+        .metric-item:nth-child(2) .metric-dot { background: var(--secondary-color); }
+        .metric-item:nth-child(3) .metric-dot { background: var(--success-color); }
+        .metric-label { color: #5a6678; font-size: 13px; font-weight: 700; }
+        .metric-value {
+            position: relative;
+            z-index: 1;
+            margin-top: 17px;
+            color: var(--primary-color);
+            font: 800 clamp(2rem, 4vw, 2.7rem)/1 "JetBrains Mono", monospace;
+            letter-spacing: -.06em;
+        }
+        .metric-item:nth-child(2) .metric-value { color: var(--secondary-color); }
+        .metric-item:nth-child(3) .metric-value { color: #059669; }
+        .metric-note { position: relative; z-index: 1; display: block; margin-top: 11px; color: #94a3b8; font-size: 11px; }
+
+        .st-card {
+            padding: 20px;
+            background: var(--surface);
+            border: 1px solid var(--line);
+            border-radius: 14px;
+            box-shadow: var(--shadow-sm);
+            overflow: hidden;
+        }
+        .card-heading, .panel-heading {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 18px;
+            margin-bottom: 12px;
+        }
+        .card-heading h2, .panel-heading h2 { margin: 0; color: #172033; font-size: 17px; line-height: 1.4; }
+        .card-heading p, .panel-heading p { margin: 4px 0 0; color: var(--muted); font-size: 12px; line-height: 1.5; }
+        .chart-key { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 7px; }
+        .chart-key span {
+            display: inline-flex;
+            align-items: center;
+            min-height: 28px;
+            padding: 4px 9px;
+            border: 1px solid var(--line);
+            border-radius: 999px;
+            color: #526074;
+            background: var(--surface-subtle);
+            font-size: 11px;
+            font-weight: 700;
+        }
+        .chart-key i { width: 7px; height: 7px; margin-right: 6px; border-radius: 50%; background: var(--success-color); }
+        .chart-key .key-post i { background: var(--primary-color); }
+        .chart-key .key-comment i { background: var(--secondary-color); }
+        #main-trend-chart { height: 420px !important; }
+
+        .controls-wrapper {
+            gap: 8px;
+            min-height: 44px;
+            margin-bottom: 13px;
+            padding-top: 13px;
+            border-top: 1px solid var(--line-soft);
+        }
+        input[type="text"] {
+            min-height: 42px;
+            padding: 10px 13px;
+            color: var(--ink);
+            background: var(--surface-subtle);
+            border: 1px solid #d7dfeb;
+            border-radius: 9px;
+            font-size: 13px;
+        }
+        input[type="text"]::placeholder { color: #94a3b8; }
+        input[type="text"]:focus { background: #fff; border-color: var(--primary-color); box-shadow: 0 0 0 3px rgba(37,99,235,.10); }
+
+        .btn-search, .btn-star-filter, .btn-rank, .btn-type, .page-btn {
+            min-height: 38px;
+            border-radius: 8px;
+            font-weight: 700;
+        }
+        .btn-search {
+            padding: 9px 24px;
+            color: #fff;
+            background: var(--primary-color);
+            border: 1px solid var(--primary-color);
+            box-shadow: 0 5px 13px rgba(37,99,235,.16);
+        }
+        .btn-search:hover { background: var(--primary-strong); }
+        .btn-star-filter, .btn-rank, .btn-type {
+            color: #5c6879;
+            background: var(--surface-subtle);
+            border: 1px solid #d7dfeb;
+        }
+        .btn-star-filter:hover, .btn-rank:hover, .btn-type:hover { color: var(--ink); background: #fff; border-color: #aab8cb; }
+        .btn-star-filter.active { color: #9a6700; background: #fffbeb; border-color: #facc15; }
+        .btn-rank.active { color: #fff; background: #202b3a; border-color: #202b3a; }
+        .btn-type.active.gonic { background: #2563eb; border-color: #2563eb; }
+        .btn-type.active.ban { background: #7c3aed; border-color: #7c3aed; }
+        .btn-type.active.udong { background: #64748b; border-color: #64748b; }
+
+        .table-responsive { margin-top: 4px; border: 1px solid var(--line-soft); border-radius: 11px; }
+        table { margin: 0; color: #334155; }
+        th, td { height: 48px; padding: 10px 12px; border-bottom: 1px solid var(--line-soft); font-size: 12px; }
+        th {
+            height: 40px;
+            color: #64748b;
+            background: #f7f9fc;
+            font-size: 11px;
+            font-weight: 800;
+            letter-spacing: .01em;
+        }
+        th.sortable:hover { color: var(--primary-color); background: #eef4ff; }
+        table tbody tr { background: rgba(255,255,255,.96); }
+        table tbody tr:last-child td { border-bottom: 0; }
+        table tbody tr:hover { background-color: #f3f7ff !important; }
+        .rank-number { color: var(--primary-color); font: 700 12px/1 "JetBrains Mono", monospace; }
+        .user-cell { display: flex; align-items: center; min-width: 0; gap: 9px; }
+        .user-avatar {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 27px;
+            height: 27px;
+            flex: 0 0 auto;
+            color: #fff;
+            background: var(--primary-color);
+            border-radius: 8px;
+            font-size: 11px;
+            font-weight: 800;
+        }
+        .user-avatar.avatar-ban { background: var(--secondary-color); }
+        .user-avatar.avatar-udong { color: #475569; background: #e2e8f0; }
+        .user-cell-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 700; }
+        .badge { display: inline-flex; align-items: center; padding: 4px 7px; border-radius: 6px; font-size: 10px; }
+        .bg-gonic { color: #1d4ed8; background: #dbeafe; }
+        .bg-ban { color: #6d28d9; background: #ede9fe; }
+        .bg-udong { color: #475569; background: #e2e8f0; }
+        .td-bookmark { accent-color: #f59e0b; }
+        .td-bookmark:hover { background-color: #fffbeb !important; }
+        .star-checkbox { width: 15px; height: 15px; transform: none; }
+        .pagination-container { margin-top: 16px; }
+        .page-btn { min-width: 38px; padding: 7px 10px; color: #526074; border-color: var(--line); }
+        .page-btn:hover:not(:disabled) { color: var(--primary-color); background: #eff6ff; border-color: #bfdbfe; }
+        .page-btn.active { color: #fff; background: var(--primary-color); border-color: var(--primary-color); }
+
+        .dashboard-footer {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 18px 28px 28px;
+            color: #8793a5;
+            border-top: 1px solid rgba(207,216,230,.85);
+            font-size: 11px;
+        }
+        .dashboard-footer-inner { display: flex; align-items: center; justify-content: space-between; gap: 14px; }
+        .dashboard-footer strong { color: #526074; font-weight: 800; }
+        .dashboard-footer-code { font-family: "JetBrains Mono", monospace; }
+
+        .modal { padding: 28px 20px; background: rgba(15,23,42,.64); backdrop-filter: blur(7px); }
+        .modal-content {
+            max-width: 980px;
+            max-height: calc(100vh - 56px);
+            padding: 0 24px 24px;
+            border: 1px solid rgba(255,255,255,.72);
+            border-radius: 16px;
+            box-shadow: var(--shadow-lg);
+        }
+        .modal-header { min-height: 66px; border-color: var(--line-soft); }
+        .modal-header::before {
+            content: "";
+            width: 34px;
+            height: 34px;
+            flex: 0 0 auto;
+            border-radius: 10px;
+            background: #eaf1ff no-repeat center/17px url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%232563eb' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 21a8 8 0 0 0-16 0'/%3E%3Ccircle cx='12' cy='7' r='4'/%3E%3C/svg%3E");
+        }
+        .modal-header h3 { color: #172033; font-size: 17px; }
+        .modal-close { top: 11px; color: #64748b; border-radius: 10px; }
+        .modal-close:hover { color: var(--ink); background: #f1f5f9; }
+        #chart-container { height: 360px; margin-top: 14px; }
+        .activity-grid { gap: 14px; }
+        .activity-panel { background: #f8fafc; border-color: var(--line); border-radius: 12px; }
+        .activity-panel-header { padding: 13px 14px; border-color: var(--line-soft); }
+        .activity-panel-header h4 { color: #253044; font-size: 14px; }
+        .activity-limit { padding: 3px 7px; color: #64748b; background: #f1f5f9; border-radius: 999px; }
+        .activity-list { max-height: 420px; }
+        .activity-item { border-color: var(--line-soft); border-radius: 9px; box-shadow: 0 1px 2px rgba(15,23,42,.025); }
+        .activity-item-title { color: #253044; }
+        .activity-item-content { color: #475569; background: #f7f9fc; }
+        .activity-type-badge { color: #526074; background: #f1f5f9; border-color: #dde5ef; }
+        .activity-content-toggle, .activity-inline-link, .activity-item-link { color: var(--primary-color); }
+        .activity-state { color: #7c8798; }
+
+        .flatpickr-calendar { border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 18px 45px rgba(15,23,42,.18); font-family: Inter, "Noto Sans KR", sans-serif; }
+        .flatpickr-day.selected, .flatpickr-day.startRange, .flatpickr-day.endRange { background: var(--primary-color); border-color: var(--primary-color); }
+
+        @media (max-width: 860px) {
+            .main { padding: 22px 16px 30px; }
+            .header { align-items: stretch; flex-direction: column; gap: 15px; }
+            .filters { align-self: flex-start; }
+            .card-heading { flex-direction: column; }
+            .chart-key { justify-content: flex-start; }
+            .dashboard-footer { padding-inline: 16px; }
+        }
+
+        @media (max-width: 720px) {
+            body { background: #f3f6fb; }
+            .main { padding: 18px 12px 26px; }
+            .header { align-items: stretch; margin-bottom: 15px; flex-direction: column; }
+            .header h1 { font-size: 1.45rem !important; }
+            .header-description { font-size: 12px; }
+            .filters { width: 100%; }
+            .date-control { width: 100%; }
+            input[type="text"].date-picker-box { width: 100%; min-height: 44px; }
+            .tab-container { margin-inline: -2px; }
+            .tab { min-height: 40px; padding-inline: 12px; }
+            .btn-refresh { min-height: 40px; }
+            .metrics-grid { gap: 8px; }
+            .metric-item { min-height: 112px; padding: 14px 11px; }
+            .metric-label { font-size: 11px; }
+            .metric-value { margin-top: 14px; font-size: clamp(1.35rem, 7vw, 1.9rem); }
+            .metric-note { margin-top: 8px; font-size: 10px; }
+            .st-card { padding: 14px; border-radius: 12px; }
+            .card-heading h2, .panel-heading h2 { font-size: 16px; }
+            #main-trend-chart { height: 340px !important; }
+            .controls-wrapper { align-items: stretch; }
+            .controls-wrapper > div { flex-wrap: wrap; }
+            .btn-search { width: 100%; }
+            .dashboard-footer-inner { align-items: flex-start; flex-direction: column; }
+            .modal { padding: 0; }
+            .modal-content { padding-inline: 14px; border: 0; border-radius: 0; }
+            .modal-header::before { width: 30px; height: 30px; }
+        }
+    </style>
 </head>
 <body>
 
 <div class="main">
-    <div class="header">
-        <h1 style="margin:0; font-size: 1.8rem;">블루아카이브 갤러리 대시보드</h1>
-        <div class="filters">
-            <input type="text" id="date-picker" class="date-picker-box" placeholder="날짜 선택"> 
+    <header class="header">
+        <div class="brand-block">
+            <div class="brand-eyebrow">PROJECTMX · DAILY ANALYTICS</div>
+            <h1>블루아카이브 갤러리 대시보드</h1>
+            <p class="header-description">선택한 날짜의 게시글·댓글·사용자 활동을 시간대별로 확인합니다.</p>
         </div>
-    </div>
+        <div class="filters">
+            <label class="date-control" aria-label="분석 날짜 선택">
+                <input type="text" id="date-picker" class="date-picker-box" placeholder="날짜 선택" aria-label="분석 날짜">
+            </label>
+        </div>
+    </header>
 
-    <div class="tab-container">
-        <div class="tab active" onclick="switchTab('trends', this)">상세 그래프</div>
-        <div class="tab" onclick="switchTab('ranking', this)">유저 랭킹</div>
-        <div class="tab" onclick="switchTab('search', this)">유저 검색</div>
+    <nav class="tab-container" role="tablist" aria-label="대시보드 보기 전환">
+        <button class="tab active" type="button" role="tab" aria-selected="true" onclick="switchTab('trends', this)">상세 그래프</button>
+        <button class="tab" type="button" role="tab" aria-selected="false" onclick="switchTab('ranking', this)">유저 랭킹</button>
+        <button class="tab" type="button" role="tab" aria-selected="false" onclick="switchTab('search', this)">유저 검색</button>
         <button id="refresh-btn" class="btn-refresh" type="button" onclick="refreshCurrentData()" title="현재 선택 날짜의 최신 데이터를 다시 불러옵니다">
             <span class="refresh-icon">↻</span><span class="refresh-text">새로고침</span>
         </button>
-    </div>
+    </nav>
 
-    <div id="status-text" class="status-msg">데이터 로딩 중...</div>
+    <div id="status-text" class="status-msg" data-state="loading" role="status" aria-live="polite">데이터 로딩 중...</div>
 
     <div id="section-trends" class="content-section active">
         <div class="metrics-grid">
-            <div class="metric-item"><div class="metric-label">총 게시글</div><div id="m-posts" class="metric-value">0</div></div>
-            <div class="metric-item"><div class="metric-label">총 댓글</div><div id="m-comments" class="metric-value">0</div></div>
-            <div class="metric-item"><div class="metric-label">활동 유저 수</div><div id="m-users" class="metric-value">0</div></div>
+            <article class="metric-item">
+                <div class="metric-head"><div class="metric-label">총 게시글</div><span class="metric-dot" aria-hidden="true"></span></div>
+                <div id="m-posts" class="metric-value">0</div>
+                <span class="metric-note">선택 날짜 게시글 집계</span>
+            </article>
+            <article class="metric-item">
+                <div class="metric-head"><div class="metric-label">총 댓글</div><span class="metric-dot" aria-hidden="true"></span></div>
+                <div id="m-comments" class="metric-value">0</div>
+                <span class="metric-note">선택 날짜 댓글 집계</span>
+            </article>
+            <article class="metric-item">
+                <div class="metric-head"><div class="metric-label">활동 유저 수</div><span class="metric-dot" aria-hidden="true"></span></div>
+                <div id="m-users" class="metric-value">0</div>
+                <span class="metric-note">중복을 제외한 활동 사용자</span>
+            </article>
         </div>
         <div class="st-card">
-            <h3 style="margin-top:0;">시간대 활동 그래프</h3>
+            <div class="card-heading">
+                <div>
+                    <h2>시간대 활동 그래프</h2>
+                    <p>게시글, 댓글과 활동 사용자 수의 24시간 분포</p>
+                </div>
+                <div class="chart-key" aria-label="그래프 항목">
+                    <span><i aria-hidden="true"></i>활동 유저 수</span>
+                    <span class="key-post"><i aria-hidden="true"></i>총 게시글</span>
+                    <span class="key-comment"><i aria-hidden="true"></i>총 댓글</span>
+                </div>
+            </div>
             <div id="main-trend-chart" style="width: 100%; height: 400px;"></div>
         </div>
     </div>
 
     <div id="section-ranking" class="content-section">
         <div class="st-card">
+            <div class="panel-heading">
+                <div>
+                    <h2>유저 랭킹</h2>
+                    <p>게시글과 댓글 작성량을 기준으로 상위 50명을 표시합니다.</p>
+                </div>
+            </div>
             <div class="controls-wrapper" style="justify-content: space-between;">
-                <button id="ranking-star-filter" class="btn-star-filter" onclick="toggleStarFilter('ranking')" title="즐겨찾기 유저만 보기">⭐</button>
+                <button id="ranking-star-filter" class="btn-star-filter" onclick="toggleStarFilter('ranking')" title="즐겨찾기 유저만 보기" aria-label="즐겨찾기 사용자만 보기">⭐</button>
                 <div style="display:flex; gap: 5px; margin-left: auto;">
                     <button id="btn-rank-post" class="btn-rank" onclick="setRankingMode('post')">게시글</button>
                     <button id="btn-rank-comment" class="btn-rank" onclick="setRankingMode('comment')">댓글</button>
@@ -358,8 +807,14 @@
 
     <div id="section-search" class="content-section">
         <div class="st-card">
+            <div class="panel-heading">
+                <div>
+                    <h2>유저 검색</h2>
+                    <p>닉네임 또는 UID(IP)로 사용자를 찾고 활동 내역을 확인합니다.</p>
+                </div>
+            </div>
             <div class="controls-wrapper">
-                <button id="search-star-filter" class="btn-star-filter" onclick="toggleStarFilter('search')" title="즐겨찾기 유저만 보기">⭐</button>
+                <button id="search-star-filter" class="btn-star-filter" onclick="toggleStarFilter('search')" title="즐겨찾기 유저만 보기" aria-label="즐겨찾기 사용자만 보기">⭐</button>
                 
                 <input type="text" id="search-input" placeholder="검색할 닉네임 또는 UID(IP) 입력" style="flex: 1; box-sizing: border-box; margin:0; min-width: 200px;" onkeypress="if(event.key === 'Enter') executeSearch()">
                 
@@ -400,6 +855,13 @@
         </div>
     </div>
 </div>
+
+<footer class="dashboard-footer">
+    <div class="dashboard-footer-inner">
+        <div><strong>블루아카이브 갤러리 대시보드</strong> · DCInside ProjectMX Gallery Analytics</div>
+        <div class="dashboard-footer-code">데이터 출처: DCInside</div>
+    </div>
+</footer>
 
 <div id="graph-modal" class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
     <div class="modal-content">
@@ -466,6 +928,7 @@
     
     let dailyTrendData = null;
     let hourlyRawData = [];
+    let mainTrendChart = null;
 
     // 상세 본문 Parquet는 상세창을 열었을 때만 읽습니다.
     // 같은 파일을 다시 요청하지 않도록 브라우저 메모리에 Promise 자체를 캐시합니다.
@@ -549,14 +1012,23 @@
     }
 
     function switchTab(tabId, el) {
-        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.tab').forEach(t => {
+            t.classList.remove('active');
+            t.setAttribute('aria-selected', 'false');
+        });
         document.querySelectorAll('.content-section').forEach(s => s.classList.remove('active'));
         
         el.classList.add('active');
+        el.setAttribute('aria-selected', 'true');
         document.getElementById(`section-${tabId}`).classList.add('active');
         activeTab = tabId;
         
-        if (tabId === 'trends' && dailyTrendData) renderTrendChart();
+        if (tabId === 'trends' && dailyTrendData) {
+            renderTrendChart();
+            requestAnimationFrame(() => {
+                if (mainTrendChart) mainTrendChart.resize();
+            });
+        }
     }
 
     function withRefreshToken(url, token) {
@@ -602,6 +1074,7 @@
         statusText.innerText = forceRefresh
             ? `${dateStr}의 최신 데이터를 다시 불러오는 중입니다`
             : `${dateStr}의 데이터를 합산 중입니다`;
+        statusText.dataset.state = 'loading';
         statusText.style.color = "#555";
 
         const refreshToken = forceRefresh ? String(Date.now()) : '';
@@ -680,6 +1153,7 @@
 
         if (currentData.length === 0) {
             statusText.innerText = `아직 수집된 데이터가 전혀 없습니다`;
+            statusText.dataset.state = 'error';
             statusText.style.color = "red";
             updateMetrics(true);
             renderRankingTable([]);
@@ -697,6 +1171,7 @@
         if (activeTab === 'trends') renderTrendChart();
 
         statusText.innerText = `실시간 데이터 반영엔 시간이 걸립니다`;
+        statusText.dataset.state = 'ready';
         statusText.style.color = "#555";
     }
 
@@ -721,21 +1196,59 @@
     function renderTrendChart() {
         if (!dailyTrendData || dailyTrendData.labels.length === 0) return;
         const chartDom = document.getElementById('main-trend-chart');
-        const myChart = echarts.init(chartDom);
+        if (!mainTrendChart) mainTrendChart = echarts.init(chartDom);
         
         const option = {
-            tooltip: { trigger: 'axis' },
-            legend: { data: ['활동 유저 수', '총 게시글', '총 댓글'], top: '0%' },
-            grid: { left: '3%', right: '4%', bottom: '5%', containLabel: true },
-            xAxis: { type: 'category', boundaryGap: false, data: dailyTrendData.labels },
-            yAxis: { type: 'value' },
+            animationDuration: 550,
+            textStyle: { fontFamily: 'Inter, Noto Sans KR, sans-serif', color: '#475569' },
+            tooltip: {
+                trigger: 'axis',
+                backgroundColor: '#172033',
+                borderColor: '#334155',
+                borderWidth: 1,
+                padding: [10, 12],
+                textStyle: { color: '#f8fafc', fontSize: 12 },
+                axisPointer: { type: 'line', lineStyle: { color: '#94a3b8', type: 'dashed' } }
+            },
+            legend: { show: false },
+            grid: { left: 8, right: 12, top: 20, bottom: 8, containLabel: true },
+            xAxis: {
+                type: 'category',
+                boundaryGap: false,
+                data: dailyTrendData.labels,
+                axisLine: { lineStyle: { color: '#cbd5e1' } },
+                axisTick: { show: false },
+                axisLabel: { color: '#718096', fontFamily: 'JetBrains Mono, monospace', fontSize: 11, interval: 1 }
+            },
+            yAxis: {
+                type: 'value',
+                axisLine: { show: false },
+                axisTick: { show: false },
+                axisLabel: { color: '#94a3b8', fontFamily: 'JetBrains Mono, monospace', fontSize: 10 },
+                splitLine: { lineStyle: { color: '#edf1f7' } }
+            },
             series: [
-                { name: '활동 유저 수', type: 'line', smooth: true, data: dailyTrendData.users, itemStyle: { color: '#28a745' }, areaStyle: { opacity: 0.1 } },
-                { name: '총 게시글', type: 'line', smooth: true, data: dailyTrendData.posts, itemStyle: { color: '#007bff' }, areaStyle: { opacity: 0.1 } },
-                { name: '총 댓글', type: 'line', smooth: true, data: dailyTrendData.comments, itemStyle: { color: '#ff4b4b' }, areaStyle: { opacity: 0.1 } }
+                {
+                    name: '활동 유저 수', type: 'line', smooth: .35, data: dailyTrendData.users,
+                    showSymbol: false, lineStyle: { color: '#10b981', width: 2, type: 'dashed' },
+                    itemStyle: { color: '#10b981' },
+                    areaStyle: { color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [{ offset: 0, color: 'rgba(16,185,129,.18)' }, { offset: 1, color: 'rgba(16,185,129,0)' }]) }
+                },
+                {
+                    name: '총 게시글', type: 'line', smooth: .35, data: dailyTrendData.posts,
+                    showSymbol: false, lineStyle: { color: '#2563eb', width: 2.5 },
+                    itemStyle: { color: '#2563eb' },
+                    areaStyle: { color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [{ offset: 0, color: 'rgba(37,99,235,.22)' }, { offset: 1, color: 'rgba(37,99,235,0)' }]) }
+                },
+                {
+                    name: '총 댓글', type: 'line', smooth: .35, data: dailyTrendData.comments,
+                    showSymbol: false, lineStyle: { color: '#7c3aed', width: 2.5 },
+                    itemStyle: { color: '#7c3aed' },
+                    areaStyle: { color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [{ offset: 0, color: 'rgba(124,58,237,.18)' }, { offset: 1, color: 'rgba(124,58,237,0)' }]) }
+                }
             ]
         };
-        myChart.setOption(option);
+        mainTrendChart.setOption(option, true);
     }
 
     function updateMetrics(isEmpty) {
@@ -972,13 +1485,15 @@
 
             const safeNick = escapeHTML(row.nickname);
             const safeId = escapeHTML(formatUserIdentity(row));
+            const avatarText = escapeHTML(Array.from(cleanText(row.nickname) || '?')[0] || '?');
+            const avatarClass = row.type === '반고닉' ? 'avatar-ban' : (row.type === '유동' ? 'avatar-udong' : 'avatar-gonic');
 
             tr.innerHTML = `
                 <td class="rank-number">${row.rank}위</td>
                 <td class="td-bookmark" title="클릭하여 즐겨찾기">
                     <input type="checkbox" class="star-checkbox" ${isBookmarked ? 'checked' : ''}>
                 </td>
-                <td title="${safeNick}">${safeNick}</td>
+                <td title="${safeNick}"><span class="user-cell"><span class="user-avatar ${avatarClass}">${avatarText}</span><span class="user-cell-name">${safeNick}</span></span></td>
                 <td title="${safeId}">${safeId}</td>
                 <td><span class="badge ${bType}">${row.type}</span></td>
                 <td style="${postWeight}">${row.post}</td>
@@ -1009,12 +1524,14 @@
             
             const safeNick = escapeHTML(row.nickname);
             const safeId = escapeHTML(formatUserIdentity(row));
+            const avatarText = escapeHTML(Array.from(cleanText(row.nickname) || '?')[0] || '?');
+            const avatarClass = row.type === '반고닉' ? 'avatar-ban' : (row.type === '유동' ? 'avatar-udong' : 'avatar-gonic');
 
             tr.innerHTML = `
                 <td class="td-bookmark" title="클릭하여 즐겨찾기">
                     <input type="checkbox" class="star-checkbox" ${isBookmarked ? 'checked' : ''}>
                 </td>
-                <td title="${safeNick}">${safeNick}</td>
+                <td title="${safeNick}"><span class="user-cell"><span class="user-avatar ${avatarClass}">${avatarText}</span><span class="user-cell-name">${safeNick}</span></span></td>
                 <td title="${safeId}">${safeId}</td>
                 <td><span class="badge ${bType}">${row.type}</span></td>
                 <td>${row.post}</td>
@@ -2312,14 +2829,46 @@
         if (modalChart) modalChart.dispose();
         modalChart = echarts.init(document.getElementById('chart-container'));
         modalChart.setOption({
-            tooltip: { trigger: 'axis' },
-            legend: { data: ['게시글', '댓글'], top: '0%' },
-            grid: { left: '3%', right: '4%', bottom: '5%', containLabel: true },
-            xAxis: { type: 'category', boundaryGap: false, data: hours },
-            yAxis: { type: 'value', minInterval: 1 },
+            animationDuration: 450,
+            textStyle: { fontFamily: 'Inter, Noto Sans KR, sans-serif', color: '#475569' },
+            tooltip: {
+                trigger: 'axis',
+                backgroundColor: '#172033',
+                borderColor: '#334155',
+                borderWidth: 1,
+                padding: [9, 11],
+                textStyle: { color: '#f8fafc', fontSize: 12 },
+                axisPointer: { lineStyle: { color: '#94a3b8', type: 'dashed' } }
+            },
+            legend: {
+                data: ['게시글', '댓글'], top: 2, right: 6, icon: 'circle',
+                itemWidth: 8, itemHeight: 8,
+                textStyle: { color: '#64748b', fontSize: 11 }
+            },
+            grid: { left: 8, right: 12, top: 44, bottom: 8, containLabel: true },
+            xAxis: {
+                type: 'category', boundaryGap: false, data: hours,
+                axisLine: { lineStyle: { color: '#cbd5e1' } },
+                axisTick: { show: false },
+                axisLabel: { color: '#718096', fontFamily: 'JetBrains Mono, monospace', fontSize: 10, interval: 1 }
+            },
+            yAxis: {
+                type: 'value', minInterval: 1,
+                axisLine: { show: false }, axisTick: { show: false },
+                axisLabel: { color: '#94a3b8', fontFamily: 'JetBrains Mono, monospace', fontSize: 10 },
+                splitLine: { lineStyle: { color: '#edf1f7' } }
+            },
             series: [
-                { name: '게시글', type: 'line', smooth: true, data: userPosts, itemStyle: { color: '#007bff' }, areaStyle: { opacity: 0.1 } },
-                { name: '댓글', type: 'line', smooth: true, data: userComments, itemStyle: { color: '#ff4b4b' }, areaStyle: { opacity: 0.1 } }
+                {
+                    name: '게시글', type: 'line', smooth: .35, data: userPosts, showSymbol: false,
+                    lineStyle: { color: '#2563eb', width: 2.5 }, itemStyle: { color: '#2563eb' },
+                    areaStyle: { color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [{ offset: 0, color: 'rgba(37,99,235,.20)' }, { offset: 1, color: 'rgba(37,99,235,0)' }]) }
+                },
+                {
+                    name: '댓글', type: 'line', smooth: .35, data: userComments, showSymbol: false,
+                    lineStyle: { color: '#7c3aed', width: 2.5 }, itemStyle: { color: '#7c3aed' },
+                    areaStyle: { color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [{ offset: 0, color: 'rgba(124,58,237,.18)' }, { offset: 1, color: 'rgba(124,58,237,0)' }]) }
+                }
             ]
         });
         requestAnimationFrame(() => {
@@ -2363,6 +2912,7 @@
     });
 
     window.addEventListener('resize', () => {
+        if (mainTrendChart) mainTrendChart.resize();
         if (modalChart) modalChart.resize();
     });
 
