@@ -1,21 +1,167 @@
 <!DOCTYPE html>
-<html lang="ko">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>블루아카이브 갤러리 대시보드 | ProjectMX</title>
-    <meta name="description" content="ProjectMX 갤러리의 게시글, 댓글, 사용자 활동을 날짜와 시간대별로 확인하는 데이터 대시보드">
-    
-    <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;family=Noto+Sans+KR:wght@400;500;600;700;800&amp;family=JetBrains+Mono:wght@500;600;700&amp;display=swap" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
-    <script src="https://npmcdn.com/flatpickr/dist/l10n/ko.js"></script>
+<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>블루아카이브 갤러리 분석기 | ProjectMX</title><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Noto+Sans+KR:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500;600&amp;display=swap"><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config = {
+    darkMode: "class",
+    theme: {
+      extend: {
+        "colors": {"secondary-container": "rgb(var(--secondary-container) / <alpha-value>)", "inverse-surface": "rgb(var(--inverse-surface) / <alpha-value>)", "on-secondary-fixed-variant": "rgb(var(--on-secondary-fixed-variant) / <alpha-value>)", "on-secondary-container": "rgb(var(--on-secondary-container) / <alpha-value>)", "error-container": "rgb(var(--error-container) / <alpha-value>)", "on-primary": "rgb(var(--on-primary) / <alpha-value>)", "surface-container-lowest": "rgb(var(--surface-container-lowest) / <alpha-value>)", "tertiary-fixed": "rgb(var(--tertiary-fixed) / <alpha-value>)", "surface-container-high": "rgb(var(--surface-container-high) / <alpha-value>)", "on-primary-fixed-variant": "rgb(var(--on-primary-fixed-variant) / <alpha-value>)", "tertiary-fixed-dim": "rgb(var(--tertiary-fixed-dim) / <alpha-value>)", "inverse-on-surface": "rgb(var(--inverse-on-surface) / <alpha-value>)", "surface-bright": "rgb(var(--surface-bright) / <alpha-value>)", "primary": "rgb(var(--primary) / <alpha-value>)", "on-secondary-fixed": "rgb(var(--on-secondary-fixed) / <alpha-value>)", "surface-container-low": "rgb(var(--surface-container-low) / <alpha-value>)", "on-tertiary": "rgb(var(--on-tertiary) / <alpha-value>)", "inverse-primary": "rgb(var(--inverse-primary) / <alpha-value>)", "on-secondary": "rgb(var(--on-secondary) / <alpha-value>)", "on-error": "rgb(var(--on-error) / <alpha-value>)", "on-surface": "rgb(var(--on-surface) / <alpha-value>)", "on-surface-variant": "rgb(var(--on-surface-variant) / <alpha-value>)", "primary-fixed": "rgb(var(--primary-fixed) / <alpha-value>)", "on-primary-fixed": "rgb(var(--on-primary-fixed) / <alpha-value>)", "surface-tint": "rgb(var(--surface-tint) / <alpha-value>)", "secondary": "rgb(var(--secondary) / <alpha-value>)", "tertiary": "rgb(var(--tertiary) / <alpha-value>)", "error": "rgb(var(--error) / <alpha-value>)", "outline": "rgb(var(--outline) / <alpha-value>)", "on-tertiary-fixed-variant": "rgb(var(--on-tertiary-fixed-variant) / <alpha-value>)", "surface-container": "rgb(var(--surface-container) / <alpha-value>)", "surface-container-highest": "rgb(var(--surface-container-highest) / <alpha-value>)", "surface-variant": "rgb(var(--surface-variant) / <alpha-value>)", "primary-container": "rgb(var(--primary-container) / <alpha-value>)", "tertiary-container": "rgb(var(--tertiary-container) / <alpha-value>)", "on-tertiary-fixed": "rgb(var(--on-tertiary-fixed) / <alpha-value>)", "outline-variant": "rgb(var(--outline-variant) / <alpha-value>)", "on-background": "rgb(var(--on-background) / <alpha-value>)", "primary-fixed-dim": "rgb(var(--primary-fixed-dim) / <alpha-value>)", "surface": "rgb(var(--surface) / <alpha-value>)", "secondary-fixed": "rgb(var(--secondary-fixed) / <alpha-value>)", "surface-dim": "rgb(var(--surface-dim) / <alpha-value>)", "secondary-fixed-dim": "rgb(var(--secondary-fixed-dim) / <alpha-value>)", "on-primary-container": "rgb(var(--on-primary-container) / <alpha-value>)", "on-tertiary-container": "rgb(var(--on-tertiary-container) / <alpha-value>)", "background": "rgb(var(--background) / <alpha-value>)", "on-error-container": "rgb(var(--on-error-container) / <alpha-value>)"},
+        "borderRadius": {
+          "DEFAULT": "0.125rem",
+          "lg": "0.25rem",
+          "xl": "0.5rem",
+          "full": "0.75rem"
+        },
+        "spacing": {
+          "space-2xs": "0.25rem",
+          "space-xs": "0.5rem",
+          "space-sm": "0.75rem",
+          "margin-screen": "1.5rem",
+          "gutter-dashboard": "1rem",
+          "space-xl": "2rem",
+          "space-md": "1rem",
+          "space-2xl": "3rem",
+          "space-lg": "1.5rem"
+        },
+        "fontFamily": {
+          "headline-sm": [
+            "Inter", "Noto Sans KR", "sans-serif"
+          ],
+          "body-sm-medium": [
+            "Inter", "Noto Sans KR", "sans-serif"
+          ],
+          "display-lg": [
+            "Inter", "Noto Sans KR", "sans-serif"
+          ],
+          "metric-val-sm": [
+            "Inter", "Noto Sans KR", "sans-serif"
+          ],
+          "body-sm": [
+            "Inter", "Noto Sans KR", "sans-serif"
+          ],
+          "body-md": [
+            "Inter", "Noto Sans KR", "sans-serif"
+          ],
+          "body-md-medium": [
+            "Inter", "Noto Sans KR", "sans-serif"
+          ],
+          "label-caps": [
+            "Inter", "Noto Sans KR", "sans-serif"
+          ],
+          "metric-val-lg": [
+            "Inter", "Noto Sans KR", "sans-serif"
+          ],
+          "display-sm": [
+            "Inter", "Noto Sans KR", "sans-serif"
+          ],
+          "code-mono": [
+            "JetBrains Mono"
+          ],
+          "headline-md": [
+            "Inter", "Noto Sans KR", "sans-serif"
+          ]
+        },
+        "fontSize": {
+          "headline-sm": [
+            "16px",
+            {
+              "lineHeight": "24px",
+              "letterSpacing": "-0.01em",
+              "fontWeight": "600"
+            }
+          ],
+          "body-sm-medium": [
+            "12px",
+            {
+              "lineHeight": "18px",
+              "letterSpacing": "0em",
+              "fontWeight": "500"
+            }
+          ],
+          "display-lg": [
+            "36px",
+            {
+              "lineHeight": "44px",
+              "letterSpacing": "-0.02em",
+              "fontWeight": "700"
+            }
+          ],
+          "metric-val-sm": [
+            "22px",
+            {
+              "lineHeight": "28px",
+              "letterSpacing": "-0.02em",
+              "fontWeight": "600"
+            }
+          ],
+          "body-sm": [
+            "12px",
+            {
+              "lineHeight": "18px",
+              "letterSpacing": "0em",
+              "fontWeight": "400"
+            }
+          ],
+          "body-md": [
+            "14px",
+            {
+              "lineHeight": "22px",
+              "letterSpacing": "-0.005em",
+              "fontWeight": "400"
+            }
+          ],
+          "body-md-medium": [
+            "14px",
+            {
+              "lineHeight": "22px",
+              "letterSpacing": "-0.005em",
+              "fontWeight": "500"
+            }
+          ],
+          "label-caps": [
+            "11px",
+            {
+              "lineHeight": "16px",
+              "letterSpacing": "0.06em",
+              "fontWeight": "600"
+            }
+          ],
+          "metric-val-lg": [
+            "32px",
+            {
+              "lineHeight": "38px",
+              "letterSpacing": "-0.025em",
+              "fontWeight": "600"
+            }
+          ],
+          "display-sm": [
+            "28px",
+            {
+              "lineHeight": "36px",
+              "letterSpacing": "-0.02em",
+              "fontWeight": "700"
+            }
+          ],
+          "code-mono": [
+            "12px",
+            {
+              "lineHeight": "16px",
+              "letterSpacing": "-0.01em",
+              "fontWeight": "400"
+            }
+          ],
+          "headline-md": [
+            "20px",
+            {
+              "lineHeight": "28px",
+              "letterSpacing": "-0.015em",
+              "fontWeight": "600"
+            }
+          ]
+        }
+      },
+    },
+  }</script><script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script><script>try {if(localStorage.getItem('projectmx_theme')==='dark')document.documentElement.classList.add('dark');}catch(_){}</script><style id="connection-styles">:root {--secondary-container:138 76 252;--inverse-surface:33 49 69;--on-secondary-fixed-variant:90 0 198;--on-secondary-container:255 251 255;--error-container:255 218 214;--on-primary:255 255 255;--surface-container-lowest:255 255 255;--tertiary-fixed:133 248 196;--surface-container-high:220 233 255;--on-primary-fixed-variant:0 62 168;--tertiary-fixed-dim:104 219 169;--inverse-on-surface:234 241 255;--surface-bright:248 249 255;--primary:0 74 198;--on-secondary-fixed:37 0 90;--surface-container-low:239 244 255;--on-tertiary:255 255 255;--inverse-primary:180 197 255;--on-secondary:255 255 255;--on-error:255 255 255;--on-surface:11 28 48;--on-surface-variant:67 70 85;--primary-fixed:219 225 255;--on-primary-fixed:0 23 75;--surface-tint:0 83 219;--secondary:113 42 226;--tertiary:0 98 67;--error:186 26 26;--outline:115 118 134;--on-tertiary-fixed-variant:0 81 55;--surface-container:229 238 255;--surface-container-highest:211 228 254;--surface-variant:211 228 254;--primary-container:37 99 235;--tertiary-container:0 125 87;--on-tertiary-fixed:0 33 20;--outline-variant:195 198 215;--on-background:11 28 48;--primary-fixed-dim:180 197 255;--surface:248 249 255;--secondary-fixed:234 221 255;--surface-dim:203 219 245;--secondary-fixed-dim:210 187 255;--on-primary-container:238 239 255;--on-tertiary-container:189 255 220;--background:248 249 255;--on-error-container:147 0 10;}
+html.dark {--surface:17 26 40;--background:17 26 40;--surface-container-lowest:26 38 55;--surface-container-low:34 49 72;--surface-container:44 61 87;--surface-container-high:52 72 100;--surface-container-highest:65 87 117;--on-surface:230 239 251;--on-surface-variant:178 193 216;--outline:146 164 191;--outline-variant:106 125 152;--primary:145 182 255;--on-primary:16 31 59;--secondary:195 162 255;--on-secondary:36 21 56;--tertiary:115 217 177;--primary-container:37 99 235;--on-primary-container:255 255 255;--error:255 170 164;--inverse-surface:48 64 92;--inverse-on-surface:238 245 255;}
 
-
-<style>
         .activity-item { background: white; border: 1px solid #e9ecef; border-radius: 8px; padding: 11px 12px; margin-bottom: 8px; }
         .activity-item:last-child { margin-bottom: 0; }
         .activity-item-title {
@@ -95,441 +241,302 @@
         }
 
 
-:root {
-    --primary: #2563eb; --secondary: #7c3aed; --green: #10b981;
-    --ink: #1e293b; --muted: #64748b; --line: #e2e8f0; --soft: #f8fafc;
-    --mono: 'JetBrains Mono', ui-monospace, monospace;
-}
-* { box-sizing: border-box; }
-html { color-scheme: light; scroll-padding-top: 20px; }
-body { margin: 0; background: #f0f3fa; color: var(--ink); font: 400 16px/1.5 Inter, 'Noto Sans KR', system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
-[hidden] { display: none !important; }
-button, input { font: inherit; }
-button, a { -webkit-tap-highlight-color: transparent; }
-button { cursor: pointer; }
-button:disabled { cursor: default; opacity: .4; }
-button, input, a { outline-offset: 3px; }
-:focus-visible { outline: 3px solid #93c5fd; }
-button { touch-action: manipulation; }
-a { color: var(--primary); text-decoration: none; }
-a:hover { text-decoration: underline; }
-svg { flex-shrink: 0; }
-.icon { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
-.dashboard { max-width: 1400px; margin: auto; padding: 26px 32px 32px; }
-h1,h2,h3,p { margin: 0; }
-h1 { font-size: clamp(1.375rem, 2.3vw, 1.875rem); letter-spacing: -.035em; line-height: 1.4; font-weight: 800; }
-h2 { font-size: 1.125rem; font-weight: 750; letter-spacing: -.025em; }
-h3 { font-size: 1rem; font-weight: 750; }
-.header-top { display: flex; justify-content: space-between; align-items: center; gap: 22px; }
-.status-msg { display: flex; align-items: flex-start; gap: 8px; color: var(--muted); font-size: .875rem; margin-top: 6px; }
-.status-msg::before { content: ''; width: 7px; height: 7px; margin-top: 7px; flex-shrink: 0; border-radius: 50%; background: #94a3b8; }
-.status-msg[data-state=ready]::before { background: var(--green); }
-.status-msg[data-state=loading]::before { background: var(--primary); }
-.status-msg[data-state=error]::before { background: #ef4444; }
-.header-controls { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
-.date-control { display: flex; align-items: center; gap: 8px; padding: 0 12px; background: #fff; border: 1px solid var(--line); border-radius: 7px; min-height: 42px; box-shadow: 0 1px 2px #0f172a08; }
-.date-control .icon { color: var(--muted); }
-.date-control label { font-size: .875rem; white-space: nowrap; }
-#date-picker { width: 116px; border: 0; padding: 9px 0; color: var(--primary); font: 600 .875rem/1.5 var(--mono); background: transparent; cursor: pointer; }
-.btn-refresh, .soft-button { min-height: 42px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 8px 12px; background: #fff; border: 1px solid var(--line); border-radius: 7px; color: #475569; font-size: .875rem; font-weight: 600; }
-.btn-refresh:hover:not(:disabled), .soft-button:hover:not(:disabled) { background: #f8fafc; border-color: #cbd5e1; }
-.refresh-icon { display: inline-flex; }
-.btn-refresh.loading .refresh-icon { animation: spin .8s linear infinite; }
-@keyframes spin { to { transform: rotate(360deg); } }
-.top-nav { display: flex; gap: 5px; padding: 18px 0 12px; margin-bottom: 20px; border-bottom: 1px solid #dce3ed; }
-.nav-tab { background: transparent; border: 0; padding: 7px 16px; min-height: 38px; border-radius: 6px; font-size: .875rem; font-weight: 600; color: #64748b; }
-.nav-tab:hover { background: #e2e8f0; }
-.nav-tab.active { color: white; background: #212b36; box-shadow: 0 1px 2px #0f172a20; }
-.metrics-grid { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 16px; margin-bottom: 20px; }
-.metric-card, .surface { background: white; border: 1px solid #e0e6ef; border-radius: 9px; box-shadow: 0 1px 2px #0f172a05; min-width: 0; }
-.metric-card { padding: 20px; }
-.metric-label { display: flex; justify-content: space-between; align-items: center; font-size: .875rem; font-weight: 500; color: #526074; }
-.metric-dot { width: 9px; height: 9px; background: var(--primary); border-radius: 50%; }
-.comments .metric-dot { background: var(--secondary); }
-.users .metric-dot { background: var(--green); }
-.metric-value-row { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 10px; margin-top: 9px; }
-.metric-value { font: 700 clamp(1.7rem, 2.5vw, 2.35rem)/1.35 var(--mono); letter-spacing: -.06em; color: var(--primary); }
-.comments .metric-value { color: var(--secondary); }
-.users .metric-value { color: #059669; }
-.metric-chip { display: inline-flex; padding: 3px 8px; border-radius: 4px; font-size: .75rem; font-weight: 600; background: #eff6ff; color: var(--primary); }
-.comments .metric-chip { background: #f5f3ff; color: var(--secondary); }
-.users .metric-chip { background: #ecfdf5; color: #047857; }
-.metric-note { display: block; color: #64748b; font-size: .75rem; margin-top: 8px; }
-.overview-chart { padding: 22px; margin-bottom: 20px; scroll-margin-top: 20px; }
-.section-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
-.section-description { color: var(--muted); font-size: .875rem; margin-top: 3px; }
-.series-controls { display: flex; flex-wrap: wrap; gap: 8px; padding-top: 2px; }
-.series-toggle { display: flex; align-items: center; gap: 6px; border: 1px solid #a7f3d0; background: #ecfdf5; color: #047857; padding: 5px 9px; border-radius: 5px; font-size: .875rem; white-space: nowrap; }
-.series-toggle i { width: 9px; height: 9px; border: 2px solid currentColor; border-radius: 50%; background: white; }
-.series-toggle.posts { color: #2563eb; background: #eff6ff; border-color: #bfdbfe; }
-.series-toggle.comments { color: #7c3aed; background: #f5f3ff; border-color: #ddd6fe; }
-.series-toggle[aria-pressed=false] { color: #64748b; background: #f8fafc; border-color: var(--line); text-decoration: line-through; }
-.main-chart-wrap { position: relative; margin-top: 14px; }
-#main-trend-chart { height: 320px; width: 100%; }
-.chart-empty { position: absolute; inset: 0; display: grid; place-content: center; text-align: center; color: var(--muted); font-size: .875rem; pointer-events: none; }
-.workspace { display: grid; grid-template-columns: minmax(0,7fr) minmax(0,5fr); gap: 20px; align-items: start; scroll-margin-top: 20px; }
-.user-list-card, .detail-panel { padding: 20px; }
-.user-list-card { min-height: 530px; }
-.list-title-row { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding-bottom: 12px; border-bottom: 1px solid #f1f5f9; }
-.segmented { display: flex; flex-wrap: wrap; gap: 2px; padding: 3px; background: #f1f5f9; border-radius: 7px; }
-.segmented button { border: 0; border-radius: 4px; background: transparent; color: #64748b; padding: 5px 8px; font-size: .875rem; font-weight: 500; }
-.segmented button.active { background: white; color: #1e293b; box-shadow: 0 1px 3px #0f172a12; font-weight: 650; }
-.type-filter-row { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 10px; align-items: center; margin-top: 12px; }
-.bookmark-filter, .bookmark-button { display: inline-flex; justify-content: center; align-items: center; border: 0; background: transparent; color: #94a3b8; font-size: 21px; min-width: 32px; min-height: 32px; border-radius: 5px; }
-.bookmark-filter:hover, .bookmark-button:hover { color: #d97706; background: #fffbeb; }
-.bookmark-filter[aria-pressed=true], .bookmark-button[aria-pressed=true] { color: #d97706; }
-.bookmark-filter { border: 1px solid var(--line); min-height: 36px; background: white; }
-.search-bar { position: relative; display: flex; align-items: center; margin: 12px 0; }
-.search-bar .icon { position: absolute; left: 12px; color: #94a3b8; pointer-events: none; }
-.search-bar input { width: 100%; min-width: 0; padding: 10px 12px 10px 38px; min-height: 42px; color: #1e293b; font-size: .875rem; border: 1px solid var(--line); background: #f8fafc; border-radius: 7px; }
-.search-bar input:focus { background: #fff; border-color: #93c5fd; }
-.search-bar input::placeholder { color: #94a3b8; }
-.rank-mode { display: flex; align-items: center; gap: 8px; color: #64748b; font-size: .75rem; }
-.rank-mode .segmented { background: transparent; }
-.rank-mode .segmented button { font-size: .75rem; }
-.rank-mode .segmented button.active { background: #eff6ff; color: #2563eb; box-shadow: none; }
-.search-form { display: flex; gap: 7px; align-items: center; }
-.search-form .search-bar { flex: 1; }
-.btn-search { border: 1px solid #2563eb; border-radius: 6px; padding: 9px 13px; color: white; background: #2563eb; min-height: 42px; font-size: .875rem; }
-.btn-search:hover { background: #1d4ed8; }
-.search-types { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; margin-bottom: 12px; }
-.btn-type { font-size: .875rem; border: 1px solid var(--line); background: #fff; color: #94a3b8; padding: 5px 10px; border-radius: 5px; }
-.btn-type.active { color: #475569; background: #f1f5f9; border-color: #cbd5e1; }
-.btn-type.active.gonic { color: #1d4ed8; background: #eff6ff; border-color: #bfdbfe; }
-.btn-type.active.ban { color: #6d28d9; background: #f5f3ff; border-color: #ddd6fe; }
-.table-responsive { width: 100%; overflow-x: auto; overscroll-behavior-x: contain; }
-table { width: 100%; min-width: 580px; table-layout: fixed; border-collapse: collapse; text-align: left; font-size: .875rem; }
-th { font-size: .75rem; font-weight: 650; color: #64748b; background: #f8fafc; padding: 10px 5px; border-block: 1px solid #f1f5f9; white-space: nowrap; }
-td { padding: 10px 5px; border-bottom: 1px solid #f1f5f9; height: 58px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-tbody tr[data-user-key] { cursor: pointer; }
-tbody tr[data-user-key]:hover { background: #f8fafc; }
-tbody tr.selected, tbody tr.selected:hover { background: #eff6ff; }
-tbody tr.bookmarked { background: #fffdf5; }
-tbody tr.bookmarked.selected { background: #eff6ff; }
-th.sortable { cursor: pointer; }
-th.sortable:hover { color: var(--primary); }
-th span[id^=sort-] { margin-left: 2px; font-size: 10px; }
-.rank-number, .td-bookmark { text-align: center; }
-.rank-number { font: 600 .75rem var(--mono); color: var(--primary); }
-.user-cell { display: flex; align-items: center; gap: 7px; min-width: 0; }
-.user-avatar { display: inline-flex; justify-content: center; align-items: center; width: 26px; height: 26px; flex-shrink: 0; border-radius: 50%; background: #2563eb; color: white; font-size: .75rem; font-weight: 700; }
-.user-avatar.avatar-ban { background: #7c3aed; }
-.user-avatar.avatar-udong { background: #e2e8f0; color: #64748b; }
-.user-cell-name { font-weight: 600; overflow: hidden; text-overflow: ellipsis; }
-.identity-cell { font: 400 .75rem var(--mono); color: #64748b; }
-.badge { display: inline-block; white-space: nowrap; padding: 2px 6px; font-size: .75rem; line-height: 1.65; border-radius: 4px; font-weight: 650; }
-.bg-gonic { color: #1e40af; background: #dbeafe; }
-.bg-ban { color: #92400e; background: #fef3c7; }
-.bg-udong { color: #475569; background: #f1f5f9; }
-.count-post, .count-comment, .count-total { font: 500 .8125rem var(--mono); text-align: right; }
-.count-post { color: #2563eb; }
-.count-comment { color: #7c3aed; }
-.count-total { color: #1e293b; font-weight: 700; }
-.number-heading { text-align: right; }
-.table-empty { text-align: center; color: #64748b; height: 180px; white-space: normal; }
-.table-footer { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 10px; padding-top: 14px; color: #64748b; font-size: .75rem; }
-.table-pager { display: flex; align-items: center; gap: 8px; }
-.table-pager button { border: 1px solid var(--line); background: white; color: #64748b; border-radius: 5px; width: 30px; height: 30px; font-size: 19px; }
-.list-help { margin-top: 12px; font-size: .75rem; color: #64748b; }
-.pagination-container { display: flex; flex-wrap: wrap; justify-content: center; gap: 5px; margin-top: 12px; }
-.page-btn { border: 1px solid var(--line); background: #fff; border-radius: 5px; padding: 6px 9px; font-size: .875rem; color: #64748b; }
-.page-btn.active { color: #fff; border-color: #2563eb; background: #2563eb; }
-.detail-panel { position: sticky; top: 20px; min-height: 530px; scroll-margin-top: 20px; }
-.detail-heading { display: flex; align-items: center; justify-content: space-between; padding-bottom: 12px; border-bottom: 1px solid #f1f5f9; gap: 8px; }
-.detail-heading-title { display: flex; gap: 7px; align-items: center; }
-.detail-heading .icon { color: #2563eb; }
-.clear-selection { border: 0; background: transparent; color: #64748b; padding: 3px 0 3px 6px; font-size: .75rem; }
-.clear-selection:hover { color: #2563eb; }
-.detail-empty { display: flex; min-height: 385px; flex-direction: column; align-items: center; justify-content: center; gap: 12px; text-align: center; }
-.detail-empty-icon { display: grid; place-items: center; width: 54px; height: 54px; border-radius: 50%; color: #93a7c6; background: #f1f5f9; }
-.detail-empty-icon .icon { width: 25px; height: 25px; }
-.detail-empty strong { font-size: .9375rem; font-weight: 600; }
-.detail-empty p { font-size: .875rem; color: #64748b; }
-.profile { margin-top: 14px; padding: 14px; background: #f8fafc; border: 1px solid #f1f5f9; border-radius: 9px; }
-.profile-top { display: flex; align-items: center; gap: 10px; min-width: 0; }
-.profile-avatar { width: 40px; height: 40px; font-size: 1rem; }
-.profile-identity { min-width: 0; flex: 1; }
-.profile-name-row { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; }
-#profile-name { font-size: .9375rem; overflow-wrap: anywhere; }
-#profile-identity { display: block; font: 400 .75rem/1.6 var(--mono); color: #64748b; overflow-wrap: anywhere; margin-top: 3px; }
-.profile-totals { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); border-top: 1px solid var(--line); gap: 12px; padding-top: 10px; margin-top: 12px; }
-.profile-stat { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 3px; }
-.profile-stat span { font-size: .75rem; color: #64748b; }
-.profile-stat strong { font: 600 .9375rem var(--mono); }
-.profile-stat:first-child strong { color: #2563eb; }
-.profile-stat:nth-child(2) strong { color: #7c3aed; }
-.detail-tabs { display: flex; gap: 16px; border-bottom: 1px solid var(--line); margin-top: 17px; }
-.detail-tabs button { border: 0; border-bottom: 2px solid transparent; margin-bottom: -1px; background: transparent; color: #64748b; padding: 0 0 10px; font-size: .875rem; font-weight: 600; white-space: nowrap; }
-.detail-tabs button.active { color: #2563eb; border-bottom-color: #2563eb; }
-.detail-tabs button small { font-size: .75rem; font-weight: 400; }
-.detail-section { margin-top: 14px; min-height: 228px; }
-.detail-section-note { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 6px; color: #64748b; font-size: .75rem; margin-bottom: 8px; }
-#profile-date { font-family: var(--mono); }
-#chart-container { height: 230px; width: 100%; }
-.activity-list { max-height: 370px; min-height: 220px; overflow-y: auto; overscroll-behavior: contain; padding-right: 4px; }
-.activity-item { background: #f8fafc; border: 1px solid #edf1f7; border-radius: 7px; padding: 12px; }
-.activity-item-title { font-size: .875rem; color: #1e293b; }
-.activity-item-meta { font-size: .75rem; color: #64748b; }
-.activity-item-content { font-size: 1rem; line-height: 1.65; padding: 0; background: transparent; color: #334155; }
-.activity-item-content.empty { color: #64748b; }
-.activity-type-badge, .activity-content-toggle, .activity-item-link { font-size: .75rem; }
-.activity-item-content.post-collapsible.collapsed { max-height: calc(1.65em * 5); }
-.activity-content-toggle { margin: 6px 0; }
-.activity-state { padding: 60px 16px; color: #64748b; font-size: .875rem; }
-.gallery-link { display: flex; justify-content: center; align-items: center; gap: 6px; background: #f1f5f9; color: #475569; border-radius: 6px; padding: 10px; margin-top: 20px; font-size: .875rem; font-weight: 500; }
-.gallery-link:hover { background: #e2e8f0; text-decoration: none; }
-.footer { border-top: 1px solid var(--line); background: white; }
-.footer-inner { max-width: 1400px; padding: 18px 32px; margin: auto; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 10px; color: #64748b; font-size: .75rem; }
-.footer strong { font-weight: 650; color: #475569; }
-.flatpickr-calendar { font-family: Inter, 'Noto Sans KR', sans-serif; box-shadow: 0 12px 32px #0f172a24; }
-.flatpickr-day.selected { background: #2563eb; border-color: #2563eb; }
-::-webkit-scrollbar { width: 6px; height: 6px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 12px; }
-@media (max-width: 1190px) {
-    .header-top { align-items: flex-start; flex-wrap: wrap; }
-    .section-heading { flex-direction: column; }
-    .dashboard { padding-inline: 24px; }
-}
-@media (max-width: 1023px) {
-    .workspace { grid-template-columns: minmax(0,1fr); }
-    .detail-panel { position: static; min-height: 380px; }
-    .detail-empty { min-height: 230px; }
-    #chart-container { height: 270px; }
-    .activity-list { max-height: 440px; }
-}
-@media (max-width: 639px) {
-    .dashboard { padding: 18px 16px 24px; }
-    .header-top { gap: 14px; }
-    .header-controls { width: 100%; }
-    .date-control { flex: 1; justify-content: space-between; }
-    .date-control label { display: none; }
-    #date-picker { width: 112px; }
-    .btn-refresh { padding-inline: 10px; }
-    .top-nav { gap: 3px; }
-    .nav-tab { padding-inline: 12px; }
-    .metrics-grid { grid-template-columns: 1fr; gap: 10px; }
-    .metric-card { padding: 16px 18px; }
-    .metric-value { font-size: 2rem; }
-    .overview-chart, .user-list-card, .detail-panel { padding: 16px; }
-    .series-controls { gap: 5px; }
-    .series-toggle { padding: 5px 7px; font-size: .8125rem; }
-    #main-trend-chart { height: 270px; }
-    .type-filter-row { gap: 8px; }
-    .detail-tabs { gap: 12px; }
-    .detail-tabs button { font-size: .8125rem; }
-    .detail-heading h2 { font-size: 1rem; }
-    .footer-inner { padding-inline: 16px; }
-    .media-lightbox { padding: 8px; }
-    .media-lightbox-panel { height: calc(100dvh - 16px); }
-}
-@media (prefers-reduced-motion: reduce) {
-    *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
-}
+html{scroll-behavior:smooth;scroll-padding-top:140px;color-scheme:light}
+html.dark{color-scheme:dark}
+body{margin:0;font-family:Inter,'Noto Sans KR',sans-serif;background:rgb(var(--surface));color:rgb(var(--on-surface))}
+[hidden]{display:none!important}
+button,a,input{ -webkit-tap-highlight-color:transparent }
+button{cursor:pointer}button:disabled{cursor:default;opacity:.4}
+button:focus-visible,a:focus-visible,input:focus-visible,tr:focus-visible,th:focus-visible{outline:2px solid rgb(var(--primary));outline-offset:3px}
+.material-symbols-outlined{font-family:'Material Symbols Outlined';font-weight:400;font-style:normal;font-size:24px;line-height:1;letter-spacing:normal;white-space:nowrap;word-wrap:normal;direction:ltr;font-feature-settings:'liga';-webkit-font-smoothing:antialiased;display:inline-block;flex-shrink:0}
+#app-header{z-index:40}.header-inner{height:auto;min-height:112px}.header-top{min-height:64px}.header-toolbar{min-height:48px}
+.connection-status{font-size:12px;line-height:1.6}
+.connection-status[data-state=error]{color:rgb(var(--error))}
+#status-dot[data-state=loading]{background:rgb(var(--primary))}
+#status-dot[data-state=error]{background:rgb(var(--error))}
+#status-dot[data-state=empty]{background:rgb(var(--outline))}
+#overview-chart-panel,#user-workspace,#user-detail-panel{scroll-margin-top:140px}
+.chart-frame{height:280px;width:100%;position:relative;overflow:hidden}
+#main-trend-chart{height:100%;width:100%}.chart-empty{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;text-align:center;padding:24px;font-size:13px;pointer-events:none}
+#chart-container{height:225px;width:100%;min-width:0;margin-top:8px}
+[id^=toggle-][aria-pressed=false]{opacity:.38;text-decoration:line-through}
+[id^=filter-]{color:rgb(var(--on-surface-variant))!important;background:transparent!important;box-shadow:none!important}
+[id^=filter-][aria-pressed=true]{color:rgb(var(--on-primary))!important;background:rgb(var(--primary))!important;box-shadow:0 1px 3px #0001!important}
+#hours-all,#hours-peak{background:transparent!important;color:rgb(var(--on-surface-variant))!important;box-shadow:none!important}
+#hours-all[aria-pressed=true],#hours-peak[aria-pressed=true]{background:rgb(var(--surface-container-lowest))!important;color:rgb(var(--primary))!important;box-shadow:0 1px 3px #0001!important}
+#tab-overview,#tab-ranking{border-bottom:2px solid transparent!important;color:rgb(var(--on-surface-variant))!important}
+#tab-overview[aria-selected=true],#tab-ranking[aria-selected=true]{border-bottom-color:rgb(var(--primary))!important;color:rgb(var(--primary))!important}
+[id^=subtab-]{background:transparent!important;color:rgb(var(--on-surface-variant))!important;box-shadow:none!important}
+[id^=subtab-][aria-selected=true]{background:rgb(var(--surface-container-lowest))!important;color:rgb(var(--on-surface))!important;box-shadow:0 1px 3px #0001!important}
+.user-list-panel,.user-detail-panel,.name-cell{min-width:0}
+.user-detail-panel{align-self:start;max-height:calc(100vh - 150px);overflow:auto}
+.user-list-panel table{width:100%;min-width:610px;border-collapse:collapse;font-size:12px}
+.user-list-panel th{cursor:pointer;user-select:none;white-space:nowrap}
+.user-row{cursor:pointer;border-bottom:1px solid rgb(var(--outline-variant) / .18);transition:background .15s}
+.user-row:hover{background:rgb(var(--surface-container-low))}.user-row.selected{background:rgb(var(--primary) / .08);box-shadow:inset 3px 0 rgb(var(--primary))}
+.user-row td{padding:12px 10px;vertical-align:middle}.user-row .rank-cell{width:36px;text-align:center;color:rgb(var(--on-surface-variant));font-family:'JetBrains Mono',monospace}
+.user-row .star-cell{width:32px;padding:8px 2px;text-align:center}.row-favorite{display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border:0;background:transparent;color:rgb(var(--outline));border-radius:7px}.row-favorite:hover{background:rgb(var(--surface-container-high))}.row-favorite .material-symbols-outlined{font-size:19px;font-variation-settings:'FILL' 0}.row-favorite.is-favorite{color:#d29400}.row-favorite.is-favorite .material-symbols-outlined{font-variation-settings:'FILL' 1}
+.nickname,.identity{display:block;overflow-wrap:anywhere}.nickname{font-weight:700;font-size:13px;color:rgb(var(--on-surface));max-width:250px}.identity{margin-top:3px;font:10px/1.5 'JetBrains Mono',monospace;color:rgb(var(--on-surface-variant));max-width:250px}
+.type-cell{text-align:center}.type-badge{display:inline-block;white-space:nowrap;border-radius:4px;padding:3px 6px;font-size:10px;font-weight:600}
+.type-gonic{background:rgb(var(--primary) / .1);color:rgb(var(--primary))}.type-semi{background:rgb(var(--secondary) / .1);color:rgb(var(--secondary))}.type-anon{background:rgb(var(--surface-container-high));color:rgb(var(--on-surface-variant))}
+.count-cell{text-align:right;font-family:'JetBrains Mono',monospace;white-space:nowrap;font-weight:600}.count-post{color:rgb(var(--primary))}.count-comment{color:rgb(var(--secondary))}.count-total{font-weight:700}
+#table-empty-state:not([hidden]){display:flex}
+.page-button{min-width:30px;height:30px;padding:0 7px;border:0;border-radius:7px;background:rgb(var(--surface-container-low));color:rgb(var(--on-surface));font:11px 'JetBrains Mono',monospace}.page-button:hover:not(:disabled){background:rgb(var(--surface-container-high))}.page-button[aria-current=page]{background:rgb(var(--primary));color:rgb(var(--on-primary));font-weight:700}.page-gap{padding:0 2px}
+.detail-empty{min-height:285px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:26px 12px;text-align:center}.detail-empty p{font-size:12px;line-height:1.8}
+#detail-nick{overflow-wrap:anywhere}#detail-uid{overflow-wrap:anywhere;font-size:11px}#detail-avatar{flex-shrink:0}#detail-type-badge{white-space:nowrap}#detail-content>div:first-child>div:first-child{gap:8px;flex-wrap:wrap}
+#detail-fav-btn{color:rgb(var(--outline))!important}#detail-fav-btn.is-favorite{color:#d29400!important}
+.activity-list{display:flex;flex-direction:column;gap:10px;max-height:400px;overflow:auto}.activity-state{color:rgb(var(--on-surface-variant));background:rgb(var(--surface-container-low));border:0;border-radius:10px;padding:20px 14px;font-size:12px;line-height:1.8}.activity-state.error{color:rgb(var(--error))}
+.activity-item{color:rgb(var(--on-surface));background:rgb(var(--surface-container-lowest));border-color:rgb(var(--outline-variant) / .4)}.activity-item-title{color:rgb(var(--primary))}.activity-item-meta,.activity-item-body,.activity-parent-link{color:rgb(var(--on-surface-variant))}
+.is-spinning{animation:sync-spin 1s linear infinite}@keyframes sync-spin{to{transform:rotate(360deg)}}
+@media(max-width:1279px){.user-detail-panel{position:static!important;max-height:none;overflow:visible}}
+@media(max-width:767px){.header-inner{min-height:0;padding-left:16px!important;padding-right:16px!important}.header-top{height:auto!important;min-height:60px;gap:12px;flex-wrap:wrap;padding-top:10px;padding-bottom:10px}.header-top>div:first-child{gap:16px!important}.header-top nav{display:none}.header-toolbar{height:auto!important;gap:10px;flex-wrap:wrap;padding-top:8px;padding-bottom:8px}.header-toolbar>div{flex-wrap:wrap}.chart-frame{height:250px}#header-sync-status{font-size:10px}#user-detail-panel{scroll-margin-top:175px}.connection-status{font-size:11px}.user-row td{padding:10px 8px}}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*,*::before,*::after{animation:none!important;transition:none!important}}
+</style></head><body class="bg-surface font-body-md text-on-surface antialiased"><header class="sticky top-0 left-0 w-full z-50 bg-surface/90 backdrop-blur-xl shadow-[0_1px_8px_rgba(0,0,0,0.04)]" id="app-header"><div class="h-28 w-full px-margin-screen flex flex-col justify-between header-inner"><div class="h-16 flex items-center justify-between gap-space-lg header-top"><div class="flex items-center gap-space-lg"><div class="flex items-center gap-space-sm"><div class="flex items-center gap-2"><span class="material-symbols-outlined text-primary text-2xl">analytics</span><span class="font-headline-md text-headline-md text-primary tracking-tight font-bold">갤러리 분석기</span></div></div><nav class="hidden xl:flex items-center gap-space-xs" data-active-classes="bg-primary-container text-on-primary-container font-semibold rounded-xl"><a aria-current="page" class="px-space-md py-space-xs transition-colors bg-primary-container text-on-primary-container font-semibold rounded-xl" data-path="overview-dashboard" href="#overview-chart-panel" onclick="navigateSection('overview'); return false;">대시보드 종합</a><a class="px-space-md py-space-xs text-on-surface-variant hover:bg-surface-container hover:text-on-surface rounded-xl transition-colors font-body-md-medium text-body-md-medium" data-path="board-deep-dive" href="#overview-chart-panel" onclick="navigateSection('overview'); return false;">시간대별 분석</a><a class="px-space-md py-space-xs text-on-surface-variant hover:bg-surface-container hover:text-on-surface rounded-xl transition-colors font-body-md-medium text-body-md-medium" data-path="author-analytics" href="#user-workspace" onclick="navigateSection('ranking'); return false;">사용자 분석</a></nav></div><div class="flex items-center gap-space-md"><div class="hidden md:flex items-center gap-space-xs px-space-sm py-space-2xs rounded-full bg-surface-container-low text-on-surface"><span id="header-sync-status" class="font-code-mono text-code-mono text-on-surface-variant" role="status">불러오는 중</span></div><button aria-label="테마 전환" class="p-space-xs rounded-xl text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors flex items-center justify-center" type="button" id="theme-toggle" onclick="toggleTheme()" aria-pressed="false"><span class="material-symbols-outlined" id="theme-icon">light_mode</span></button><div class="flex items-center gap-space-sm pl-space-xs"><div class="hidden lg:flex flex-col"></div></div></div></div><div class="h-12 flex items-center justify-between gap-space-md header-toolbar"><div class="flex items-center gap-space-lg overflow-x-auto"><div class="flex items-center gap-space-xs"><span class="font-label-caps text-label-caps text-on-surface-variant uppercase">조회 기준</span><div class="flex items-center p-0.5 bg-surface-container-low rounded-xl"><button class="px-space-sm py-space-2xs rounded-lg font-body-sm-medium text-body-sm-medium bg-surface-container-lowest text-on-surface shadow-[0_1px_4px_rgba(0,0,0,0.04)]" type="button" id="today-btn" onclick="selectToday()">오늘</button><button class="px-space-sm py-space-2xs rounded-lg font-body-sm-medium text-body-sm-medium text-on-surface-variant hover:text-on-surface flex items-center gap-1" type="button" id="date-open-btn" onclick="openDatePicker()"><span class="material-symbols-outlined text-xs">calendar_today</span>날짜 선택</button></div></div><div class="flex items-center gap-space-xs"><span class="font-label-caps text-label-caps text-on-surface-variant uppercase">시간대</span><div class="flex items-center p-0.5 bg-surface-container-low rounded-xl"><button class="px-space-sm py-space-2xs rounded-lg font-body-sm-medium text-body-sm-medium bg-surface-container-lowest text-on-surface shadow-[0_1px_4px_rgba(0,0,0,0.04)]" type="button" id="hours-all" onclick="setTimeRange('all')">24시간 전체</button><button class="px-space-sm py-space-2xs rounded-lg font-body-sm-medium text-body-sm-medium text-on-surface-variant hover:text-on-surface" type="button" id="hours-peak" onclick="setTimeRange('peak')" title="선택 날짜의 00~02시 및 19~23시 데이터만 표시합니다.">피크타임 (19~02시)</button></div></div></div><div class="flex items-center gap-space-xs flex-shrink-0"><button class="px-space-sm py-space-xs rounded-xl bg-surface-container-low text-on-surface font-body-sm-medium text-body-sm-medium hover:bg-surface-container hover:text-on-surface transition-colors flex items-center gap-space-xs" type="button" id="refresh-btn" onclick="refreshCurrentData()"><span class="material-symbols-outlined text-sm" id="sync-refresh-icon">sync</span><span class="">데이터 새로고침</span></button></div></div></div></header><main class="w-full  bg-surface"><div class="flex flex-col w-full">
+<div class="w-full px-margin-screen py-space-md flex flex-col gap-space-md bg-surface">
+<div class="w-full flex flex-col lg:flex-row lg:items-center justify-between gap-space-md bg-surface-container-lowest p-space-md rounded-xl shadow-sm">
+<div class="flex flex-wrap items-center gap-space-md">
+<div class="flex items-center gap-space-xs px-space-sm py-1.5 rounded-lg bg-primary/10 text-primary"><span class="material-symbols-outlined text-base">target</span><span class="font-label-caps text-label-caps text-on-surface-variant font-semibold">수집 대상:</span><span class="font-headline-sm text-headline-sm font-bold tracking-tight text-primary">디시인사이드 블루아카이브 갤러리</span><span class="px-1.5 py-0.5 rounded bg-surface-container text-on-surface-variant font-code-mono text-xs">projectmx</span></div>
+<div class="h-4 w-px bg-surface-container"></div>
+<div class="flex items-center gap-space-xs">
+<label class="font-body-sm-medium text-body-sm-medium text-on-surface-variant flex items-center gap-1" for="archive-date-input">
+<span class="material-symbols-outlined text-sm">calendar_month</span>
+            분석 일자
+          </label>
+<div class="relative flex items-center">
+<input class="bg-surface-container-low text-on-surface font-body-sm-medium text-body-sm-medium px-space-sm py-1.5 rounded-lg focus:outline-none focus:bg-surface-container cursor-pointer" id="archive-date-input" type="date" onchange="changeAnalysisDate(this.value)">
+</div>
+</div>
+<div class="flex items-center gap-space-xs px-space-sm py-1 rounded-full bg-surface-container-low">
+<span class="w-2 h-2 rounded-full bg-tertiary-container animate-pulse" id="status-dot"></span>
+<span class="font-code-mono text-code-mono text-on-surface-variant" id="auto-refresh-label">오늘 · 5분 자동 갱신</span>
+<span class="font-code-mono text-code-mono text-tertiary font-bold ml-1" id="last-sync-timestamp">—</span>
+</div>
+</div>
+<div class="flex items-center gap-space-xs">
 
-</style>
-</head>
-<body>
-<svg width="0" height="0" aria-hidden="true" style="position:absolute;overflow:hidden">
-    <defs>
-        <symbol id="icon-calendar" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 11h18"/></symbol>
-        <symbol id="icon-refresh" viewBox="0 0 24 24"><path d="M20 7v5h-5M4 17v-5h5M6.5 6a7 7 0 0 1 11.8 1.3L20 12M4 12l1.7 4.7A7 7 0 0 0 17.5 18"/></symbol>
-        <symbol id="icon-search" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 5 5"/></symbol>
-        <symbol id="icon-person" viewBox="0 0 24 24"><circle cx="12" cy="7" r="4"/><path d="M4 21v-2a8 8 0 0 1 16 0v2"/></symbol>
-        <symbol id="icon-external" viewBox="0 0 24 24"><path d="M14 3h7v7M21 3 10 14M10 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-5"/></symbol>
-    </defs>
-</svg>
-<main class="dashboard">
-    <header>
-        <div class="header-top">
-            <div>
-                <h1>블루아카이브 갤러리 대시보드</h1>
-                <div id="status-text" class="status-msg" data-state="loading" role="status" aria-live="polite">데이터를 불러오는 중입니다.</div>
-            </div>
-            <div class="header-controls">
-                <div class="date-control">
-                    <svg class="icon" aria-hidden="true"><use href="#icon-calendar"/></svg>
-                    <label for="date-picker">날짜 선택</label>
-                    <input type="text" id="date-picker" class="date-picker-box" placeholder="날짜 선택" aria-label="분석 날짜 선택">
-                </div>
-                <button id="refresh-btn" class="btn-refresh" type="button" onclick="refreshCurrentData()" title="선택 날짜의 데이터를 새로 불러옵니다">
-                    <span class="refresh-icon"><svg class="icon" aria-hidden="true"><use href="#icon-refresh"/></svg></span>
-                    <span class="refresh-text">새로고침</span>
-                </button>
-            </div>
-        </div>
-        <nav class="top-nav" aria-label="대시보드 바로가기">
-            <button class="nav-tab active" type="button" data-view="trends" aria-current="location" onclick="switchTab('trends', this)">상세 그래프</button>
-            <button class="nav-tab" type="button" data-view="ranking" onclick="switchTab('ranking', this)">유저 랭킹</button>
-            <button class="nav-tab" type="button" data-view="search" onclick="switchTab('search', this)">유저 검색</button>
-        </nav>
-    </header>
+<a class="flex items-center gap-space-xs px-space-md py-1.5 rounded-lg bg-primary text-on-primary hover:bg-primary-container font-body-sm-medium text-body-sm-medium transition-all shadow-sm" href="https://gall.dcinside.com/mgallery/board/lists/?id=projectmx" rel="noopener noreferrer" target="_blank">
+<span class="">갤러리 원문 열기</span>
+<span class="material-symbols-outlined text-sm">open_in_new</span>
+</a>
+</div>
+</div>
+<div id="status-text" class="connection-status text-on-surface-variant" role="status" aria-live="polite">데이터를 불러오는 중입니다.</div><div class="w-full flex items-center justify-between border-b-0 pb-1">
+<div class="flex items-center gap-space-xs bg-surface-container-low p-1 rounded-xl">
+<button class="px-space-lg py-space-xs rounded-lg font-body-md-medium text-body-md-medium bg-surface-container-lowest text-primary shadow-sm flex items-center gap-2 transition-all" id="tab-overview" onclick="switchMainTab('overview')" type="button">
+<span class="material-symbols-outlined text-base">insights</span>
+          종합 대시보드 (24시간 상세 추이)
+        </button>
+<button class="px-space-lg py-space-xs rounded-lg font-body-md-medium text-body-md-medium text-on-surface-variant hover:text-on-surface flex items-center gap-2 transition-all" id="tab-ranking" onclick="switchMainTab('ranking')" type="button">
+<span class="material-symbols-outlined text-base">group</span>
+          유저 랭킹 &amp; 활동 분석
+        </button>
+</div>
 
-    <section class="metrics-grid" aria-label="선택 날짜 요약">
-        <article class="metric-card posts">
-            <div class="metric-label">총 게시글<span class="metric-dot" aria-hidden="true"></span></div>
-            <div class="metric-value-row"><strong class="metric-value" id="m-posts">0</strong><span class="metric-chip">일일 집계</span></div>
-            <span class="metric-note" id="metric-hours">0개 시간대 집계</span>
-        </article>
-        <article class="metric-card comments">
-            <div class="metric-label">총 댓글<span class="metric-dot" aria-hidden="true"></span></div>
-            <div class="metric-value-row"><strong class="metric-value" id="m-comments">0</strong><span class="metric-chip" id="metric-ratio">글당 비율 없음</span></div>
-            <span class="metric-note">선택 날짜에 수집된 댓글</span>
-        </article>
-        <article class="metric-card users">
-            <div class="metric-label">활동 유저 수<span class="metric-dot" aria-hidden="true"></span></div>
-            <div class="metric-value-row"><strong class="metric-value" id="m-users">0</strong><span class="metric-chip">중복 제외</span></div>
-            <span class="metric-note" id="metric-types">고닉 0 · 반고닉 0 · 유동 0</span>
-        </article>
-    </section>
-
-    <section id="section-trends" class="surface overview-chart" aria-labelledby="trend-title">
-        <div class="section-heading">
-            <div><h2 id="trend-title">시간대 활동 그래프</h2><p class="section-description">선택 날짜의 게시글, 댓글 및 활동 유저 수</p></div>
-            <div class="series-controls" aria-label="그래프 항목 표시">
-                <button class="series-toggle" data-series="활동 유저 수" type="button" aria-pressed="true" onclick="toggleTrendSeries(this)"><i aria-hidden="true"></i>활동 유저 수</button>
-                <button class="series-toggle posts" data-series="총 게시글" type="button" aria-pressed="true" onclick="toggleTrendSeries(this)"><i aria-hidden="true"></i>총 게시글</button>
-                <button class="series-toggle comments" data-series="총 댓글" type="button" aria-pressed="true" onclick="toggleTrendSeries(this)"><i aria-hidden="true"></i>총 댓글</button>
-            </div>
-        </div>
-        <div class="main-chart-wrap">
-            <div id="main-trend-chart" role="img" aria-label="시간대별 게시글, 댓글, 활동 유저 수 그래프"></div>
-            <p id="chart-empty" class="chart-empty">데이터를 불러오는 중입니다.</p>
-        </div>
-    </section>
-
-    <section id="user-workspace" class="workspace" aria-label="유저 활동 분석">
-        <div class="surface user-list-card">
-            <div class="list-title-row">
-                <h2>유저 활동</h2>
-                <div class="segmented" role="tablist" aria-label="사용자 목록 보기">
-                    <button id="list-tab-ranking" type="button" class="active" data-user-view="ranking" role="tab" aria-controls="section-ranking" aria-selected="true" onclick="setUserView('ranking')">랭킹</button>
-                    <button id="list-tab-search" type="button" data-user-view="search" role="tab" aria-controls="section-search" aria-selected="false" onclick="setUserView('search')">검색</button>
-                </div>
-            </div>
-
-            <div id="section-ranking" role="tabpanel" aria-labelledby="list-tab-ranking">
-                <div class="type-filter-row">
-                    <div class="segmented" aria-label="랭킹 닉네임 유형">
-                        <button type="button" class="active" data-rank-type="전체" aria-pressed="true" onclick="selectRankType('전체')">전체</button>
-                        <button type="button" data-rank-type="고닉" aria-pressed="false" onclick="selectRankType('고닉')">고닉</button>
-                        <button type="button" data-rank-type="반고닉" aria-pressed="false" onclick="selectRankType('반고닉')">반고닉</button>
-                        <button type="button" data-rank-type="유동" aria-pressed="false" onclick="selectRankType('유동')">유동</button>
-                    </div>
-                    <button id="ranking-star-filter" class="btn-star-filter bookmark-filter" type="button" onclick="toggleStarFilter('ranking')" aria-pressed="false" aria-label="즐겨찾기 유저만 보기" title="즐겨찾기 유저만 보기">★</button>
-                </div>
-                <div class="search-bar">
-                    <svg class="icon" aria-hidden="true"><use href="#icon-search"/></svg>
-                    <input type="text" id="ranking-query" placeholder="상위 50명에서 닉네임 또는 UID(IP) 검색" aria-label="상위 50명 검색" oninput="filterRanking()">
-                </div>
-                <div class="type-filter-row" style="margin:0 0 10px">
-                    <span class="rank-mode">활동량 순위</span>
-                    <div class="rank-mode"><span>기준</span><div class="segmented">
-                        <button id="btn-rank-post" class="btn-rank" type="button" onclick="setRankingMode('post')">게시글</button>
-                        <button id="btn-rank-comment" class="btn-rank" type="button" onclick="setRankingMode('comment')">댓글</button>
-                        <button id="btn-rank-total" class="btn-rank active" type="button" onclick="setRankingMode('total')">총합</button>
-                    </div></div>
-                </div>
-                <div class="table-responsive" tabindex="0" aria-label="유저 랭킹 표, 좁은 화면에서 가로 스크롤 가능">
-                    <table>
-                        <colgroup><col style="width:42px"><col style="width:34px"><col style="width:24%"><col style="width:21%"><col style="width:60px"><col style="width:10%"><col style="width:10%"><col style="width:11%"></colgroup>
-                        <thead><tr><th style="text-align:center">순위</th><th style="text-align:center" aria-label="즐겨찾기">★</th><th>닉네임</th><th>UID(IP)</th><th>타입</th><th class="number-heading">글</th><th class="number-heading">댓글</th><th class="number-heading">총합</th></tr></thead>
-                        <tbody id="ranking-body"><tr><td colspan="8" class="table-empty">데이터를 불러오는 중입니다.</td></tr></tbody>
-                    </table>
-                </div>
-                <div class="table-footer">
-                    <span id="ranking-summary">상위 50명 · 한 페이지 5명</span>
-                    <div class="table-pager"><button type="button" id="rank-prev" onclick="moveRankingPage(-1)" aria-label="이전 랭킹 페이지" disabled>‹</button><span id="rank-page">1 / 1</span><button type="button" id="rank-next" onclick="moveRankingPage(1)" aria-label="다음 랭킹 페이지" disabled>›</button></div>
-                </div>
-                <p class="list-help">유저를 선택하면 활동 분석이 표시됩니다. <a href="#user-workspace" onclick="switchTab('search'); return false;">전체 유저 검색 →</a></p>
-            </div>
-
-            <div id="section-search" role="tabpanel" aria-labelledby="list-tab-search" hidden>
-                <form class="search-form" onsubmit="event.preventDefault(); executeSearch();">
-                    <div class="search-bar"><svg class="icon" aria-hidden="true"><use href="#icon-search"/></svg><input type="text" id="search-input" placeholder="닉네임 또는 UID(IP) 검색" aria-label="전체 유저 검색"></div>
-                    <button class="btn-search" type="submit">검색</button>
-                </form>
-                <div class="search-types">
-                    <button id="search-star-filter" class="btn-star-filter bookmark-filter" type="button" onclick="toggleStarFilter('search')" aria-pressed="false" aria-label="즐겨찾기 유저만 보기">★</button>
-                    <button id="btn-type-gonic" class="btn-type gonic active" type="button" onclick="toggleSearchType('고닉')" aria-pressed="true">고닉</button>
-                    <button id="btn-type-ban" class="btn-type ban active" type="button" onclick="toggleSearchType('반고닉')" aria-pressed="true">반고닉</button>
-                    <button id="btn-type-udong" class="btn-type udong active" type="button" onclick="toggleSearchType('유동')" aria-pressed="true">유동</button>
-                </div>
-                <div class="table-responsive" tabindex="0" aria-label="유저 검색 결과, 좁은 화면에서 가로 스크롤 가능">
-                    <table>
-                        <colgroup><col style="width:34px"><col style="width:25%"><col style="width:23%"><col style="width:62px"><col style="width:10%"><col style="width:10%"><col style="width:11%"></colgroup>
-                        <thead><tr>
-                            <th class="sortable" tabindex="0" onclick="handleHeaderSort('search','bookmark')" aria-label="즐겨찾기 순 정렬">★<span id="sort-search-bookmark"></span></th>
-                            <th class="sortable" tabindex="0" onclick="handleHeaderSort('search','nickname')">닉네임<span id="sort-search-nickname"></span></th>
-                            <th class="sortable" tabindex="0" onclick="handleHeaderSort('search','id')">UID(IP)<span id="sort-search-id"></span></th>
-                            <th class="sortable" tabindex="0" onclick="handleHeaderSort('search','type')">타입<span id="sort-search-type">▲</span></th>
-                            <th class="sortable number-heading" tabindex="0" onclick="handleHeaderSort('search','post')">글<span id="sort-search-post"></span></th>
-                            <th class="sortable number-heading" tabindex="0" onclick="handleHeaderSort('search','comment')">댓글<span id="sort-search-comment"></span></th>
-                            <th class="sortable number-heading" tabindex="0" onclick="handleHeaderSort('search','total')">총합<span id="sort-search-total"></span></th>
-                        </tr></thead>
-                        <tbody id="search-body"><tr><td colspan="7" class="table-empty">데이터를 불러오는 중입니다.</td></tr></tbody>
-                    </table>
-                </div>
-                <div class="table-footer"><span id="search-summary">검색 결과 0명</span></div>
-                <div id="search-pagination" class="pagination-container" aria-label="검색 결과 페이지"></div>
-            </div>
-        </div>
-
-        <aside id="graph-modal" class="surface detail-panel" aria-labelledby="modal-title">
-            <div class="modal-content">
-                <div class="detail-heading">
-                    <div class="detail-heading-title"><svg class="icon" aria-hidden="true"><use href="#icon-person"/></svg><h2 id="modal-title">유저 활동 분석</h2></div>
-                    <button id="clear-selection" class="clear-selection" type="button" onclick="closeModal()" hidden>선택 해제</button>
-                </div>
-                <div id="detail-empty" class="detail-empty">
-                    <span class="detail-empty-icon"><svg class="icon" aria-hidden="true"><use href="#icon-person"/></svg></span>
-                    <strong>유저를 선택해 주세요</strong>
-                    <p>랭킹 또는 검색 결과에서 유저를 선택하면<br>시간대별 활동과 최근 내역을 확인할 수 있습니다.</p>
-                </div>
-                <div id="detail-content" hidden>
-                    <div class="profile">
-                        <div class="profile-top">
-                            <span id="profile-avatar" class="user-avatar profile-avatar"></span>
-                            <div class="profile-identity"><div class="profile-name-row"><strong id="profile-name"></strong><span id="profile-type" class="badge"></span></div><span id="profile-identity"></span></div>
-                            <button id="profile-bookmark" class="bookmark-button" type="button" onclick="toggleSelectedBookmark()" aria-label="즐겨찾기 추가" aria-pressed="false">☆</button>
-                        </div>
-                        <div class="profile-totals"><div class="profile-stat"><span>게시글</span><strong id="profile-post">0</strong></div><div class="profile-stat"><span>댓글</span><strong id="profile-comment">0</strong></div><div class="profile-stat"><span>총합</span><strong id="profile-total">0</strong></div></div>
-                    </div>
-                    <div class="detail-tabs" role="tablist" aria-label="유저 상세 내역">
-                        <button id="user-tab-chart" class="active" type="button" role="tab" aria-selected="true" aria-controls="modal-chart-section" onclick="showDetailTab('chart')">활동 그래프</button>
-                        <button id="user-tab-posts" type="button" role="tab" aria-selected="false" aria-controls="modal-posts-section" onclick="showDetailTab('posts')">최근 게시글 <small>(5)</small></button>
-                        <button id="user-tab-comments" type="button" role="tab" aria-selected="false" aria-controls="modal-comments-section" onclick="showDetailTab('comments')">최근 댓글 <small>(10)</small></button>
-                    </div>
-                    <section id="modal-chart-section" class="detail-section" role="tabpanel" aria-labelledby="user-tab-chart">
-                        <div class="detail-section-note"><span>시간대별 작성 빈도</span><span id="profile-date"></span></div>
-                        <div id="chart-container" role="img" aria-label="선택 유저의 시간대별 게시글 및 댓글 막대그래프"></div>
-                    </section>
-                    <section id="modal-posts-section" class="detail-section" role="tabpanel" aria-labelledby="user-tab-posts" hidden>
-                        <div class="detail-section-note">선택 날짜의 최근 게시글 · 최대 5개</div>
-                        <div id="recent-posts" class="activity-list" aria-live="polite"></div>
-                    </section>
-                    <section id="modal-comments-section" class="detail-section" role="tabpanel" aria-labelledby="user-tab-comments" hidden>
-                        <div class="detail-section-note">선택 날짜의 최근 댓글 · 최대 10개</div>
-                        <div id="recent-comments" class="activity-list" aria-live="polite"></div>
-                    </section>
-                </div>
-                <a class="gallery-link" href="https://gall.dcinside.com/mgallery/board/lists/?id=projectmx" target="_blank" rel="noopener noreferrer">블루아카이브 갤러리 바로가기<svg class="icon" aria-hidden="true"><use href="#icon-external"/></svg></a>
-            </div>
-        </aside>
-    </section>
-</main>
-<footer class="footer"><div class="footer-inner"><div><strong>블루아카이브 갤러리 대시보드</strong> · ProjectMX Gallery Analytics</div><span>데이터 출처: DCInside</span></div></footer>
-
-<div id="media-lightbox" class="media-lightbox" role="dialog" aria-modal="true" aria-hidden="true" aria-label="미디어 보기">
+</div>
+<div class="grid grid-cols-1 md:grid-cols-3 gap-space-md">
+<div class="bg-surface-container-lowest p-5 rounded-xl shadow-sm flex flex-col justify-between relative overflow-hidden group">
+<div class="flex items-center justify-between">
+<span class="font-label-caps text-label-caps uppercase text-on-surface-variant tracking-wider">총 게시글 (Posts)</span>
+<span class="px-2 py-0.5 rounded-full bg-primary/10 text-primary font-code-mono text-xs font-semibold" id="metric-range">집계 범위</span>
+</div>
+<div class="my-space-sm flex items-baseline gap-space-sm">
+<span class="font-metric-val-lg text-metric-val-lg text-primary tracking-tight" id="metric-total-posts">0</span>
+<span class="font-body-md text-body-md text-on-surface-variant">건</span>
+</div>
+<div class="flex flex-col gap-1.5 pt-2"><div class="w-full h-1.5 bg-surface-container-high rounded-full overflow-hidden"></div><div class="flex items-center justify-between font-body-sm-medium text-body-sm-medium text-on-surface-variant"><span>일반글 — · 개념글 —</span><span>구분 데이터 없음</span></div></div>
+</div>
+<div class="bg-surface-container-lowest p-5 rounded-xl shadow-sm flex flex-col justify-between relative overflow-hidden group">
+<div class="flex items-center justify-between">
+<span class="font-label-caps text-label-caps uppercase text-on-surface-variant tracking-wider">총 댓글 (Comments)</span>
+<span class="px-2 py-0.5 rounded-full bg-secondary/10 text-secondary font-code-mono text-xs font-semibold">반응도 지수</span>
+</div>
+<div class="my-space-sm flex items-baseline gap-space-sm">
+<span class="font-metric-val-lg text-metric-val-lg text-secondary tracking-tight" id="metric-total-comments">0</span>
+<span class="font-body-md text-body-md text-on-surface-variant">건</span>
+</div>
+<div class="flex flex-col gap-1.5 pt-2">
+<div class="flex items-center justify-between font-body-sm-medium text-body-sm-medium text-on-surface-variant">
+<span class="">게시글당 평균 댓글</span>
+<span class="font-code-mono text-secondary font-bold" id="comments-per-post">—</span>
+</div>
+<div class="flex items-center justify-between font-body-sm-medium text-body-sm-medium text-on-surface-variant">
+<span class="">전체 활동 중 댓글 비중</span>
+<span class="font-code-mono text-on-surface font-semibold" id="comments-share">—</span>
+</div>
+</div>
+</div>
+<div class="bg-surface-container-lowest p-5 rounded-xl shadow-sm flex flex-col justify-between relative overflow-hidden group">
+<div class="flex items-center justify-between">
+<span class="font-label-caps text-label-caps uppercase text-on-surface-variant tracking-wider">활동 유저 수 (Users)</span>
+<span class="px-2 py-0.5 rounded-full bg-tertiary-container/20 text-tertiary font-code-mono text-xs font-semibold">식별 고유 모수</span>
+</div>
+<div class="my-space-sm flex items-baseline gap-space-sm">
+<span class="font-metric-val-lg text-metric-val-lg text-tertiary tracking-tight" id="metric-total-users">0</span>
+<span class="font-body-md text-body-md text-on-surface-variant">명</span>
+</div>
+<div class="flex flex-col gap-1.5 pt-2">
+<div class="w-full h-1.5 bg-surface-container-high rounded-full overflow-hidden flex">
+<div class="bg-tertiary h-full transition-all duration-700" style="width:0%" id="registered-user-bar"></div>
+<div class="bg-outline-variant h-full transition-all duration-700" style="width:0%" id="anonymous-user-bar"></div>
+</div>
+<div class="flex items-center justify-between font-body-sm-medium text-body-sm-medium text-on-surface-variant">
+<span class="flex items-center gap-1" id="registered-user-label">고닉/반고닉 0명</span>
+<span class="flex items-center gap-1" id="anonymous-user-label">유동(IP) 0명</span>
+</div>
+</div>
+</div>
+</div>
+<div class="w-full bg-surface-container-lowest p-5 rounded-xl shadow-sm flex flex-col gap-space-md" id="overview-chart-panel">
+<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-space-sm">
+<div>
+<div class="flex items-center gap-2">
+<h2 class="font-headline-sm text-headline-sm text-on-surface font-bold">갤러리 타임라인 활동 추이</h2>
+<span class="px-2 py-0.5 bg-error/10 text-error rounded font-label-caps text-label-caps font-bold" id="peak-time-badge">피크 데이터 없음</span>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant mt-0.5">시간대별 게시글·댓글·활동 유저 집계 (KST)</p>
+</div>
+<div class="flex items-center gap-1 bg-surface-container-low p-1 rounded-lg">
+<button class="px-space-sm py-1 rounded font-body-sm-medium text-body-sm-medium bg-primary text-on-primary flex items-center gap-1.5 transition-all" id="toggle-posts" onclick="toggleMetricSeries('posts')" aria-pressed="true" type="button">
+<span class="w-2 h-2 rounded-full bg-on-primary"></span>
+            게시글
+          </button>
+<button class="px-space-sm py-1 rounded font-body-sm-medium text-body-sm-medium bg-secondary text-on-secondary flex items-center gap-1.5 transition-all" id="toggle-comments" onclick="toggleMetricSeries('comments')" aria-pressed="true" type="button">
+<span class="w-2 h-2 rounded-full bg-on-secondary"></span>
+            댓글
+          </button>
+<button class="px-space-sm py-1 rounded font-body-sm-medium text-body-sm-medium bg-tertiary-container text-on-primary flex items-center gap-1.5 transition-all" id="toggle-users" onclick="toggleMetricSeries('users')" aria-pressed="true" type="button">
+<span class="w-2 h-2 rounded-full bg-on-primary"></span>
+            활동 유저
+          </button>
+</div>
+</div>
+<div class="chart-frame bg-surface-container-low/40 rounded-lg"><div id="main-trend-chart" role="img" aria-label="시간대별 게시글, 댓글, 활동 유저 수"></div><div id="chart-empty" class="chart-empty text-on-surface-variant">그래프 데이터를 불러오는 중입니다.</div></div>
+</div>
+<div class="grid grid-cols-1 xl:grid-cols-12 gap-space-md items-start" id="user-workspace">
+<div class="xl:col-span-7 bg-surface-container-lowest rounded-xl p-5 shadow-sm flex flex-col gap-space-md user-list-panel">
+<div class="flex flex-col gap-space-sm">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-2">
+<h3 class="font-headline-sm text-headline-sm text-on-surface font-bold">유저 랭킹 (Top Contributors)</h3>
+<span class="px-2 py-0.5 rounded-full bg-surface-container-high text-on-surface font-code-mono text-xs" id="rank-count-badge">0명 집계</span>
+</div>
+<span class="font-body-sm text-body-sm text-on-surface-variant">유저 클릭 시 상세 분석</span>
+</div>
+<div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-space-xs">
+<div class="relative flex-1">
+<span class="material-symbols-outlined absolute left-3 top-2.5 text-on-surface-variant text-sm">search</span>
+<input class="w-full bg-surface-container-low pl-9 pr-8 py-2 rounded-lg font-body-sm-medium text-body-sm-medium text-on-surface placeholder:text-outline focus:outline-none focus:bg-surface-container transition-all" id="user-search-input" placeholder="닉네임 또는 UID, IP(예: 118.235.*) 검색..." type="text" oninput="filterUserTable()" aria-label="닉네임 또는 UID, IP 검색">
+<button class="material-symbols-outlined absolute right-2.5 top-2.5 text-on-surface-variant text-sm hover:text-on-surface" onclick="clearSearch()" type="button">close</button>
+</div>
+<div class="flex items-center gap-1 bg-surface-container-low p-1 rounded-lg self-start sm:self-auto overflow-x-auto">
+<button class="px-2.5 py-1 rounded font-body-sm-medium text-body-sm-medium bg-surface-container-lowest text-on-surface shadow-sm transition-all" id="filter-all" onclick="filterType('ALL')" aria-pressed="true" type="button">전체</button>
+<button class="px-2.5 py-1 rounded font-body-sm-medium text-body-sm-medium text-on-surface-variant hover:text-on-surface transition-all" id="filter-gonic" onclick="filterType('GONIC')" aria-pressed="false" type="button">고닉</button>
+<button class="px-2.5 py-1 rounded font-body-sm-medium text-body-sm-medium text-on-surface-variant hover:text-on-surface transition-all" id="filter-semi" onclick="filterType('SEMI')" aria-pressed="false" type="button">반고닉</button>
+<button class="px-2.5 py-1 rounded font-body-sm-medium text-body-sm-medium text-on-surface-variant hover:text-on-surface transition-all" id="filter-anon" onclick="filterType('ANON')" aria-pressed="false" type="button">유동</button>
+<button class="px-2.5 py-1 rounded font-body-sm-medium text-body-sm-medium text-on-surface-variant hover:text-on-surface flex items-center gap-1 transition-all" id="filter-fav" onclick="filterType('FAV')" aria-pressed="false" type="button">
+<span class="material-symbols-outlined text-xs text-yellow-500">star</span>
+                즐겨찾기
+              </button>
+</div>
+</div>
+</div>
+<div class="w-full overflow-x-auto" tabindex="0" aria-label="유저 랭킹, 가로 스크롤 가능">
+<table class="w-full text-left font-body-sm-medium text-body-sm-medium">
+<thead>
+<tr class="bg-surface-container-low text-on-surface-variant font-label-caps text-label-caps uppercase h-9">
+<th class="px-3 py-1.5 w-12 text-center" tabindex="0" role="columnheader" onclick="sortUserTable('rank')" data-sort-key="rank" title="클릭하여 정렬" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click();}">순위<span id="sort-rank" aria-hidden="true"></span></th>
+<th class="px-2 py-1.5 w-8 text-center" tabindex="0" role="columnheader" onclick="sortUserTable('bookmark')" data-sort-key="bookmark" title="클릭하여 정렬" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click();}">북마크<span id="sort-bookmark" aria-hidden="true"></span></th>
+<th class="px-3 py-1.5" tabindex="0" role="columnheader" onclick="sortUserTable('nickname')" data-sort-key="nickname" title="클릭하여 정렬" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click();}">작성자 / 식별값<span id="sort-nickname" aria-hidden="true"></span></th>
+<th class="px-2 py-1.5 w-16 text-center" tabindex="0" role="columnheader" onclick="sortUserTable('type')" data-sort-key="type" title="클릭하여 정렬" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click();}">유형<span id="sort-type" aria-hidden="true"></span></th>
+<th class="px-3 py-1.5 w-16 text-right text-primary" tabindex="0" role="columnheader" onclick="sortUserTable('post')" data-sort-key="post" title="클릭하여 정렬" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click();}">글<span id="sort-post" aria-hidden="true"></span></th>
+<th class="px-3 py-1.5 w-16 text-right text-secondary" tabindex="0" role="columnheader" onclick="sortUserTable('comment')" data-sort-key="comment" title="클릭하여 정렬" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click();}">댓글<span id="sort-comment" aria-hidden="true"></span></th>
+<th class="px-3 py-1.5 w-20 text-right text-on-surface font-bold" tabindex="0" role="columnheader" onclick="sortUserTable('total')" data-sort-key="total" title="클릭하여 정렬" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click();}">총합<span id="sort-total" aria-hidden="true"></span></th>
+</tr>
+</thead>
+<tbody id="user-table-body"></tbody>
+</table>
+</div>
+<div class="hidden flex-col items-center justify-center py-10 px-4 text-center bg-surface-container-low rounded-lg" id="table-empty-state">
+<span class="material-symbols-outlined text-3xl text-outline mb-2">person_search</span>
+<p class="font-headline-sm text-headline-sm text-on-surface font-semibold">선택하신 조건의 활동 데이터가 존재하지 않습니다.</p>
+<p class="font-body-sm text-body-sm text-on-surface-variant mt-1">검색어를 재설정하거나 날짜 및 필터 조건을 변경해 주세요.</p>
+<button class="mt-4 px-3 py-1.5 rounded-lg bg-surface-container-lowest text-primary font-body-sm-medium text-body-sm-medium shadow-sm hover:bg-surface-container" onclick="resetTableFilter()" type="button">
+            필터 초기화
+          </button>
+</div>
+<div class="flex flex-col sm:flex-row items-center justify-between gap-2 pt-2 border-t-0 text-on-surface-variant font-body-sm text-body-sm"><span id="table-summary">검색 결과 0명</span><div id="table-pagination" class="flex flex-wrap items-center gap-1" aria-label="사용자 목록 페이지"></div></div>
+</div>
+<div class="xl:col-span-5 bg-surface-container-lowest rounded-xl p-5 shadow-sm flex flex-col gap-space-md sticky top-32 user-detail-panel" id="user-detail-panel">
+<div class="flex items-center justify-between gap-2"><h3 class="text-headline-sm font-semibold text-on-surface">유저 활동 분석</h3><button id="clear-selection" type="button" onclick="clearSelectedUser()" class="text-body-sm text-on-surface-variant" hidden>선택 해제</button></div><div id="detail-empty" class="detail-empty bg-surface-container-low rounded-xl text-on-surface-variant"><span class="material-symbols-outlined text-3xl text-outline">person_search</span><h3 class="text-headline-sm font-semibold text-on-surface">유저를 선택해 주세요</h3><p>랭킹이나 검색 결과에서 유저를 선택하면<br>활동 그래프와 최근 내역을 확인할 수 있습니다.</p></div><div id="detail-content" class="flex flex-col gap-space-md" hidden="hidden"><div class="bg-surface-container-low p-4 rounded-xl flex flex-col gap-3">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-space-sm">
+<div class="w-12 h-12 rounded-full bg-primary/20 text-primary flex items-center justify-center font-bold text-lg font-code-mono" id="detail-avatar">—</div>
+<div class="flex flex-col">
+<div class="flex items-center gap-2">
+<h4 class="font-headline-md text-headline-md text-on-surface font-bold" id="detail-nick">—</h4>
+<span class="px-2 py-0.5 rounded bg-primary text-on-primary font-code-mono text-xs" id="detail-type-badge">—</span>
+</div>
+<span class="font-code-mono text-code-mono text-on-surface-variant" id="detail-uid">—</span>
+</div>
+</div>
+<div class="flex items-center gap-1">
+<button class="p-2 rounded-lg bg-surface-container-lowest text-yellow-500 hover:bg-surface-container shadow-sm transition-transform active:scale-90" id="detail-fav-btn" onclick="toggleDetailFav()" title="즐겨찾기 토글" aria-label="선택 유저 즐겨찾기" aria-pressed="false" type="button">
+<span class="material-symbols-outlined text-base" id="detail-fav-icon" style="font-variation-settings: 'FILL' 1;">star</span>
+</button>
+<a class="p-2 rounded-lg bg-surface-container-lowest text-on-surface hover:bg-surface-container shadow-sm" href="https://gall.dcinside.com/mgallery/board/lists/?id=projectmx" id="detail-user-gallery-link" rel="noopener noreferrer" target="_blank" title="갤러리 원문 열기">
+<span class="material-symbols-outlined text-base">person_search</span>
+</a>
+</div>
+</div>
+<div class="grid grid-cols-3 gap-2 pt-2 border-t-0 font-body-sm text-body-sm">
+<div class="bg-surface-container-lowest p-2 rounded-lg flex flex-col items-center">
+<span class="text-on-surface-variant font-label-caps text-label-caps">총 작성글</span>
+<span class="font-code-mono font-bold text-primary text-base" id="detail-post-count">0</span>
+</div>
+<div class="bg-surface-container-lowest p-2 rounded-lg flex flex-col items-center">
+<span class="text-on-surface-variant font-label-caps text-label-caps">총 작성댓글</span>
+<span class="font-code-mono font-bold text-secondary text-base" id="detail-comment-count">0</span>
+</div>
+<div class="bg-surface-container-lowest p-2 rounded-lg flex flex-col items-center">
+<span class="text-on-surface-variant font-label-caps text-label-caps">활동 지분율</span>
+<span class="font-code-mono font-bold text-on-surface text-base" id="detail-total-share">—</span>
+</div>
+</div>
+</div>
+<div class="flex items-center gap-1 bg-surface-container-low p-1 rounded-lg" role="tablist" aria-label="선택 유저 상세 내역">
+<button class="flex-1 py-1.5 rounded font-body-sm-medium text-body-sm-medium bg-surface-container-lowest text-on-surface shadow-sm transition-all flex items-center justify-center gap-1" id="subtab-hourly" onclick="switchUserSubTab('hourly')" role="tab" aria-controls="pane-user-hourly" aria-selected="true" type="button">
+<span class="material-symbols-outlined text-xs">query_stats</span>
+            활동 그래프
+          </button>
+<button class="flex-1 py-1.5 rounded font-body-sm-medium text-body-sm-medium text-on-surface-variant hover:text-on-surface transition-all flex items-center justify-center gap-1" id="subtab-recent-posts" onclick="switchUserSubTab('posts')" role="tab" aria-controls="pane-user-posts" aria-selected="false" type="button">
+<span class="material-symbols-outlined text-xs">article</span>
+            최근 게시글 (5)
+          </button>
+<button class="flex-1 py-1.5 rounded font-body-sm-medium text-body-sm-medium text-on-surface-variant hover:text-on-surface transition-all flex items-center justify-center gap-1" id="subtab-recent-comments" onclick="switchUserSubTab('comments')" role="tab" aria-controls="pane-user-comments" aria-selected="false" type="button">
+<span class="material-symbols-outlined text-xs">chat</span>
+            최근 댓글 (10)
+          </button>
+</div>
+<div class="flex flex-col gap-space-sm" id="pane-user-hourly" role="tabpanel" aria-labelledby="subtab-hourly"><div class="flex flex-wrap items-center justify-between gap-2 font-body-sm-medium text-body-sm-medium"><span class="text-on-surface font-semibold">시간대별 작성 분포 (글 vs 댓글)</span><span id="user-peak-time" class="font-code-mono text-error text-xs">활동 없음</span></div><div id="chart-container" class="bg-surface-container-low rounded-lg" role="img" aria-label="선택 유저의 시간대별 글과 댓글"></div></div>
+<div class="hidden flex-col gap-2 max-h-72 overflow-y-auto pr-1" id="pane-user-posts" role="tabpanel" aria-labelledby="subtab-recent-posts"><div id="recent-posts" class="activity-list" aria-live="polite"></div></div>
+<div class="hidden flex-col gap-2 max-h-72 overflow-y-auto pr-1" id="pane-user-comments" role="tabpanel" aria-labelledby="subtab-recent-comments"><div id="recent-comments" class="activity-list" aria-live="polite"></div></div>
+</div><a class="w-full py-2.5 rounded-lg bg-surface-container-low hover:bg-surface-container text-on-surface font-body-sm-medium text-body-sm-medium flex items-center justify-center gap-2 transition-colors" href="https://gall.dcinside.com/mgallery/board/lists/?id=projectmx" rel="noopener noreferrer" target="_blank">
+<span class="">디시인사이드 블루아카 갤러리 바로가기</span>
+<span class="material-symbols-outlined text-sm">north_east</span>
+</a>
+</div>
+</div>
+</div>
+</div>
+</main><footer class="w-full bg-surface-container-low py-space-lg"><div class="w-full px-margin-screen flex flex-col md:flex-row items-center justify-between gap-space-md text-on-surface-variant font-body-sm text-body-sm"><div class="flex items-center gap-space-md"></div><div class="flex items-center gap-space-lg"></div></div></footer><div id="media-lightbox" class="media-lightbox" role="dialog" aria-modal="true" aria-hidden="true" aria-label="미디어 보기">
     <div class="media-lightbox-panel" role="document">
-        <button id="media-lightbox-close" class="media-lightbox-close" type="button" aria-label="미디어 닫기">&times;</button>
+        <button id="media-lightbox-close" class="media-lightbox-close" type="button" aria-label="미디어 닫기">×</button>
         <div id="media-lightbox-stage" class="media-lightbox-stage"></div>
         <div id="media-lightbox-status" class="media-lightbox-status" aria-live="polite"></div>
     </div>
 </div>
 
-<script>
-const R2_DOMAIN = "https://pub-fca2435a027e41bf954b4bc4f46e560a.r2.dev"; 
+<script id="dashboard-application">const R2_DOMAIN = "https://pub-fca2435a027e41bf954b4bc4f46e560a.r2.dev"; 
     const GALLERY_ID = "projectmx";
     // 미디어 URL은 main.go가 저장한 값을 그대로 사용합니다.
     // Worker가 필요한 게시글 3번 유형 이미지는 main.go가 이미 서명된 Worker URL로 저장합니다.
@@ -538,51 +545,237 @@ const R2_DOMAIN = "https://pub-fca2435a027e41bf954b4bc4f46e560a.r2.dev";
 
     const PROJECT_START_DATE = "2026-06-07"; 
 
-    let currentData = [];
-    let bookmarks = JSON.parse(localStorage.getItem('user_bookmarks')) || [];
-    let activeTab = 'trends';
-    
-    let dailyTrendData = null;
-    let hourlyRawData = [];
-    let selectedUser = null;
-    let dailyLoadSequence = 0;
-    let dailyLoading = false;
-    let rankingType = '전체';
-    let rankingCurrentPage = 1;
-    const rankingItemsPerPage = 5;
-    let mainTrendChart = null;
 
-    // 상세 본문 Parquet는 상세창을 열었을 때만 읽습니다.
-    // 같은 파일을 다시 요청하지 않도록 브라우저 메모리에 Promise 자체를 캐시합니다.
-    const parquetCache = new Map();
-    let parquetModulePromise = null;
-    let modalLoadSequence = 0;
+/* Supplied GUI + existing encrypted daily summary adapter. All counts use the selected scope. */
+let currentData = [], hourlyRawData = Array(24).fill(null), selectedUser = null;
+let dailyLoadSequence = 0, dailyLoading = false, modalLoadSequence = 0;
+let mainTrendChart = null, dailyTrendData = null, selectedDate = '', timeRange = 'all';
+let activeTab = 'overview', detailTab = 'hourly', typeFilter = 'ALL', tablePage = 1;
+let tableSort = {key:'total', direction:-1}, adapterMissing = false;
+let totals = {post:0, comment:0, total:0}, bookmarks = [];
+let parquetModulePromise = null;
+const parquetCache = new Map(), PAGE_SIZE = 7;
+const seriesVisible = {posts:true, comments:true, users:true};
+const unadaptedFetch = window.fetch;
+const todayKst = kstToday();
+try { const saved = JSON.parse(localStorage.getItem('user_bookmarks') || '[]'); if (Array.isArray(saved)) bookmarks = saved.filter(x=>typeof x==='string'); } catch (_) {}
 
-    let currentRankingMode = 'total'; 
-
-    let sortStates = {
-        search: { key: 'type', order: 'asc' }
-    };
-
-    let filterOnlyBookmarks = { ranking: false, search: false };
-    let searchTypes = { '고닉': true, '반고닉': true, '유동': true };
-
-    let searchCurrentPage = 1;
-    const searchItemsPerPage = 15;
-    let searchFilteredData = [];
-
-    const todayKst = new Date(new Date().getTime() + (9 * 60 * 60 * 1000)).toISOString().split('T')[0];
-
-    flatpickr("#date-picker", {
-        locale: "ko",
-        defaultDate: todayKst,
-        minDate: PROJECT_START_DATE,
-        maxDate: "today",
-        disableMobile: true,
-        onChange: function(selectedDates, dateStr, instance) {
-            fetchDailyData(dateStr);
+function dom(id) { return document.getElementById(id); }
+function textAt(id, text) { const node = dom(id); if (node) node.textContent = String(text); }
+function show(id, visible) { const node=dom(id); if(!node)return; node.hidden=!visible; node.classList.toggle('hidden',!visible); }
+function numberText(n) { return Number(n || 0).toLocaleString('ko-KR'); }
+function amount(n) { const v=Number(n); return Number.isFinite(v) && v>0 ? v : 0; }
+function kstToday() { return new Date(Date.now()+9*3600000).toISOString().slice(0,10); }
+function includedHours() { return Array.from({length:24},(_,h)=>h).filter(h=>timeRange==='all'||h<=2||h>=19); }
+function validDate(value) { return /^\d{4}-\d{2}-\d{2}$/.test(value) && value>=PROJECT_START_DATE && value<=kstToday() && !Number.isNaN(Date.parse(value)) && new Date(value+'T00:00:00Z').toISOString().slice(0,10)===value; }
+function setStatus(message, state='ready') { textAt('status-text',message); dom('status-text').dataset.state=state; dom('status-dot').dataset.state=state; }
+function updateAutoRefreshLabel() { textAt('auto-refresh-label',selectedDate===kstToday()?'오늘 · 5분 자동 갱신':'과거 날짜 · 자동 갱신 꺼짐'); }
+function syncRangeButtons() {
+    ['all','peak'].forEach(k=>dom('hours-'+k).setAttribute('aria-pressed',String(k===timeRange)));
+    dom('today-btn').setAttribute('aria-pressed',String(selectedDate===kstToday()));
+    textAt('metric-range',timeRange==='all'?'선택 날짜 · 24시간':'선택 날짜 · 피크타임');
+}
+function setLoading(value) {
+    dailyLoading=value; dom('refresh-btn').disabled=value;
+    dom('sync-refresh-icon').classList.toggle('is-spinning',value);
+    dom('user-workspace').setAttribute('aria-busy',String(value));
+    textAt('header-sync-status',value?'데이터 연결 중':'집계 완료');
+}
+function handleAdapterMissing() { adapterMissing=true; }
+function initializeDashboard() {
+    if(window.fetch===unadaptedFetch)adapterMissing=true;
+    const date=dom('archive-date-input'); date.min=PROJECT_START_DATE;date.max=kstToday();date.value=kstToday();
+    syncThemeButton(); switchMainTab('overview'); clearSelectedUser(); syncRangeButtons(); renderTable();
+    window.addEventListener('resize',()=>{mainTrendChart?.resize();modalChart?.resize();});
+    document.addEventListener('visibilitychange',()=>{if(!document.hidden){date.max=kstToday();updateAutoRefreshLabel();}});
+    document.addEventListener('keydown',event=>{if(event.key==='Escape')closeMediaLightbox();});
+    dom('media-lightbox-close').addEventListener('click',closeMediaLightbox);
+    dom('media-lightbox').addEventListener('click',event=>{if(event.target===event.currentTarget)closeMediaLightbox();});
+    setInterval(autoRefresh,300000);
+    return fetchDailyData(date.value);
+}
+async function autoRefresh() { updateAutoRefreshLabel(); if(!document.hidden&&!dailyLoading&&selectedDate===kstToday()) return fetchDailyData(selectedDate,true); }
+function openDatePicker() { const input=dom('archive-date-input');input.focus();try{input.showPicker();}catch(_){} }
+function selectToday() { dom('archive-date-input').max=kstToday();return changeAnalysisDate(kstToday()); }
+function changeAnalysisDate(value) {
+    if(!validDate(value)){dom('archive-date-input').value=selectedDate||kstToday();setStatus(`${PROJECT_START_DATE}부터 오늘(KST)까지의 날짜를 선택해 주세요.`,'error');return;}
+    return fetchDailyData(value);
+}
+function refreshCurrentData() { if(dailyLoading)return;return fetchDailyData(selectedDate||kstToday(),true); }
+async function fetchDailyData(dateStr,forceRefresh=false) {
+    if(!validDate(dateStr))return;
+    const sequence=++dailyLoadSequence;selectedDate=dateStr;dom('archive-date-input').value=dateStr;
+    clearSelectedUser();setLoading(true);syncRangeButtons();updateAutoRefreshLabel();
+    hourlyRawData=Array(24).fill(null);currentData=[];tablePage=1;rebuildView();
+    textAt('last-sync-timestamp','—');setStatus(`${dateStr} 데이터를 불러오는 중입니다.`,'loading');
+    textAt('chart-empty','그래프 데이터를 불러오는 중입니다.');
+    if(adapterMissing){setLoading(false);textAt('header-sync-status','연결 파일 확인 필요');setStatus('dashboard_api_patch.js를 이 HTML과 같은 폴더에 넣어 주세요.','error');textAt('chart-empty','데이터 연결 파일이 없습니다.');return;}
+    if(forceRefresh)parquetCache.clear();
+    const token=forceRefresh?`${Date.now()}-${sequence}`:'';
+    let timer;
+    try {
+        const requests=Array.from({length:24},async(_,hour)=>{
+            const hh=String(hour).padStart(2,'0');
+            const url=`${R2_DOMAIN}/${dateStr}/${hh}h/${hh}h.json${token?'?refresh='+encodeURIComponent(token):''}`;
+            const response=await fetch(url);
+            if(response.status===404)return null;
+            if(!response.ok)throw new Error(`집계 API 응답 오류 (${response.status})`);
+            const users=await response.json();if(!Array.isArray(users))throw new Error('시간대별 집계 형식을 확인할 수 없습니다.');
+            return users.filter(u=>u&&typeof u==='object').map(normalizeUser);
+        });
+        const results=await Promise.race([Promise.all(requests),new Promise((_,reject)=>{timer=setTimeout(()=>reject(new Error('데이터 요청 시간이 초과되었습니다.')),25000);})]);
+        if(sequence!==dailyLoadSequence)return;
+        hourlyRawData=results;setLoading(false);rebuildView();
+        textAt('last-sync-timestamp',new Intl.DateTimeFormat('ko-KR',{timeZone:'Asia/Seoul',hour:'2-digit',minute:'2-digit',second:'2-digit',hourCycle:'h23'}).format(new Date())+' KST');
+    } catch(error) {
+        if(sequence!==dailyLoadSequence)return;
+        hourlyRawData=Array(24).fill(null);setLoading(false);rebuildView();
+        setStatus(`데이터 연결 실패: ${error.message} 새로고침으로 다시 시도해 주세요.`,'error');
+        textAt('header-sync-status','데이터 연결 실패');textAt('chart-empty','데이터를 불러오지 못했습니다.');
+    } finally {clearTimeout(timer);}
+}
+function normalizeUser(u) {
+    const key=cleanText(resolveUserKey(u)||u.id||u.display_id);
+    const type=cleanText(u.type)||((u.ip||key.startsWith('ip:'))?'유동':'미분류');
+    const post=amount(u.post),comment=amount(u.comment);
+    return {...u,user_key:key,type,nickname:cleanText(u.nickname)||'이름 없음',post,comment,total:post+comment};
+}
+function rebuildView() {
+    const hours=includedHours(), users=new Map();totals={post:0,comment:0,total:0};
+    dailyTrendData={hours,labels:hours.map(h=>String(h).padStart(2,'0')+'시'),posts:[],comments:[],users:[]};
+    for(const hour of hours){
+        const data=hourlyRawData[hour];
+        if(!Array.isArray(data)){dailyTrendData.posts.push(null);dailyTrendData.comments.push(null);dailyTrendData.users.push(null);continue;}
+        let post=0,comment=0;const hourUsers=new Set();
+        for(const u of data){
+            post+=u.post;comment+=u.comment;const key=u.user_key;
+            if(!key)continue;hourUsers.add(key);
+            const prev=users.get(key);
+            users.set(key,prev?{...prev,...u,post:prev.post+u.post,comment:prev.comment+u.comment,total:prev.total+u.total}:{...u});
         }
-    });
+        totals.post+=post;totals.comment+=comment;
+        dailyTrendData.posts.push(post);dailyTrendData.comments.push(comment);dailyTrendData.users.push(hourUsers.size);
+    }
+    totals.total=totals.post+totals.comment;
+    currentData=[...users.values()].sort((a,b)=>b.total-a.total||a.user_key.localeCompare(b.user_key));
+    currentData.forEach((u,i)=>u.rank=i+1);
+    textAt('metric-total-posts',numberText(totals.post));textAt('metric-total-comments',numberText(totals.comment));textAt('metric-total-users',numberText(currentData.length));
+    textAt('comments-per-post',totals.post?(totals.comment/totals.post).toFixed(1)+'개':'—');
+    textAt('comments-share',totals.total?(100*totals.comment/totals.total).toFixed(1)+'%':'—');
+    const registered=currentData.filter(u=>u.type==='고닉'||u.type==='반고닉').length,anon=currentData.filter(u=>u.type==='유동').length;
+    const userLabel=n=>`${numberText(n)}명 (${currentData.length?(100*n/currentData.length).toFixed(1):'0.0'}%)`;
+    textAt('registered-user-label','고닉/반고닉 '+userLabel(registered));textAt('anonymous-user-label','유동(IP) '+userLabel(anon));
+    dom('registered-user-bar').style.width=(currentData.length?100*registered/currentData.length:0)+'%';dom('anonymous-user-bar').style.width=(currentData.length?100*anon/currentData.length:0)+'%';
+    dom('registered-user-bar').parentElement.title= currentData.length>registered+anon?`미분류 ${currentData.length-registered-anon}명 포함`:'';
+    textAt('peak-time-badge',peakLabel(dailyTrendData.posts,dailyTrendData.comments,hours,'피크'));
+    syncRangeButtons();renderTable();renderTrendChart();
+    if(!dailyLoading){
+        const collected=hours.filter(h=>Array.isArray(hourlyRawData[h]));
+        if(!collected.length){setStatus(`${selectedDate} · 선택한 시간대에 수집된 데이터가 없습니다.`,'empty');textAt('header-sync-status','수집 데이터 없음');}
+        else {setStatus(`${selectedDate} · ${timeRange==='all'?'24시간 전체':'00~02시 · 19~23시'} · ${collected.length}/${hours.length}개 시간대 수집 · ${numberText(currentData.length)}명 집계 (KST)`);textAt('header-sync-status','집계 완료');}
+    }
+}
+function peakLabel(posts,comments,hours,prefix) {
+    let max=0,index=-1;posts.forEach((p,i)=>{const value=(p||0)+(comments[i]||0);if(value>max){max=value;index=i;}});
+    return index<0?'활동 피크 없음':`${prefix}: ${String(hours[index]).padStart(2,'0')}:00 (${numberText(max)}건)`;
+}
+function setTimeRange(range) { if(!['all','peak'].includes(range)||range===timeRange)return;timeRange=range;tablePage=1;clearSelectedUser();rebuildView(); }
+function chartColors() { return document.documentElement.classList.contains('dark')?{text:'#b2c1d8',grid:'#344864',post:'#91b6ff',comment:'#c3a2ff',user:'#73d9b1',bg:'#1a2637'}:{text:'#44474f',grid:'#e1e3ee',post:'#004ac6',comment:'#712ae2',user:'#007d57',bg:'#ffffff'}; }
+function chartBase(labels) {
+    const c=chartColors();return {animation:false,backgroundColor:'transparent',textStyle:{fontFamily:'Inter, Noto Sans KR, sans-serif'},
+        tooltip:{trigger:'axis',renderMode:'richText',backgroundColor:c.bg,textStyle:{color:c.text},confine:true},
+        grid:{left:14,right:20,top:32,bottom:15,containLabel:true},
+        xAxis:{type:'category',data:labels,boundaryGap:false,axisLabel:{color:c.text,hideOverlap:true},axisLine:{lineStyle:{color:c.grid}},axisTick:{show:false}},
+        yAxis:{type:'value',minInterval:1,axisLabel:{color:c.text},splitLine:{lineStyle:{color:c.grid,type:'dashed'}}}};
+}
+function renderTrendChart() {
+    if(!dailyTrendData)return;
+    const hasData=dailyTrendData.posts.some(v=>v!==null);show('chart-empty',!hasData);
+    if(!hasData){mainTrendChart?.clear();textAt('chart-empty','선택한 시간대의 수집 데이터가 없습니다.');return;}
+    if(!window.echarts){show('chart-empty',true);textAt('chart-empty','그래프 라이브러리를 불러오지 못했습니다. 인터넷 연결 후 페이지를 새로고침해 주세요.');return;}
+    mainTrendChart ||= echarts.init(dom('main-trend-chart'));
+    const c=chartColors(),names={posts:'게시글',comments:'댓글',users:'활동 유저'},colors={posts:c.post,comments:c.comment,users:c.user};
+    const option=chartBase(dailyTrendData.labels);
+    option.legend={show:false,selected:Object.fromEntries(Object.entries(names).map(([key,name])=>[name,seriesVisible[key]]))};
+    option.yAxis=[{...option.yAxis,name:'글·댓글',nameTextStyle:{color:c.text}},{...option.yAxis,name:'유저',nameTextStyle:{color:c.text},splitLine:{show:false}}];
+    option.series=Object.entries(names).map(([key,name])=>({name,type:'line',data:dailyTrendData[key],smooth:0.22,connectNulls:false,showSymbol:false,symbolSize:6,yAxisIndex:key==='users'?1:0,lineStyle:{width:2.5,color:colors[key],type:key==='users'?'dashed':'solid'},itemStyle:{color:colors[key]},areaStyle:key==='posts'?{color:colors[key],opacity:0.06}:undefined}));
+    mainTrendChart.setOption(option,true);requestAnimationFrame(()=>mainTrendChart?.resize());
+}
+function toggleMetricSeries(key) { if(!(key in seriesVisible))return;seriesVisible[key]=!seriesVisible[key];dom('toggle-'+key).setAttribute('aria-pressed',String(seriesVisible[key]));renderTrendChart(); }
+function matchesQuery(user,query) {
+    if(!query)return true;
+    const fields=[user.nickname,user.uid,user.ip,user.user_key,user.id,user.display_id,formatUserIdentity(user)].map(v=>cleanText(v).toLowerCase());
+    if(query.endsWith('*')){const prefix=query.slice(0,-1).replace(/\.$/,'');return fields.some(v=>v.startsWith(prefix));}
+    return fields.some(v=>v.includes(query));
+}
+function filterUserTable() {tablePage=1;renderTable();}
+function clearSearch() {dom('user-search-input').value='';filterUserTable();dom('user-search-input').focus();}
+function filterType(type) { if(!['ALL','GONIC','SEMI','ANON','FAV'].includes(type))return;typeFilter=type;tablePage=1;renderTable(); }
+function resetTableFilter() {typeFilter='ALL';dom('user-search-input').value='';tablePage=1;renderTable();}
+function sortUserTable(key) {if(!['rank','bookmark','nickname','type','post','comment','total'].includes(key))return;tableSort={key,direction:tableSort.key===key?-tableSort.direction:(['post','comment','total','bookmark'].includes(key)?-1:1)};tablePage=1;renderTable();}
+function renderTable() {
+    const query=cleanText(dom('user-search-input').value).toLowerCase(),typeMap={GONIC:'고닉',SEMI:'반고닉',ANON:'유동'};
+    const filtered=currentData.filter(u=>(typeFilter==='ALL'||(typeFilter==='FAV'?isUserBookmarked(u):u.type===typeMap[typeFilter]))&&matchesQuery(u,query));
+    const sortValue=u=>tableSort.key==='bookmark'?Number(isUserBookmarked(u)):u[tableSort.key];
+    filtered.sort((a,b)=>{const av=sortValue(a),bv=sortValue(b);return tableSort.direction*(typeof av==='number'?av-bv:cleanText(av).localeCompare(cleanText(bv),'ko'))||a.rank-b.rank;});
+    const pages=Math.max(1,Math.ceil(filtered.length/PAGE_SIZE));tablePage=Math.max(1,Math.min(tablePage,pages));
+    const start=(tablePage-1)*PAGE_SIZE,rows=filtered.slice(start,start+PAGE_SIZE),tbody=dom('user-table-body');tbody.replaceChildren();
+    for(const user of rows){
+        const tr=document.createElement('tr');tr.dataset.userKey=user.user_key;tr.tabIndex=0;tr.className='user-row';
+        tr.classList.toggle('selected',selectedUser?.user_key===user.user_key);tr.setAttribute('aria-label',user.nickname+' 활동 분석 보기');
+        const favorite=isUserBookmarked(user),typeClass=user.type==='고닉'?'type-gonic':user.type==='반고닉'?'type-semi':'type-anon';
+        tr.innerHTML=`<td class="rank-cell">${user.rank}</td><td class="star-cell"><button type="button" class="row-favorite ${favorite?'is-favorite':''}" aria-label="${favorite?'즐겨찾기 해제':'즐겨찾기 추가'}" aria-pressed="${favorite}"><span class="material-symbols-outlined" aria-hidden="true">star</span></button></td><td class="name-cell"><span class="nickname">${escapeHTML(user.nickname)}</span><span class="identity">${escapeHTML(formatUserIdentity(user))||'ID 없음'}</span></td><td class="type-cell"><span class="type-badge ${typeClass}">${escapeHTML(user.type)}</span></td><td class="count-cell count-post">${numberText(user.post)}</td><td class="count-cell count-comment">${numberText(user.comment)}</td><td class="count-cell count-total">${numberText(user.total)}</td>`;
+        tr.onclick=()=>selectUser(user);tr.addEventListener('keydown',event=>{if(event.target===tr&&['Enter',' '].includes(event.key)){event.preventDefault();selectUser(user);}});
+        tr.querySelector('button').onclick=event=>{event.stopPropagation();toggleBookmarkUser(user);};tbody.appendChild(tr);
+    }
+    textAt('rank-count-badge',numberText(currentData.length)+'명 집계');
+    textAt('table-summary',filtered.length?`검색 결과 ${numberText(filtered.length)}명 중 ${start+1}~${Math.min(start+PAGE_SIZE,filtered.length)}명 표시`:'검색 결과 0명');
+    show('table-empty-state',!filtered.length);
+    ['ALL','GONIC','SEMI','ANON','FAV'].forEach(k=>dom('filter-'+k.toLowerCase()).setAttribute('aria-pressed',String(typeFilter===k)));
+    document.querySelectorAll('th[data-sort-key]').forEach(th=>{const active=th.dataset.sortKey===tableSort.key;th.setAttribute('aria-sort',active?(tableSort.direction===1?'ascending':'descending'):'none');textAt('sort-'+th.dataset.sortKey,active?(tableSort.direction===1?' ↑':' ↓'):'');});
+    const pagination=dom('table-pagination');pagination.replaceChildren();
+    function button(label,page,disabled=false){const b=document.createElement('button');b.type='button';b.textContent=String(label);b.className='page-button';b.disabled=disabled;b.setAttribute('aria-label',label==='‹'?'이전 페이지':label==='›'?'다음 페이지':page+' 페이지');if(page===tablePage&&typeof label==='number')b.setAttribute('aria-current','page');b.onclick=()=>{tablePage=page;renderTable();};pagination.appendChild(b);}
+    button('‹',tablePage-1,tablePage===1);
+    const pageNumbers=[...new Set([1,tablePage-1,tablePage,tablePage+1,pages])].filter(p=>p>=1&&p<=pages).sort((a,b)=>a-b);
+    pageNumbers.forEach((p,i)=>{if(i&&p-pageNumbers[i-1]>1){const gap=document.createElement('span');gap.textContent='…';gap.className='page-gap';pagination.appendChild(gap);}button(p,p);});
+    button('›',tablePage+1,tablePage===pages);
+}
+function toggleBookmarkUser(user) {
+    const keys=bookmarkAliases(user);if(!keys.length)return;
+    bookmarks=isUserBookmarked(user)?bookmarks.filter(key=>!keys.includes(key)):[...bookmarks,keys[0]];
+    try{localStorage.setItem('user_bookmarks',JSON.stringify(bookmarks));}catch(_){setStatus('이 브라우저에서는 즐겨찾기가 현재 페이지에만 유지됩니다.');}
+    renderTable();updateDetailFavorite();
+}
+function toggleDetailFav() {if(selectedUser)toggleBookmarkUser(selectedUser);}
+function updateDetailFavorite() {const value=selectedUser?isUserBookmarked(selectedUser):false;dom('detail-fav-btn').setAttribute('aria-pressed',String(value));dom('detail-fav-icon').style.fontVariationSettings=`'FILL' ${value?1:0}`;dom('detail-fav-btn').classList.toggle('is-favorite',value);}
+function clearSelectedUser() {selectedUser=null;++modalLoadSequence;show('detail-content',false);show('detail-empty',true);show('clear-selection',false);modalChart?.clear();setActivityState('recent-posts','유저를 선택해 주세요.');setActivityState('recent-comments','유저를 선택해 주세요.');document.querySelectorAll('.user-row.selected').forEach(n=>n.classList.remove('selected'));}
+function selectUser(user) {
+    const found=currentData.find(u=>u.user_key===(typeof user==='string'?user:user.user_key));if(!found)return;
+    selectedUser=found;const sequence=++modalLoadSequence;show('detail-content',true);show('detail-empty',false);show('clear-selection',true);
+    textAt('detail-avatar',Array.from(found.nickname)[0]||'?');textAt('detail-nick',found.nickname);textAt('detail-type-badge',found.type);
+    textAt('detail-uid',(found.type==='유동'?'IP: ':'UID: ')+(formatUserIdentity(found)||'없음'));
+    textAt('detail-post-count',numberText(found.post));textAt('detail-comment-count',numberText(found.comment));textAt('detail-total-share',totals.total?(100*found.total/totals.total).toFixed(1)+'%':'—');
+    updateDetailFavorite();switchUserSubTab('hourly');renderTable();
+    setActivityState('recent-posts','최근 게시글을 확인하는 중입니다.');setActivityState('recent-comments','최근 댓글을 확인하는 중입니다.');
+    Promise.resolve(loadRecentUserActivity(found,sequence)).catch(()=>{if(sequence===modalLoadSequence){setActivityState('recent-posts','최근 게시글을 불러오지 못했습니다.',true);setActivityState('recent-comments','최근 댓글을 불러오지 못했습니다.',true);}});
+    if(window.matchMedia?.('(max-width: 1279px)').matches)dom('user-detail-panel').scrollIntoView({behavior:'smooth',block:'start'});
+}
+function renderUserChart() {
+    if(!selectedUser)return;const hours=includedHours();
+    const rows=hours.map(h=>hourlyRawData[h]===null?null:hourlyRawData[h].find(u=>u.user_key===selectedUser.user_key)||{post:0,comment:0});
+    const posts=rows.map(r=>r?.post??null),comments=rows.map(r=>r?.comment??null);
+    textAt('user-peak-time',peakLabel(posts,comments,hours,'최다 활동'));
+    if(!window.echarts){textAt('chart-container','그래프 라이브러리를 불러오지 못했습니다.');return;}
+    modalChart ||= echarts.init(dom('chart-container'));const c=chartColors(),option=chartBase(hours.map(h=>String(h).padStart(2,'0')+'시'));
+    option.xAxis.boundaryGap=true;option.legend={top:0,textStyle:{color:c.text},data:['게시글','댓글']};
+    option.series=[{name:'게시글',type:'bar',data:posts,itemStyle:{color:c.post,borderRadius:[3,3,0,0]},barMaxWidth:12},{name:'댓글',type:'bar',data:comments,itemStyle:{color:c.comment,borderRadius:[3,3,0,0]},barMaxWidth:12}];
+    modalChart.setOption(option,true);requestAnimationFrame(()=>modalChart?.resize());
+}
+function switchUserSubTab(tab) { if(!['hourly','posts','comments'].includes(tab))return;detailTab=tab;const ids={hourly:'hourly',posts:'recent-posts',comments:'recent-comments'};Object.keys(ids).forEach(key=>{show('pane-user-'+key,key===tab);dom('subtab-'+ids[key]).setAttribute('aria-selected',String(key===tab));});if(tab==='hourly')renderUserChart(); }
+function switchMainTab(tab) {if(!['overview','ranking'].includes(tab))return;activeTab=tab;show('overview-chart-panel',tab==='overview');['overview','ranking'].forEach(k=>dom('tab-'+k).setAttribute('aria-selected',String(k===tab)));if(tab==='overview')requestAnimationFrame(()=>mainTrendChart?.resize());}
+function navigateSection(tab) {switchMainTab(tab);dom(tab==='ranking'?'user-workspace':'overview-chart-panel').scrollIntoView({behavior:'smooth',block:'start'});}
+function syncThemeButton() {const dark=document.documentElement.classList.contains('dark');textAt('theme-icon',dark?'light_mode':'dark_mode');dom('theme-toggle').setAttribute('aria-pressed',String(dark));dom('theme-toggle').setAttribute('aria-label',dark?'밝은 테마로 전환':'어두운 테마로 전환');}
+function toggleTheme() {const dark=document.documentElement.classList.toggle('dark');try{localStorage.setItem('projectmx_theme',dark?'dark':'light');}catch(_){}syncThemeButton();renderTrendChart();if(selectedUser&&detailTab==='hourly')renderUserChart();}
 
     function escapeHTML(str) {
         if (!str) return '';
@@ -633,668 +826,6 @@ const R2_DOMAIN = "https://pub-fca2435a027e41bf954b4bc4f46e560a.r2.dev";
         return legacyId.replace(/^(?:id|ip):/i, '');
     }
 
-    // 상단 탐색은 페이지 안의 작업 영역으로 이동합니다.
-    function switchTab(tabId, el) {
-        activeTab = tabId;
-        document.querySelectorAll('.nav-tab').forEach(button => {
-            const selected = button.dataset.view === tabId;
-            button.classList.toggle('active', selected);
-            if (selected) button.setAttribute('aria-current', 'location');
-            else button.removeAttribute('aria-current');
-        });
-        if (tabId !== 'trends') setUserView(tabId);
-        const target = document.getElementById(tabId === 'trends' ? 'section-trends' : 'user-workspace');
-        target.scrollIntoView({ behavior: reducedMotion() ? 'auto' : 'smooth', block: 'start' });
-        if (tabId === 'search') document.getElementById('search-input').focus({preventScroll: true});
-    }
-
-    function reducedMotion() {
-        return window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    }
-
-    function setUserView(view) {
-        const search = view === 'search';
-        document.getElementById('section-ranking').hidden = search;
-        document.getElementById('section-search').hidden = !search;
-        document.querySelectorAll('[data-user-view]').forEach(button => {
-            const selected = button.dataset.userView === view;
-            button.classList.toggle('active', selected);
-            button.setAttribute('aria-selected', String(selected));
-        });
-    }
-
-    function selectRankType(type) {
-        rankingType = type;
-        rankingCurrentPage = 1;
-        document.querySelectorAll('[data-rank-type]').forEach(button => {
-            const selected = button.dataset.rankType === type;
-            button.classList.toggle('active', selected);
-            button.setAttribute('aria-pressed', String(selected));
-        });
-        sortAndRenderRanking();
-    }
-
-    function filterRanking() {
-        rankingCurrentPage = 1;
-        sortAndRenderRanking();
-    }
-
-    function moveRankingPage(change) {
-        rankingCurrentPage += change;
-        sortAndRenderRanking();
-    }
-
-    function displayUserKey(user) {
-        return bookmarkKey(user) || [user.type, user.nickname, formatUserIdentity(user)].join('|');
-    }
-
-    function highlightSelectedUser() {
-        document.querySelectorAll('tr[data-user-key]').forEach(row => {
-            row.classList.toggle('selected', Boolean(selectedUser) && row.dataset.userKey === displayUserKey(selectedUser));
-        });
-        if (selectedUser) {
-            const saved = isUserBookmarked(selectedUser);
-            const button = document.getElementById('profile-bookmark');
-            button.textContent = saved ? '★' : '☆';
-            button.setAttribute('aria-pressed', String(saved));
-            button.setAttribute('aria-label', saved ? '즐겨찾기 해제' : '즐겨찾기 추가');
-        }
-    }
-
-    function toggleSelectedBookmark() {
-        if (selectedUser) toggleBookmarkUser(selectedUser);
-    }
-
-    function showDetailTab(tab) {
-        const panels = {chart: 'modal-chart-section', posts: 'modal-posts-section', comments: 'modal-comments-section'};
-        for (const [key, id] of Object.entries(panels)) {
-            document.getElementById(id).hidden = key !== tab;
-            const button = document.getElementById('user-tab-' + key);
-            button.setAttribute('aria-selected', String(key === tab));
-            button.classList.toggle('active', key === tab);
-        }
-        requestAnimationFrame(() => {
-            if (tab === 'chart' && modalChart) modalChart.resize();
-            if (tab === 'posts') {
-                document.querySelectorAll('#recent-posts .post-collapsible').forEach(body => {
-                    if (!body.classList.contains('collapsed')) return;
-                    const toggle = body.nextElementSibling;
-                    if (toggle && toggle.classList.contains('activity-content-toggle')) {
-                        toggle.hidden = body.scrollHeight <= body.clientHeight + 2;
-                    }
-                });
-            }
-        });
-    }
-
-
-    function withRefreshToken(url, token) {
-        if (!token) return url;
-        return `${url}${url.includes('?') ? '&' : '?'}refresh=${encodeURIComponent(token)}`;
-    }
-
-    function aggregateJsonCandidates(dateStr, hour) {
-        const hh = String(hour).padStart(2, '0');
-        return [
-            // main.go v4 현재 구조: 2026-08-25/13h/13h.json
-            `${R2_DOMAIN}/${dateStr}/${hh}h/${hh}h.json`,
-            // 이전 대시보드 데이터 호환: 2026-08-25/13h.json
-            `${R2_DOMAIN}/${dateStr}/${hh}h.json`
-        ];
-    }
-
-    async function fetchJsonFromCandidates(candidates, refreshToken = '') {
-        let lastError = null;
-        for (const baseUrl of candidates) {
-            const url = withRefreshToken(baseUrl, refreshToken);
-            try {
-                const response = await fetch(url, { cache: 'no-store' });
-                if (response.status === 404) continue;
-                if (!response.ok) {
-                    lastError = new Error(`JSON 요청 실패 (${response.status})`);
-                    continue;
-                }
-                return await response.json();
-            } catch (error) {
-                lastError = error;
-            }
-        }
-        if (lastError) console.warn('시간대 JSON을 불러오지 못했습니다:', lastError);
-        return null;
-    }
-
-    async function fetchDailyData(dateStr, forceRefresh = false) {
-        const statusText = document.getElementById('status-text');
-        const loadSequence = ++dailyLoadSequence;
-        dailyLoading = true;
-        closeModal();
-        document.getElementById('user-workspace').setAttribute('aria-busy', 'true');
-
-        // 새로고침 시 이전 상세 Parquet 캐시(404 포함)를 비워 새로 생성된 파일도 다시 확인합니다.
-        if (forceRefresh) parquetCache.clear();
-        statusText.innerText = forceRefresh
-            ? `${dateStr}의 최신 데이터를 다시 불러오는 중입니다`
-            : `${dateStr}의 데이터를 합산 중입니다`;
-        statusText.dataset.state = 'loading';
-        statusText.style.color = "#555";
-
-        const refreshToken = forceRefresh ? String(Date.now()) : '';
-        const promises = Array.from({length: 24}, (_, i) =>
-            fetchJsonFromCandidates(aggregateJsonCandidates(dateStr, i), refreshToken)
-        );
-
-        const results = await Promise.all(promises);
-        if (loadSequence !== dailyLoadSequence) return;
-        dailyLoading = false;
-        document.getElementById('user-workspace').setAttribute('aria-busy', 'false');
-        hourlyRawData = results;
-
-        let lastValidIndex = -1;
-        for(let i = 23; i >= 0; i--) {
-            if(results[i] !== null) {
-                lastValidIndex = i;
-                break;
-            }
-        }
-
-        const trendPosts = [];
-        const trendComments = [];
-        const trendUsers = [];
-        const xAxisLabels = [];
-        const userMap = new Map();
-
-        for (let i = 0; i <= lastValidIndex; i++) {
-            const data = results[i];
-            xAxisLabels.push(`${i}시`);
-
-            if (data && data.length > 0) {
-                let hourPosts = 0;
-                let hourComments = 0;
-
-                data.forEach(u => {
-                    hourPosts += Number(u.post || 0);
-                    hourComments += Number(u.comment || 0);
-
-                    const aggregateKey = u.user_key || u.id || u.display_id;
-                    if (!aggregateKey) return;
-
-                    if (userMap.has(aggregateKey)) {
-                        const existing = userMap.get(aggregateKey);
-                        existing.post += Number(u.post || 0);
-                        existing.comment += Number(u.comment || 0);
-                        existing.total += Number(u.total ?? (Number(u.post || 0) + Number(u.comment || 0)));
-
-                        // 같은 user_key에서 닉네임/표시 ID가 바뀌었다면 더 최근 시간대의 값을 표시합니다.
-                        if (u.nickname) existing.nickname = u.nickname;
-                        if (u.id) existing.id = u.id;
-                        if (u.display_id) existing.display_id = u.display_id;
-                        if (u.uid) existing.uid = u.uid;
-                        if (u.ip) existing.ip = u.ip;
-                        if (u.type) existing.type = u.type;
-                        if (u.user_key) existing.user_key = u.user_key;
-                    } else {
-                        userMap.set(aggregateKey, {
-                            ...u,
-                            post: Number(u.post || 0),
-                            comment: Number(u.comment || 0),
-                            total: Number(u.total ?? (Number(u.post || 0) + Number(u.comment || 0)))
-                        });
-                    }
-                });
-
-                trendPosts.push(hourPosts);
-                trendComments.push(hourComments);
-                trendUsers.push(data.length);
-            } else {
-                trendPosts.push(0);
-                trendComments.push(0);
-                trendUsers.push(0);
-            }
-        }
-
-        dailyTrendData = { labels: xAxisLabels, posts: trendPosts, comments: trendComments, users: trendUsers };
-        currentData = Array.from(userMap.values());
-
-        if (currentData.length === 0) {
-            statusText.innerText = `아직 수집된 데이터가 전혀 없습니다`;
-            statusText.dataset.state = 'error';
-            statusText.style.color = "red";
-            updateMetrics(true);
-            rankingCurrentPage = 1;
-            sortAndRenderRanking();
-
-            searchFilteredData = [];
-            renderSearchTablePage(); 
-
-            renderTrendChart();
-            return;
-        }
-
-        updateMetrics(false);
-        sortAndRenderRanking();
-        executeSearch(); 
-        renderTrendChart();
-
-        statusText.innerText = `실시간 데이터 반영엔 시간이 걸립니다`;
-        statusText.dataset.state = 'ready';
-        statusText.style.color = "#555";
-    }
-
-    async function refreshCurrentData() {
-        const refreshBtn = document.getElementById('refresh-btn');
-        const dateInput = document.getElementById('date-picker');
-        const selectedDate = dateInput.value || todayKst;
-
-        if (refreshBtn.disabled) return;
-
-        refreshBtn.disabled = true;
-        refreshBtn.classList.add('loading');
-
-        try {
-            await fetchDailyData(selectedDate, true);
-        } finally {
-            refreshBtn.disabled = false;
-            refreshBtn.classList.remove('loading');
-        }
-    }
-
-    function renderTrendChart() {
-        const chartDom = document.getElementById('main-trend-chart');
-        if (!mainTrendChart) mainTrendChart = echarts.init(chartDom);
-        const noData = !dailyTrendData || dailyTrendData.labels.length === 0;
-        document.getElementById('chart-empty').hidden = !noData;
-        if (noData) {
-            document.getElementById('chart-empty').textContent = '선택 날짜에 수집된 그래프 데이터가 없습니다.';
-            mainTrendChart.clear(); return;
-        }
-        const legendSelected = {};
-        document.querySelectorAll('[data-series]').forEach(button => {
-            legendSelected[button.dataset.series] = button.getAttribute('aria-pressed') !== 'false';
-        });
-        mainTrendChart.setOption({
-            animationDuration: reducedMotion() ? 0 : 350,
-            textStyle: {fontFamily: 'Inter, Noto Sans KR, sans-serif'},
-            tooltip: {
-                trigger: 'axis', confine: true, backgroundColor: '#1e293b', borderColor: '#334155',
-                textStyle: {color: '#fff', fontSize: 14},
-                axisPointer: {lineStyle: {color: '#94a3b8', type: 'dashed'}}
-            },
-            legend: {show: false, selected: legendSelected},
-            grid: {left: 4, right: 16, top: 18, bottom: 8, containLabel: true},
-            xAxis: {type: 'category', boundaryGap: false, data: dailyTrendData.labels,
-                axisTick: {show: false}, axisLine: {lineStyle: {color: '#cbd5e1'}},
-                axisLabel: {color: '#64748b', fontSize: 12, hideOverlap: true}},
-            yAxis: {type: 'value', minInterval: 1, axisLabel: {color: '#94a3b8', fontSize: 12},
-                splitLine: {lineStyle: {color: '#f1f5f9'}}},
-            series: [
-                trendSeries('활동 유저 수', dailyTrendData.users, '#10b981', true),
-                trendSeries('총 게시글', dailyTrendData.posts, '#2563eb'),
-                trendSeries('총 댓글', dailyTrendData.comments, '#7c3aed')
-            ]
-        }, true);
-    }
-
-    function trendSeries(name, data, color, dashed = false) {
-        return {name, data, type: 'line', smooth: .25, showSymbol: false,
-            symbol: 'circle', symbolSize: 7,
-            lineStyle: {color, width: dashed ? 2 : 2.5, type: dashed ? 'dashed' : 'solid'},
-            itemStyle: {color}, areaStyle: dashed ? undefined : {opacity: .10, color}};
-    }
-
-    function toggleTrendSeries(button) {
-        const visible = button.getAttribute('aria-pressed') !== 'false';
-        button.setAttribute('aria-pressed', String(!visible));
-        if (mainTrendChart) mainTrendChart.dispatchAction({type: 'legendToggleSelect', name: button.dataset.series});
-    }
-
-
-    function updateMetrics(isEmpty) {
-        const rows = isEmpty ? [] : currentData;
-        const posts = rows.reduce((sum, row) => sum + Number(row.post || 0), 0);
-        const comments = rows.reduce((sum, row) => sum + Number(row.comment || 0), 0);
-        document.getElementById('m-posts').textContent = posts.toLocaleString();
-        document.getElementById('m-comments').textContent = comments.toLocaleString();
-        document.getElementById('m-users').textContent = rows.length.toLocaleString();
-        const hours = hourlyRawData.filter(Array.isArray).length;
-        document.getElementById('metric-hours').textContent = `${hours}개 시간대 집계`;
-        document.getElementById('metric-ratio').textContent = posts ? `글당 ${(comments / posts).toFixed(2)}개` : '글당 비율 없음';
-        document.getElementById('metric-types').textContent = `고닉 ${rows.filter(r => r.type === '고닉').length.toLocaleString()} · 반고닉 ${rows.filter(r => r.type === '반고닉').length.toLocaleString()} · 유동 ${rows.filter(r => r.type === '유동').length.toLocaleString()}`;
-    }
-
-
-    function setRankingMode(mode) {
-        currentRankingMode = mode;
-        rankingCurrentPage = 1;
-        document.querySelectorAll('.btn-rank').forEach(btn => btn.classList.remove('active'));
-        document.getElementById(`btn-rank-${mode}`).classList.add('active');
-        sortAndRenderRanking();
-    }
-
-    function toggleStarFilter(tab) {
-        filterOnlyBookmarks[tab] = !filterOnlyBookmarks[tab];
-        const btn = document.getElementById(`${tab}-star-filter`);
-        
-        if (filterOnlyBookmarks[tab]) {
-            btn.classList.add('active');
-        } else {
-            btn.classList.remove('active');
-        }
-        
-        btn.setAttribute('aria-pressed', String(filterOnlyBookmarks[tab]));
-        if (tab === 'ranking') { rankingCurrentPage = 1; sortAndRenderRanking(); }
-        if (tab === 'search') executeSearch();
-    }
-
-    function toggleSearchType(type) {
-        searchTypes[type] = !searchTypes[type]; 
-        let btnId = type === '고닉' ? 'btn-type-gonic' : (type === '반고닉' ? 'btn-type-ban' : 'btn-type-udong');
-        const btn = document.getElementById(btnId);
-        
-        if (searchTypes[type]) {
-            btn.classList.add('active');
-        } else {
-            btn.classList.remove('active');
-        }
-        btn.setAttribute('aria-pressed', String(searchTypes[type]));
-        executeSearch();
-    }
-
-    function handleHeaderSort(tab, key) {
-        if (tab !== 'search') return; 
-        if (sortStates.search.key === key) {
-            sortStates.search.order = sortStates.search.order === 'desc' ? 'asc' : 'desc';
-        } else {
-            sortStates.search.key = key;
-            sortStates.search.order = 'desc';
-        }
-        updateSortIndicators('search');
-        executeSearch();
-    }
-
-    function updateSortIndicators(tab) {
-        if (tab !== 'search') return;
-        const columns = ['bookmark', 'nickname', 'id', 'type', 'post', 'comment', 'total'];
-        columns.forEach(col => {
-            const span = document.getElementById(`sort-search-${col}`);
-            if (span) {
-                if (sortStates.search.key === col) {
-                    span.innerText = sortStates.search.order === 'desc' ? '▼' : '▲';
-                } else {
-                    span.innerText = '';
-                }
-            }
-        });
-    }
-
-    function sortData(data, key, order) {
-        return data.sort((a, b) => {
-            let valA, valB;
-            if (key === 'bookmark') {
-                valA = isUserBookmarked(a) ? 1 : 0;
-                valB = isUserBookmarked(b) ? 1 : 0;
-            } else if (key === 'id') {
-                valA = formatUserIdentity(a);
-                valB = formatUserIdentity(b);
-            } else {
-                valA = a[key];
-                valB = b[key];
-            }
-
-            if (typeof valA === 'string') {
-                return order === 'asc' ? valA.localeCompare(valB, 'ko') : valB.localeCompare(valA, 'ko');
-            } else {
-                return order === 'asc' ? valA - valB : valB - valA;
-            }
-        });
-    }
-
-    function sortAndRenderRanking() {
-        let rows = [...currentData].sort((a, b) => b[currentRankingMode] - a[currentRankingMode]);
-        rows.forEach((row, index) => { row.rank = index + 1; });
-        if (filterOnlyBookmarks.ranking) rows = rows.filter(isUserBookmarked);
-        rows = rows.slice(0, 50);
-        const keyword = document.getElementById('ranking-query').value.trim().toLowerCase();
-        rows = rows.filter(row => (rankingType === '전체' || row.type === rankingType) &&
-            (!keyword || cleanText(row.nickname).toLowerCase().includes(keyword) || formatUserIdentity(row).toLowerCase().includes(keyword)));
-        rows = [...rows.filter(isUserBookmarked), ...rows.filter(row => !isUserBookmarked(row))];
-        const pages = Math.max(1, Math.ceil(rows.length / rankingItemsPerPage));
-        rankingCurrentPage = Math.min(pages, Math.max(1, rankingCurrentPage));
-        const start = (rankingCurrentPage - 1) * rankingItemsPerPage;
-        renderRankingTable(rows.slice(start, start + rankingItemsPerPage));
-        document.getElementById('ranking-summary').textContent = rows.length
-            ? `${start + 1}–${Math.min(start + rankingItemsPerPage, rows.length)} / ${rows.length}명 · 전체 활동 ${currentData.length.toLocaleString()}명`
-            : '조건에 맞는 사용자가 없습니다.';
-        document.getElementById('rank-prev').disabled = rankingCurrentPage <= 1;
-        document.getElementById('rank-next').disabled = rankingCurrentPage >= pages;
-        document.getElementById('rank-page').textContent = `${rankingCurrentPage} / ${pages}`;
-        highlightSelectedUser();
-    }
-
-
-    function executeSearch() {
-        const kw = document.getElementById('search-input').value.toLowerCase();
-        let filtered = [...currentData];
-        
-        if (kw) {
-            filtered = filtered.filter(r => {
-                const nickname = cleanText(r.nickname).toLowerCase();
-                const identity = formatUserIdentity(r).toLowerCase();
-                return nickname.includes(kw) || identity.includes(kw);
-            });
-        }
-        filtered = filtered.filter(r => searchTypes[r.type]);
-        if (filterOnlyBookmarks.search) {
-            filtered = filtered.filter(isUserBookmarked);
-        }
-        
-        filtered = sortData(filtered, sortStates.search.key, sortStates.search.order);
-
-        const bookmarkedUsers = filtered.filter(isUserBookmarked);
-        const normalUsers = filtered.filter(r => !isUserBookmarked(r));
-        
-        searchFilteredData = [...bookmarkedUsers, ...normalUsers];
-        searchCurrentPage = 1; 
-        
-        renderSearchTablePage();
-    }
-
-    function renderSearchTablePage() {
-        const totalPages = Math.ceil(searchFilteredData.length / searchItemsPerPage) || 1;
-        
-        if (searchCurrentPage > totalPages) searchCurrentPage = totalPages;
-        if (searchCurrentPage < 1) searchCurrentPage = 1;
-
-        const startIdx = (searchCurrentPage - 1) * searchItemsPerPage;
-        const endIdx = startIdx + searchItemsPerPage;
-        const pageData = searchFilteredData.slice(startIdx, endIdx);
-
-        renderSearchTable(pageData);
-        renderSearchPagination(totalPages);
-        document.getElementById('search-summary').textContent = `검색 결과 ${searchFilteredData.length.toLocaleString()}명`;
-        highlightSelectedUser();
-    }
-
-    function renderSearchPagination(totalPages) {
-        const container = document.getElementById('search-pagination');
-        container.innerHTML = '';
-
-        if (totalPages <= 1) return;
-
-        const prevBtn = document.createElement('button');
-        prevBtn.className = 'page-btn';
-        prevBtn.innerText = '이전';
-        prevBtn.disabled = searchCurrentPage === 1;
-        prevBtn.onclick = () => { if (searchCurrentPage > 1) { searchCurrentPage--; renderSearchTablePage(); } };
-        container.appendChild(prevBtn);
-
-        let startPage = Math.max(1, searchCurrentPage - 2);
-        let endPage = Math.min(totalPages, startPage + 4);
-        if (endPage - startPage < 4) {
-            startPage = Math.max(1, endPage - 4);
-        }
-
-        if (startPage > 1) {
-            const firstBtn = document.createElement('button');
-            firstBtn.className = 'page-btn';
-            firstBtn.innerText = '1';
-            firstBtn.onclick = () => { searchCurrentPage = 1; renderSearchTablePage(); };
-            container.appendChild(firstBtn);
-            if (startPage > 2) {
-                const elp = document.createElement('span');
-                elp.innerText = '...';
-                elp.style.padding = '5px 0';
-                elp.style.color = '#888';
-                container.appendChild(elp);
-            }
-        }
-
-        for (let i = startPage; i <= endPage; i++) {
-            const btn = document.createElement('button');
-            btn.className = `page-btn ${i === searchCurrentPage ? 'active' : ''}`;
-            btn.innerText = i;
-            btn.onclick = () => { searchCurrentPage = i; renderSearchTablePage(); };
-            container.appendChild(btn);
-        }
-
-        if (endPage < totalPages) {
-            if (endPage < totalPages - 1) {
-                const elp = document.createElement('span');
-                elp.innerText = '...';
-                elp.style.padding = '5px 0';
-                elp.style.color = '#888';
-                container.appendChild(elp);
-            }
-            const lastBtn = document.createElement('button');
-            lastBtn.className = 'page-btn';
-            lastBtn.innerText = totalPages;
-            lastBtn.onclick = () => { searchCurrentPage = totalPages; renderSearchTablePage(); };
-            container.appendChild(lastBtn);
-        }
-
-        const nextBtn = document.createElement('button');
-        nextBtn.className = 'page-btn';
-        nextBtn.innerText = '다음';
-        nextBtn.disabled = searchCurrentPage === totalPages;
-        nextBtn.onclick = () => { if (searchCurrentPage < totalPages) { searchCurrentPage++; renderSearchTablePage(); } };
-        container.appendChild(nextBtn);
-    }
-
-    function renderRankingTable(data) {
-        const tbody = document.getElementById('ranking-body');
-        tbody.innerHTML = '';
-        if (!data.length) {
-            const row = document.createElement('tr');
-            const cell = document.createElement('td');
-            cell.colSpan = 8;
-            cell.className = 'table-empty';
-            cell.textContent = dailyLoading ? '데이터를 불러오는 중입니다.' : '조건에 맞는 사용자 데이터가 없습니다.';
-            row.appendChild(cell);
-            tbody.appendChild(row);
-            return;
-        }
-        data.forEach(row => {
-            const isBookmarked = isUserBookmarked(row);
-            const tr = document.createElement('tr');
-            tr.classList.toggle('bookmarked', isBookmarked);
-            tr.dataset.userKey = displayUserKey(row);
-            tr.tabIndex = 0;
-            tr.setAttribute('aria-label', `${cleanText(row.nickname)} 활동 분석 보기`);
-            tr.addEventListener('keydown', event => {
-                if (event.target !== tr || !['Enter', ' '].includes(event.key)) return;
-                event.preventDefault();
-                openModal(row);
-            }); 
-            
-            tr.onclick = () => openModal(row);
-            let bType = (row.type === "고닉") ? "bg-gonic" : (row.type === "반고닉" ? "bg-ban" : "bg-udong");
-            
-            const postWeight = currentRankingMode === 'post' ? 'font-weight:bold;' : '';
-            const commentWeight = currentRankingMode === 'comment' ? 'font-weight:bold;' : '';
-            const totalWeight = currentRankingMode === 'total' ? 'font-weight:bold;' : '';
-
-            const safeNick = escapeHTML(row.nickname);
-            const safeId = escapeHTML(formatUserIdentity(row));
-            const avatarText = escapeHTML(Array.from(cleanText(row.nickname) || '?')[0] || '?');
-            const avatarClass = row.type === '반고닉' ? 'avatar-ban' : (row.type === '유동' ? 'avatar-udong' : 'avatar-gonic');
-
-            tr.innerHTML = `
-                <td class="rank-number">${row.rank}위</td>
-                <td class="td-bookmark" title="클릭하여 즐겨찾기">
-                    <button type="button" class="bookmark-button" aria-label="${isBookmarked ? '즐겨찾기 해제' : '즐겨찾기 추가'}" aria-pressed="${isBookmarked}">${isBookmarked ? '★' : '☆'}</button>
-                </td>
-                <td title="${safeNick}"><span class="user-cell"><span class="user-avatar ${avatarClass}">${avatarText}</span><span class="user-cell-name">${safeNick}</span></span></td>
-                <td class="identity-cell" title="${safeId}">${safeId}</td>
-                <td><span class="badge ${bType}">${escapeHTML(row.type)}</span></td>
-                <td class="count-post" style="${postWeight}">${row.post}</td>
-                <td class="count-comment" style="${commentWeight}">${row.comment}</td>
-                <td class="count-total" style="${totalWeight}">${row.total}</td>
-            `;
-            const bookmarkCell = tr.querySelector('.td-bookmark');
-            if (bookmarkCell) {
-                bookmarkCell.addEventListener('click', event => {
-                    event.stopPropagation();
-                    toggleBookmarkUser(row);
-                });
-            }
-            tbody.appendChild(tr);
-        });
-    }
-
-    function renderSearchTable(data) {
-        const tbody = document.getElementById('search-body');
-        tbody.innerHTML = '';
-        if (!data.length) {
-            const row = document.createElement('tr');
-            const cell = document.createElement('td');
-            cell.colSpan = 7;
-            cell.className = 'table-empty';
-            cell.textContent = dailyLoading ? '데이터를 불러오는 중입니다.' : '조건에 맞는 사용자 데이터가 없습니다.';
-            row.appendChild(cell);
-            tbody.appendChild(row);
-            return;
-        }
-        data.forEach(row => {
-            const isBookmarked = isUserBookmarked(row);
-            const tr = document.createElement('tr');
-            tr.classList.toggle('bookmarked', isBookmarked);
-            tr.dataset.userKey = displayUserKey(row);
-            tr.tabIndex = 0;
-            tr.setAttribute('aria-label', `${cleanText(row.nickname)} 활동 분석 보기`);
-            tr.addEventListener('keydown', event => {
-                if (event.target !== tr || !['Enter', ' '].includes(event.key)) return;
-                event.preventDefault();
-                openModal(row);
-            }); 
-            
-            tr.onclick = () => openModal(row);
-            let bType = (row.type === "고닉") ? "bg-gonic" : (row.type === "반고닉" ? "bg-ban" : "bg-udong");
-            
-            const safeNick = escapeHTML(row.nickname);
-            const safeId = escapeHTML(formatUserIdentity(row));
-            const avatarText = escapeHTML(Array.from(cleanText(row.nickname) || '?')[0] || '?');
-            const avatarClass = row.type === '반고닉' ? 'avatar-ban' : (row.type === '유동' ? 'avatar-udong' : 'avatar-gonic');
-
-            tr.innerHTML = `
-                <td class="td-bookmark" title="클릭하여 즐겨찾기">
-                    <button type="button" class="bookmark-button" aria-label="${isBookmarked ? '즐겨찾기 해제' : '즐겨찾기 추가'}" aria-pressed="${isBookmarked}">${isBookmarked ? '★' : '☆'}</button>
-                </td>
-                <td title="${safeNick}"><span class="user-cell"><span class="user-avatar ${avatarClass}">${avatarText}</span><span class="user-cell-name">${safeNick}</span></span></td>
-                <td class="identity-cell" title="${safeId}">${safeId}</td>
-                <td><span class="badge ${bType}">${escapeHTML(row.type)}</span></td>
-                <td class="count-post">${row.post}</td>
-                <td class="count-comment">${row.comment}</td>
-                <td class="count-total">${row.total}</td>
-            `;
-            const bookmarkCell = tr.querySelector('.td-bookmark');
-            if (bookmarkCell) {
-                bookmarkCell.addEventListener('click', event => {
-                    event.stopPropagation();
-                    toggleBookmarkUser(row);
-                });
-            }
-            tbody.appendChild(tr);
-        });
-    }
 
     let modalChart = null;
 
@@ -1330,22 +861,6 @@ const R2_DOMAIN = "https://pub-fca2435a027e41bf954b4bc4f46e560a.r2.dev";
 
     function isUserBookmarked(user) {
         return bookmarkAliases(user).some(key => bookmarks.includes(key));
-    }
-
-    function toggleBookmarkUser(user) {
-        const aliases = bookmarkAliases(user);
-        if (!aliases.length) return;
-
-        const alreadyBookmarked = aliases.some(key => bookmarks.includes(key));
-        if (alreadyBookmarked) {
-            bookmarks = bookmarks.filter(saved => !aliases.includes(saved));
-        } else {
-            bookmarks = [...bookmarks, aliases[0]];
-        }
-
-        localStorage.setItem('user_bookmarks', JSON.stringify(bookmarks));
-        sortAndRenderRanking();
-        executeSearch();
     }
 
     function isSameUser(record, user, userKey) {
@@ -2471,7 +1986,7 @@ const R2_DOMAIN = "https://pub-fca2435a027e41bf954b4bc4f46e560a.r2.dev";
     ];
 
     async function loadRecentUserActivity(user, requestSequence) {
-        const dateStr = document.getElementById('date-picker').value || todayKst;
+        const dateStr = document.getElementById('archive-date-input').value || todayKst;
         const userKey = resolveUserKey(user);
         const lastValidHour = getLastValidHour();
         const posts = [];
@@ -2493,6 +2008,7 @@ const R2_DOMAIN = "https://pub-fca2435a027e41bf954b4bc4f46e560a.r2.dev";
         // Parquet만 읽고, 게시글 5개/댓글 10개가 모이면 더 오래된 파일은 읽지 않습니다.
         for (let hour = lastValidHour; hour >= 0; hour--) {
             if (requestSequence !== modalLoadSequence) return;
+            if (!includedHours().includes(hour)) continue;
             if (posts.length >= 5 && comments.length >= 10) break;
 
             const hourUser = findUserInHour(hourlyRawData[hour], user, userKey);
@@ -2537,147 +2053,4 @@ const R2_DOMAIN = "https://pub-fca2435a027e41bf954b4bc4f46e560a.r2.dev";
         renderCommentItems(sortNewestFirst(comments).slice(0, 10));
     }
 
-    function scrollModalSection(sectionId) {
-        const tabs = {'modal-chart-section': 'chart', 'modal-posts-section': 'posts', 'modal-comments-section': 'comments'};
-        if (tabs[sectionId]) showDetailTab(tabs[sectionId]);
-    }
-
-
-    function openModal(user) {
-        const requestSequence = ++modalLoadSequence;
-        const nick = cleanText(user.nickname) || '이름 없음';
-        const id = formatUserIdentity(user);
-        const userKey = resolveUserKey(user);
-        if (dailyLoading) return;
-        selectedUser = user;
-        document.getElementById('detail-empty').hidden = true;
-        document.getElementById('detail-content').hidden = false;
-        document.getElementById('clear-selection').hidden = false;
-        document.getElementById('profile-name').textContent = nick;
-        document.getElementById('profile-identity').textContent = id ? `UID(IP): ${id}` : '식별 정보 없음';
-        const badge = document.getElementById('profile-type');
-        badge.textContent = cleanText(user.type) || '유형 없음';
-        badge.className = 'badge ' + (user.type === '고닉' ? 'bg-gonic' : user.type === '반고닉' ? 'bg-ban' : 'bg-udong');
-        const avatar = document.getElementById('profile-avatar');
-        avatar.textContent = Array.from(nick)[0];
-        avatar.className = 'user-avatar profile-avatar ' + (user.type === '반고닉' ? 'avatar-ban' : user.type === '유동' ? 'avatar-udong' : '');
-        for (const key of ['post', 'comment', 'total']) {
-            document.getElementById('profile-' + key).textContent = Number(user[key] || 0).toLocaleString();
-        }
-        document.getElementById('profile-date').textContent = document.getElementById('date-picker').value || todayKst;
-        showDetailTab('chart');
-        highlightSelectedUser();
-        document.getElementById('recent-posts').scrollTop = 0;
-        document.getElementById('recent-comments').scrollTop = 0;
-        if (window.matchMedia && window.matchMedia('(max-width: 1023px)').matches) {
-            document.getElementById('graph-modal').scrollIntoView({behavior: reducedMotion() ? 'auto' : 'smooth', block: 'start'});
-        }
-        setActivityState('recent-posts', '최근 게시글을 불러오는 중...');
-        setActivityState('recent-comments', '최근 댓글을 불러오는 중...');
-
-        const lastValidIndex = getLastValidHour();
-        const validLen = lastValidIndex >= 0 ? lastValidIndex + 1 : 0;
-        const hours = Array.from({length: validLen}, (_, i) => `${i}시`);
-        const userPosts = [];
-        const userComments = [];
-
-        for (let i = 0; i < validLen; i++) {
-            const userRecord = findUserInHour(hourlyRawData[i], user, userKey);
-            userPosts.push(userRecord ? Number(userRecord.post || 0) : 0);
-            userComments.push(userRecord ? Number(userRecord.comment || 0) : 0);
-        }
-
-        if (modalChart) modalChart.dispose();
-        modalChart = echarts.init(document.getElementById('chart-container'));
-        modalChart.setOption({
-            animationDuration: reducedMotion() ? 0 : 300,
-            textStyle: {fontFamily: 'Inter, Noto Sans KR, sans-serif'},
-            tooltip: {trigger: 'axis', confine: true, backgroundColor: '#1e293b', borderColor: '#334155',
-                textStyle: {color: '#fff', fontSize: 14}, axisPointer: {type: 'shadow'}},
-            legend: {data: ['게시글', '댓글'], right: 0, top: 0, icon: 'circle', itemWidth: 8, itemHeight: 8,
-                textStyle: {fontSize: 12, color: '#64748b'}},
-            grid: {left: 2, right: 4, top: 38, bottom: 0, containLabel: true},
-            xAxis: {type: 'category', data: hours, axisTick: {show: false},
-                axisLine: {lineStyle: {color: '#cbd5e1'}}, axisLabel: {fontSize: 12, color: '#94a3b8', hideOverlap: true}},
-            yAxis: {type: 'value', minInterval: 1, splitLine: {lineStyle: {color: '#edf1f7'}},
-                axisLabel: {fontSize: 12, color: '#94a3b8'}},
-            series: [
-                {name: '게시글', type: 'bar', data: userPosts, barMaxWidth: 9, itemStyle: {color: '#2563eb', borderRadius: [2,2,0,0]}},
-                {name: '댓글', type: 'bar', data: userComments, barMaxWidth: 9, itemStyle: {color: '#7c3aed', borderRadius: [2,2,0,0]}}
-            ]
-        });
-        requestAnimationFrame(() => {
-            if (modalChart) modalChart.resize();
-        });
-
-        loadRecentUserActivity(user, requestSequence).catch(error => {
-            if (requestSequence !== modalLoadSequence) return;
-            console.error('상세 Parquet 로딩 실패:', error);
-            setActivityState('recent-posts', '게시글 상세 데이터를 불러오지 못했습니다.', true);
-            setActivityState('recent-comments', '댓글 상세 데이터를 불러오지 못했습니다.', true);
-        });
-    }
-
-    // 기존 행 클릭 API 이름은 유지하되 선택 해제는 인라인 패널을 초기화합니다.
-    function closeModal() {
-        modalLoadSequence++;
-        selectedUser = null;
-        if (modalChart) { modalChart.dispose(); modalChart = null; }
-        document.getElementById('detail-content').hidden = true;
-        document.getElementById('clear-selection').hidden = true;
-        document.getElementById('detail-empty').hidden = false;
-        document.getElementById('recent-posts').replaceChildren();
-        document.getElementById('recent-comments').replaceChildren();
-        highlightSelectedUser();
-    }
-
-    document.getElementById('media-lightbox').addEventListener('click', event => {
-        if (event.target === event.currentTarget) closeMediaLightbox();
-    });
-    document.getElementById('media-lightbox-close').addEventListener('click', closeMediaLightbox);
-
-    document.addEventListener('keydown', event => {
-        if (event.key !== 'Escape') return;
-        const mediaLightbox = document.getElementById('media-lightbox');
-        if (mediaLightbox.classList.contains('open')) {
-            closeMediaLightbox();
-            return;
-        }
-        if (selectedUser && document.getElementById('graph-modal').contains(document.activeElement)) {
-            closeModal();
-        }
-    });
-
-    window.addEventListener('resize', () => {
-        if (mainTrendChart) mainTrendChart.resize();
-        if (modalChart) modalChart.resize();
-    });
-
-    window.onload = () => fetchDailyData(todayKst);
-
-    document.querySelectorAll('th.sortable').forEach(header => {
-        header.addEventListener('keydown', event => {
-            if (event.key === 'Enter' || event.key === ' ') {
-                event.preventDefault();
-                header.click();
-            }
-        });
-    });
-    document.querySelectorAll('[role="tablist"]').forEach(list => {
-        list.addEventListener('keydown', event => {
-            const tabs = Array.from(list.querySelectorAll('[role="tab"]'));
-            const index = tabs.indexOf(event.target);
-            if (index < 0 || !['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
-            event.preventDefault();
-            const next = event.key === 'Home' ? 0 : event.key === 'End' ? tabs.length - 1 :
-                (index + (event.key === 'ArrowRight' ? 1 : -1) + tabs.length) % tabs.length;
-            tabs[next].focus();
-            tabs[next].click();
-        });
-    });
-
-</script>
-<!-- 기존 암호화 summary API 및 본문 접근 정책을 유지합니다. -->
-<script src="./dashboard_api_patch.js"></script>
-</body>
-</html>
+</script><script src="./dashboard_api_patch.js" onerror="handleAdapterMissing()"></script><script id="dashboard-startup">initializeDashboard();</script></body></html>
