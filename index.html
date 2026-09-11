@@ -260,6 +260,9 @@ button:focus-visible,a:focus-visible,input:focus-visible,tr:focus-visible,th:foc
 #overview-chart-panel,#user-workspace,#user-ranking-panel,#user-detail-panel{scroll-margin-top:0}
 .chart-frame{height:280px;width:100%;position:relative;overflow:hidden}
 #main-trend-chart{height:100%;width:100%}.chart-empty{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;text-align:center;padding:24px;font-size:13px;pointer-events:none}
+#main-trend-chart{cursor:crosshair}#main-trend-chart:focus-visible{outline:2px solid rgb(var(--primary));outline-offset:-3px;border-radius:8px}
+.selected-hour-banner{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px;padding:12px 16px;border-radius:12px;background:rgb(var(--primary) / .08);color:rgb(var(--primary));font-size:14px;font-weight:600}
+#clear-hour-selection{padding:6px 10px;border:0;border-radius:8px;background:rgb(var(--surface-container-lowest));color:rgb(var(--primary));font-size:13px;font-weight:600}#clear-hour-selection:hover{background:rgb(var(--primary) / .12)}
 #chart-container{height:225px;width:100%;min-width:0;margin-top:8px}
 [id^=toggle-][aria-pressed=false]{opacity:.38;text-decoration:line-through}
 [id^=filter-]{color:rgb(var(--on-surface-variant))!important;background:transparent!important;box-shadow:none!important}
@@ -380,7 +383,7 @@ button:focus-visible,a:focus-visible,input:focus-visible,tr:focus-visible,th:foc
 <h2 class="font-headline-sm text-headline-sm text-on-surface font-bold">갤러리 타임라인 활동 추이</h2>
 <span class="px-2 py-0.5 bg-error/10 text-error rounded font-label-caps text-label-caps font-bold" id="peak-time-badge">피크 데이터 없음</span>
 </div>
-<p class="font-body-sm text-body-sm text-on-surface-variant mt-0.5">시간대별 게시글·댓글·활동 유저 집계 (KST)</p>
+<p class="font-body-sm text-body-sm text-on-surface-variant mt-0.5">시간대를 클릭하면 해당 시간의 활동만 표시합니다. (KST)</p>
 </div>
 <div class="flex items-center gap-1 bg-surface-container-low p-1 rounded-lg">
 <button class="px-space-sm py-1 rounded font-body-sm-medium text-body-sm-medium bg-primary text-on-primary flex items-center gap-1.5 transition-all" id="toggle-posts" onclick="toggleMetricSeries('posts')" aria-pressed="true" type="button">
@@ -397,9 +400,9 @@ button:focus-visible,a:focus-visible,input:focus-visible,tr:focus-visible,th:foc
           </button>
 </div>
 </div>
-<div class="chart-frame bg-surface-container-low/40 rounded-lg"><div id="main-trend-chart" role="img" aria-label="시간대별 게시글, 댓글, 활동 유저 수"></div><div id="chart-empty" class="chart-empty text-on-surface-variant">그래프 데이터를 불러오는 중입니다.</div></div>
+<div class="chart-frame bg-surface-container-low/40 rounded-lg"><div id="main-trend-chart" role="group" tabindex="0" onkeydown="handleTimelineKey(event)" aria-label="시간대별 게시글, 댓글, 활동 유저 수. 좌우 방향키로 시간 선택, Escape 키로 선택 해제."></div><div id="chart-empty" class="chart-empty text-on-surface-variant">그래프 데이터를 불러오는 중입니다.</div></div>
 </div>
-<div class="grid grid-cols-1 xl:grid-cols-12 gap-space-md items-start" id="user-workspace">
+<div id="selected-hour-banner" class="selected-hour-banner" hidden><span id="selected-hour-label" role="status" aria-live="polite"></span><button type="button" id="clear-hour-selection" onclick="clearHourSelection()">시간 선택 해제</button></div><div class="grid grid-cols-1 xl:grid-cols-12 gap-space-md items-start" id="user-workspace">
 <div class="xl:col-span-7 bg-surface-container-lowest rounded-xl p-5 shadow-sm flex flex-col gap-space-md user-list-panel" id="user-ranking-panel">
 <div class="flex flex-col gap-space-sm">
 <div class="flex items-center justify-between">
@@ -537,6 +540,7 @@ button:focus-visible,a:focus-visible,input:focus-visible,tr:focus-visible,th:foc
 let currentData = [], hourlyRawData = Array(24).fill(null), selectedUser = null;
 let dailyLoadSequence = 0, dailyLoading = false, modalLoadSequence = 0;
 let mainTrendChart = null, dailyTrendData = null, selectedDate = '', timeRange = 'all';
+let selectedHour = null;
 let activeTab = 'overview', detailTab = 'hourly', typeFilter = 'ALL', tablePage = 1;
 let sectionScrollOffset=128, navigationUpdateQueued=false;
 let tableSort = {key:'total', direction:-1}, adapterMissing = false;
@@ -554,14 +558,19 @@ function show(id, visible) { const node=dom(id); if(!node)return; node.hidden=!v
 function numberText(n) { return Number(n || 0).toLocaleString('ko-KR'); }
 function amount(n) { const v=Number(n); return Number.isFinite(v) && v>0 ? v : 0; }
 function kstToday() { return new Date(Date.now()+9*3600000).toISOString().slice(0,10); }
-function includedHours() { return Array.from({length:24},(_,h)=>h).filter(h=>timeRange==='all'||h<=2||h>=19); }
+function timelineHours() { return Array.from({length:24},(_,h)=>h).filter(h=>timeRange==='all'||h<=2||h>=19); }
+function includedHours() { return selectedHour===null?timelineHours():[selectedHour]; }
+function hourWindow(hour) { return String(hour).padStart(2,'0')+':00~'+String(hour+1).padStart(2,'0')+':00'; }
 function validDate(value) { return /^\d{4}-\d{2}-\d{2}$/.test(value) && value>=PROJECT_START_DATE && value<=kstToday() && !Number.isNaN(Date.parse(value)) && new Date(value+'T00:00:00Z').toISOString().slice(0,10)===value; }
 function setStatus(message, state='ready') { textAt('status-text',message); dom('status-text').dataset.state=state; dom('status-dot').dataset.state=state; }
 function updateAutoRefreshLabel() { textAt('auto-refresh-label',selectedDate===kstToday()?'오늘 · 5분 자동 갱신':'과거 날짜 · 자동 갱신 꺼짐'); }
 function syncRangeButtons() {
     ['all','peak'].forEach(k=>dom('hours-'+k).setAttribute('aria-pressed',String(k===timeRange)));
     dom('today-btn').setAttribute('aria-pressed',String(selectedDate===kstToday()));
-    textAt('metric-range',timeRange==='all'?'선택 날짜 · 24시간':'선택 날짜 · 피크타임');
+    textAt('metric-range',selectedHour===null?(timeRange==='all'?'선택 날짜 · 24시간':'선택 날짜 · 피크타임'):hourWindow(selectedHour));
+    show('selected-hour-banner',selectedHour!==null);
+    textAt('selected-hour-label',selectedHour===null?'':`${hourWindow(selectedHour)} 활동만 표시 중`);
+    dom('main-trend-chart').setAttribute('aria-label',`시간대별 게시글, 댓글, 활동 유저 수. ${selectedHour===null?'전체 시간대':hourWindow(selectedHour)+' 선택됨'}. 좌우 방향키로 시간 선택, Escape 키로 선택 해제.`);
 }
 function setLoading(value) {
     dailyLoading=value; dom('refresh-btn').disabled=value;
@@ -593,6 +602,7 @@ function changeAnalysisDate(value) {
 function refreshCurrentData() { if(dailyLoading)return;return fetchDailyData(selectedDate||kstToday(),true); }
 async function fetchDailyData(dateStr,forceRefresh=false) {
     if(!validDate(dateStr))return;
+    if(dateStr!==selectedDate)selectedHour=null;
     const sequence=++dailyLoadSequence;selectedDate=dateStr;dom('archive-date-input').value=dateStr;
     clearSelectedUser();setLoading(true);syncRangeButtons();updateAutoRefreshLabel();
     hourlyRawData=Array(24).fill(null);currentData=[];tablePage=1;rebuildView();
@@ -630,19 +640,21 @@ function normalizeUser(u) {
     return {...u,user_key:key,type,nickname:cleanText(u.nickname)||'이름 없음',post,comment,total:post+comment};
 }
 function rebuildView() {
-    const hours=includedHours(), users=new Map();totals={post:0,comment:0,total:0};
+    const hours=timelineHours(), scopeHours=includedHours(), users=new Map();totals={post:0,comment:0,total:0};
     dailyTrendData={hours,labels:hours.map(h=>String(h).padStart(2,'0')+'시'),posts:[],comments:[],users:[]};
     for(const hour of hours){
         const data=hourlyRawData[hour];
         if(!Array.isArray(data)){dailyTrendData.posts.push(null);dailyTrendData.comments.push(null);dailyTrendData.users.push(null);continue;}
         let post=0,comment=0;const hourUsers=new Set();
         for(const u of data){
+            if(u.post+u.comment<=0)continue;
             post+=u.post;comment+=u.comment;const key=u.user_key;
             if(!key)continue;hourUsers.add(key);
+            if(!scopeHours.includes(hour))continue;
             const prev=users.get(key);
             users.set(key,prev?{...prev,...u,post:prev.post+u.post,comment:prev.comment+u.comment,total:prev.total+u.total}:{...u});
         }
-        totals.post+=post;totals.comment+=comment;
+        if(scopeHours.includes(hour)){totals.post+=post;totals.comment+=comment;}
         dailyTrendData.posts.push(post);dailyTrendData.comments.push(comment);dailyTrendData.users.push(hourUsers.size);
     }
     totals.total=totals.post+totals.comment;
@@ -667,9 +679,9 @@ function rebuildView() {
     textAt('peak-time-badge',peakLabel(dailyTrendData.posts,dailyTrendData.comments,hours,'피크'));
     syncRangeButtons();renderTable();renderTrendChart();
     if(!dailyLoading){
-        const collected=hours.filter(h=>Array.isArray(hourlyRawData[h]));
+        const collected=scopeHours.filter(h=>Array.isArray(hourlyRawData[h]));
         if(!collected.length){setStatus(`${selectedDate} · 선택한 시간대에 수집된 데이터가 없습니다.`,'empty');textAt('header-sync-status','수집 데이터 없음');}
-        else {setStatus(`${selectedDate} · ${timeRange==='all'?'24시간 전체':'00~02시 · 19~23시'} · ${collected.length}/${hours.length}개 시간대 수집 · ${numberText(currentData.length)}명 집계 (KST)`);textAt('header-sync-status','집계 완료');}
+        else {setStatus(`${selectedDate} · ${selectedHour===null?(timeRange==='all'?'24시간 전체':'00~02시 · 19~23시'):hourWindow(selectedHour)} · ${collected.length}/${scopeHours.length}개 시간대 수집 · ${numberText(currentData.length)}명 집계 (KST)`);textAt('header-sync-status','집계 완료');}
     }
 }
 function renderPostParticipation() {
@@ -691,7 +703,42 @@ function peakLabel(posts,comments,hours,prefix) {
     let max=0,index=-1;posts.forEach((p,i)=>{const value=(p||0)+(comments[i]||0);if(value>max){max=value;index=i;}});
     return index<0?'활동 피크 없음':`${prefix}: ${String(hours[index]).padStart(2,'0')}:00 (${numberText(max)}건)`;
 }
-function setTimeRange(range) { if(!['all','peak'].includes(range)||range===timeRange)return;timeRange=range;tablePage=1;clearSelectedUser();rebuildView(); }
+function setTimeRange(range) { if(!['all','peak'].includes(range)||(range===timeRange&&selectedHour===null))return;timeRange=range;selectedHour=null;tablePage=1;clearSelectedUser();rebuildView(); }
+function selectTimelineHour(hour) {
+    if(dailyLoading||!Number.isInteger(hour)||!timelineHours().includes(hour)||hour===selectedHour)return;
+    selectedHour=hour;tablePage=1;clearSelectedUser();rebuildView();
+}
+function clearHourSelection() {
+    if(selectedHour===null)return;
+    selectedHour=null;tablePage=1;clearSelectedUser();rebuildView();
+}
+function handleTimelineKey(event) {
+    if(event.key==='Escape'){if(selectedHour!==null){event.preventDefault();clearHourSelection();}return;}
+    if(dailyLoading||!dailyTrendData?.posts.some(value=>value!==null))return;
+    const hours=timelineHours(),index=hours.indexOf(selectedHour);let next;
+    if(event.key==='ArrowRight')next=Math.min(hours.length-1,index+1);
+    else if(event.key==='ArrowLeft')next=index<0?hours.length-1:Math.max(0,index-1);
+    else if(event.key==='Home')next=0;
+    else if(event.key==='End')next=hours.length-1;
+    else return;
+    event.preventDefault();selectTimelineHour(hours[next]);
+}
+function bindTimelineSelection(chart) {
+    // ZRender captures clicks in the plot, including gaps with no points.
+    // https://echarts.apache.org/handbook/en/concepts/event/
+    chart.getZr().on('click',event=>{
+        const point=[event.offsetX,event.offsetY];
+        if(!point.every(Number.isFinite)||!chart.containPixel({gridIndex:0},point))return;
+        const position=chart.convertFromPixel({gridIndex:0},point);
+        const index=Math.round(Array.isArray(position)?position[0]:position);
+        if(Number.isInteger(index)&&index>=0&&index<timelineHours().length)selectTimelineHour(timelineHours()[index]);
+    });
+    chart.on('click',event=>{
+        if(event.componentType!=='xAxis')return;
+        const index=dailyTrendData?.labels.indexOf(String(event.value));
+        if(index>=0)selectTimelineHour(dailyTrendData.hours[index]);
+    });
+}
 function chartColors() { return document.documentElement.classList.contains('dark')?{text:'#b2c1d8',grid:'#344864',post:'#91b6ff',comment:'#c3a2ff',user:'#73d9b1',bg:'#1a2637'}:{text:'#44474f',grid:'#e1e3ee',post:'#004ac6',comment:'#712ae2',user:'#007d57',bg:'#ffffff'}; }
 function chartBase(labels) {
     const c=chartColors();return {animation:false,backgroundColor:'transparent',textStyle:{fontFamily:'Inter, Noto Sans KR, sans-serif'},
@@ -705,12 +752,22 @@ function renderTrendChart() {
     const hasData=dailyTrendData.posts.some(v=>v!==null);show('chart-empty',!hasData);
     if(!hasData){mainTrendChart?.clear();textAt('chart-empty','선택한 시간대의 수집 데이터가 없습니다.');return;}
     if(!window.echarts){show('chart-empty',true);textAt('chart-empty','그래프 라이브러리를 불러오지 못했습니다. 인터넷 연결 후 페이지를 새로고침해 주세요.');return;}
-    mainTrendChart ||= echarts.init(dom('main-trend-chart'));
+    if(!mainTrendChart){mainTrendChart=echarts.init(dom('main-trend-chart'));bindTimelineSelection(mainTrendChart);}
     const c=chartColors(),names={posts:'게시글',comments:'댓글',users:'활동 유저'},colors={posts:c.post,comments:c.comment,users:c.user};
     const option=chartBase(dailyTrendData.labels);
+    option.xAxis.triggerEvent=true;
+    if(selectedHour!==null){
+        const label=String(selectedHour).padStart(2,'0')+'시';
+        option.xAxis.axisLabel.formatter=value=>value===label?`{selected|${value}}`:value;
+        option.xAxis.axisLabel.rich={selected:{color:c.bg,backgroundColor:c.post,borderRadius:4,padding:[3,5]}};
+    }
     option.legend={show:false,selected:Object.fromEntries(Object.entries(names).map(([key,name])=>[name,seriesVisible[key]]))};
     option.yAxis=[{...option.yAxis,name:'글·댓글',nameTextStyle:{color:c.text}},{...option.yAxis,name:'유저',nameTextStyle:{color:c.text},splitLine:{show:false}}];
     option.series=Object.entries(names).map(([key,name])=>({name,type:'line',data:dailyTrendData[key],smooth:0.22,connectNulls:false,showSymbol:false,symbolSize:6,yAxisIndex:key==='users'?1:0,lineStyle:{width:2.5,color:colors[key],type:key==='users'?'dashed':'solid'},itemStyle:{color:colors[key]},areaStyle:key==='posts'?{color:colors[key],opacity:0.06}:undefined}));
+    if(selectedHour!==null){
+        const markerSeries=option.series.find(series=>option.legend.selected[series.name])||option.series[0];
+        markerSeries.markLine={silent:true,symbol:['none','none'],label:{show:false},lineStyle:{color:c.post,width:2,type:'solid',opacity:0.7},data:[{xAxis:String(selectedHour).padStart(2,'0')+'시'}]};
+    }
     mainTrendChart.setOption(option,true);requestAnimationFrame(()=>mainTrendChart?.resize());
 }
 function toggleMetricSeries(key) { if(!(key in seriesVisible))return;seriesVisible[key]=!seriesVisible[key];dom('toggle-'+key).setAttribute('aria-pressed',String(seriesVisible[key]));renderTrendChart(); }
