@@ -336,7 +336,7 @@ button:focus-visible,a:focus-visible,input:focus-visible,tr:focus-visible,th:foc
 <span class="font-metric-val-lg text-metric-val-lg text-primary tracking-tight" id="metric-total-posts">0</span>
 <span class="font-body-md text-body-md text-on-surface-variant">건</span>
 </div>
-<div class="flex flex-col gap-1.5 pt-2"><div class="w-full h-1.5 bg-surface-container-high rounded-full overflow-hidden"></div><div class="flex items-center justify-between font-body-sm-medium text-body-sm-medium text-on-surface-variant"><span>일반글 — · 개념글 —</span><span>구분 데이터 없음</span></div></div>
+<div class="flex flex-col gap-1.5 pt-2"><div class="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 font-body-sm-medium text-body-sm-medium text-on-surface-variant"><span>글 작성자 <strong id="post-author-count" class="font-code-mono text-primary">—</strong></span><span title="선택한 날짜·시간대의 총 게시글 ÷ 글 작성자 수">작성자 1인당 <strong id="posts-per-author" class="font-code-mono text-on-surface">—</strong></span></div><div class="flex items-center justify-between gap-2 font-body-sm-medium text-body-sm-medium text-on-surface-variant" title="선택한 날짜·시간대의 글 작성자 수 ÷ 전체 활동 유저 수 × 100"><span>글 작성 참여율</span><strong id="post-participation-rate" class="font-code-mono text-primary">—</strong></div><div id="post-participation-meter" class="w-full h-1.5 bg-surface-container-high rounded-full overflow-hidden" role="img" aria-label="글 작성 참여율: 데이터 없음"><div id="post-participation-bar" class="h-full bg-primary rounded-full transition-all duration-700" style="width:0%"></div></div></div>
 </div>
 <div class="bg-surface-container-lowest p-5 rounded-xl shadow-sm flex flex-col justify-between relative overflow-hidden group">
 <div class="flex items-center justify-between">
@@ -514,7 +514,7 @@ button:focus-visible,a:focus-visible,input:focus-visible,tr:focus-visible,th:foc
 <div class="hidden flex-col gap-2 max-h-72 overflow-y-auto pr-1" id="pane-user-posts" role="tabpanel" aria-labelledby="subtab-recent-posts"><div id="recent-posts" class="activity-list" aria-live="polite"></div></div>
 <div class="hidden flex-col gap-2 max-h-72 overflow-y-auto pr-1" id="pane-user-comments" role="tabpanel" aria-labelledby="subtab-recent-comments"><div id="recent-comments" class="activity-list" aria-live="polite"></div></div>
 </div><a class="w-full py-2.5 rounded-lg bg-surface-container-low hover:bg-surface-container text-on-surface font-body-sm-medium text-body-sm-medium flex items-center justify-center gap-2 transition-colors" href="https://gall.dcinside.com/mgallery/board/lists/?id=projectmx" rel="noopener noreferrer" target="_blank">
-<span class="">디시인사이드 블루아카이브 갤러리 바로가기</span>
+<span class="">디시인사이드 블루아카 갤러리 바로가기</span>
 <span class="material-symbols-outlined text-sm">north_east</span>
 </a>
 </div>
@@ -653,6 +653,7 @@ function rebuildView() {
     currentData=[...users.values()].sort((a,b)=>b.total-a.total||a.user_key.localeCompare(b.user_key));
     currentData.forEach((u,i)=>u.rank=i+1);
     textAt('metric-total-posts',numberText(totals.post));textAt('metric-total-comments',numberText(totals.comment));textAt('metric-total-users',numberText(currentData.length));
+    renderPostParticipation();
     textAt('comments-per-post',totals.post?(totals.comment/totals.post).toFixed(1)+'개':'—');
     textAt('comments-share',totals.total?(100*totals.comment/totals.total).toFixed(1)+'%':'—');
     const registered=currentData.filter(u=>u.type==='고닉'||u.type==='반고닉').length,anon=currentData.filter(u=>u.type==='유동').length;
@@ -667,6 +668,21 @@ function rebuildView() {
         if(!collected.length){setStatus(`${selectedDate} · 선택한 시간대에 수집된 데이터가 없습니다.`,'empty');textAt('header-sync-status','수집 데이터 없음');}
         else {setStatus(`${selectedDate} · ${timeRange==='all'?'24시간 전체':'00~02시 · 19~23시'} · ${collected.length}/${hours.length}개 시간대 수집 · ${numberText(currentData.length)}명 집계 (KST)`);textAt('header-sync-status','집계 완료');}
     }
+}
+function renderPostParticipation() {
+    // currentData is already deduplicated across the selected hours, before table filters.
+    const hasData=includedHours().some(hour=>Array.isArray(hourlyRawData[hour]));
+    const authors=currentData.filter(user=>user.post>0).length;
+    const activeUsers=currentData.length;
+    const rate=hasData&&activeUsers>0?100*authors/activeUsers:null;
+    const decimal=value=>value.toLocaleString('ko-KR',{minimumFractionDigits:1,maximumFractionDigits:1});
+    textAt('post-author-count',hasData?numberText(authors)+'명':'—');
+    textAt('posts-per-author',hasData&&authors>0?decimal(totals.post/authors)+'개':'—');
+    textAt('post-participation-rate',rate===null?'—':decimal(rate)+'%');
+    dom('post-participation-bar').style.width=(rate??0)+'%';
+    dom('post-participation-meter').setAttribute('aria-label',rate===null
+        ?'글 작성 참여율: 산출할 활동 데이터 없음'
+        :`글 작성 참여율 ${decimal(rate)}%, 활동 유저 ${numberText(activeUsers)}명 중 글 작성자 ${numberText(authors)}명`);
 }
 function peakLabel(posts,comments,hours,prefix) {
     let max=0,index=-1;posts.forEach((p,i)=>{const value=(p||0)+(comments[i]||0);if(value>max){max=value;index=i;}});
