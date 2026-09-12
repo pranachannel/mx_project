@@ -297,13 +297,56 @@ button:focus-visible,a:focus-visible,input:focus-visible,tr:focus-visible,th:foc
 @media(max-width:1023px){.header-top{height:auto!important;padding-top:10px;padding-bottom:10px;align-items:flex-start!important}.header-top>div:first-child{flex-wrap:wrap;min-width:0;gap:10px!important}.section-nav{flex-wrap:wrap;flex-basis:100%}.section-nav-link{padding:7px 9px}}
 @media(max-width:767px){.header-inner{min-height:0;padding-left:16px!important;padding-right:16px!important}.header-top{height:auto!important;min-height:60px;gap:12px;flex-wrap:wrap;padding-top:10px;padding-bottom:10px}.header-top>div:first-child{gap:10px!important}.header-toolbar{height:auto!important;gap:10px;flex-wrap:wrap;padding-top:8px;padding-bottom:8px}.header-toolbar>div{flex-wrap:wrap}.chart-frame{height:250px}#header-sync-status{font-size:10px}.connection-status{font-size:11px}.user-row td{padding:10px 8px}}
 @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*,*::before,*::after{animation:none!important;transition:none!important}}
-</style></head><body id="dashboard-top" class="bg-surface font-body-md text-on-surface antialiased"><header class="sticky top-0 left-0 w-full z-50 bg-surface/90 backdrop-blur-xl shadow-[0_1px_8px_rgba(0,0,0,0.04)]" id="app-header"><div class="h-28 w-full px-margin-screen flex flex-col justify-between header-inner"><div class="h-16 flex items-center justify-between gap-space-lg header-top"><div class="flex items-center gap-space-lg"><div class="flex items-center gap-space-sm"><div class="flex items-center gap-2"><span class="material-symbols-outlined text-primary text-2xl">analytics</span><span class="font-headline-md text-headline-md text-primary tracking-tight font-bold">갤러리 분석기</span></div></div><nav class="section-nav" aria-label="분석 구간 이동"><a class="section-nav-link" data-path="overview-dashboard" href="#dashboard-top" id="nav-overview" data-section="overview" onclick="navigateSection('overview'); return false;" aria-current="location">대시보드 종합</a><a class="section-nav-link" data-path="board-deep-dive" href="#overview-chart-panel" id="nav-timeline" data-section="timeline" onclick="navigateSection('timeline'); return false;">시간대별 분석</a><a class="section-nav-link" data-path="author-analytics" href="#user-workspace" id="nav-ranking" data-section="ranking" onclick="navigateSection('ranking'); return false;">사용자 분석</a></nav></div><div class="flex items-center gap-space-md"><div class="hidden md:flex items-center gap-space-xs px-space-sm py-space-2xs rounded-full bg-surface-container-low text-on-surface"><span id="header-sync-status" class="font-code-mono text-code-mono text-on-surface-variant" role="status">불러오는 중</span></div><button aria-label="테마 전환" class="p-space-xs rounded-xl text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors flex items-center justify-center" type="button" id="theme-toggle" onclick="toggleTheme()" aria-pressed="false"><span class="material-symbols-outlined" id="theme-icon">light_mode</span></button><div class="flex items-center gap-space-sm pl-space-xs"><div class="hidden lg:flex flex-col"></div></div></div></div><div class="h-12 flex items-center justify-between gap-space-md header-toolbar"><div class="flex items-center gap-space-lg overflow-x-auto"><div class="flex items-center gap-space-xs"><span class="font-label-caps text-label-caps text-on-surface-variant uppercase">조회 기준</span><div class="flex items-center p-0.5 bg-surface-container-low rounded-xl"><button class="px-space-sm py-space-2xs rounded-lg font-body-sm-medium text-body-sm-medium bg-surface-container-lowest text-on-surface shadow-[0_1px_4px_rgba(0,0,0,0.04)]" type="button" id="today-btn" onclick="selectToday()">오늘</button><button class="px-space-sm py-space-2xs rounded-lg font-body-sm-medium text-body-sm-medium text-on-surface-variant hover:text-on-surface flex items-center gap-1" type="button" id="date-open-btn" onclick="openDatePicker()"><span class="material-symbols-outlined text-xs">calendar_today</span>날짜 선택</button></div></div><div class="flex items-center gap-space-xs"><span class="font-label-caps text-label-caps text-on-surface-variant uppercase">시간대</span><div class="flex items-center p-0.5 bg-surface-container-low rounded-xl"><button class="px-space-sm py-space-2xs rounded-lg font-body-sm-medium text-body-sm-medium bg-surface-container-lowest text-on-surface shadow-[0_1px_4px_rgba(0,0,0,0.04)]" type="button" id="hours-all" onclick="setTimeRange('all')">24시간 전체</button><button class="px-space-sm py-space-2xs rounded-lg font-body-sm-medium text-body-sm-medium text-on-surface-variant hover:text-on-surface" type="button" id="hours-peak" onclick="setTimeRange('peak')" title="선택 날짜의 00~02시 및 19~23시 데이터만 표시합니다.">피크타임 (19~02시)</button></div></div></div><div class="flex items-center gap-space-xs flex-shrink-0"><button class="px-space-sm py-space-xs rounded-xl bg-surface-container-low text-on-surface font-body-sm-medium text-body-sm-medium hover:bg-surface-container hover:text-on-surface transition-colors flex items-center gap-space-xs" type="button" id="refresh-btn" onclick="refreshCurrentData()"><span class="material-symbols-outlined text-sm" id="sync-refresh-icon">sync</span><span class="">데이터 새로고침</span></button></div></div></div></header><main class="w-full  bg-surface" id="dashboard-content"><div class="flex flex-col w-full">
+</style><style id="responsive-refinements">/* Let the header grow with wrapped controls, regardless of Tailwind load order. */
+#app-header .header-inner{height:auto!important;min-height:0;justify-content:flex-start}
+#app-header .header-top,#app-header .header-toolbar{height:auto!important;flex-shrink:0}
+#app-header .header-toolbar{flex-wrap:wrap;padding-block:8px}
+#app-header .header-toolbar>div:first-child{min-width:0;flex-wrap:wrap;overflow:visible}
+#gallery-summary,#gallery-summary-content,#gallery-target,#analysis-date-control,#collection-sync{min-width:0;max-width:100%}
+#gallery-target{flex-wrap:wrap}#gallery-target-title{min-width:0;overflow-wrap:anywhere}
+#collection-sync{flex-wrap:wrap}#collection-sync>span{white-space:nowrap}
+@media(max-width:1023px){
+ #app-header .header-top{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center!important}
+ #app-header .header-top>div:first-child{display:contents}
+ #app-header .header-top>div:last-child{grid-column:2;grid-row:1;justify-self:end}
+ #app-header .section-nav{grid-column:1/-1;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));width:100%}
+ #app-header .section-nav-link{text-align:center;white-space:normal;word-break:keep-all;padding:10px 4px}
+}
+@media(max-width:767px){
+ #app-header .header-inner{padding:10px 12px!important}
+ #app-header .header-top{padding:0 0 8px;min-height:0}
+ #app-header .header-toolbar{display:grid;grid-template-columns:minmax(0,1fr);gap:8px;min-height:0}
+ #app-header .header-toolbar>div:first-child{display:grid;gap:8px;width:100%}
+ #app-header .header-toolbar>div:first-child>div{display:grid;grid-template-columns:48px minmax(0,1fr);gap:6px;min-width:0}
+ #app-header .header-toolbar>div:first-child>div>div{min-width:0}
+ #app-header .header-toolbar button{min-width:0;min-height:40px;white-space:normal;word-break:keep-all}
+ #app-header .header-toolbar>div:first-child button{flex:1;padding:8px 5px}
+ #app-header #refresh-btn{width:100%;justify-content:center}
+ #dashboard-content>div>div{padding-left:12px;padding-right:12px;min-width:0}
+ #gallery-summary-content{width:100%;gap:12px}
+ #gallery-target{width:100%;display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:6px}
+ #gallery-target-title{grid-column:1/-1;grid-row:2;word-break:keep-all}
+ #gallery-summary-divider{display:none}
+ #analysis-date-control{width:100%;display:grid;grid-template-columns:auto minmax(0,1fr);gap:8px}
+ #analysis-date-control>div{min-width:0}
+ #analysis-date-control>label{white-space:nowrap}
+ #archive-date-input{width:100%;min-width:0;max-width:100%;font-size:16px}
+ #collection-sync{gap:6px}
+ #auto-refresh-label,#last-sync-timestamp{font-size:11px}
+ #dashboard-view-tabs{width:100%;min-width:0}
+ #tab-overview,#tab-ranking{flex:1;min-width:0;padding:10px 8px;white-space:normal;justify-content:center;word-break:keep-all}
+ #user-detail-panel [role=tab]{min-width:0;white-space:normal;word-break:keep-all}
+ .media-lightbox{padding:8px}
+ .media-lightbox-panel{height:calc(100vh - 16px);height:calc(100dvh - 16px)}
+ .media-lightbox-stage{padding:12px 8px 52px}
+}
+</style></head><body id="dashboard-top" class="bg-surface font-body-md text-on-surface antialiased"><header class="sticky top-0 left-0 w-full z-50 bg-surface/90 backdrop-blur-xl shadow-[0_1px_8px_rgba(0,0,0,0.04)]" id="app-header"><div class="w-full px-margin-screen flex flex-col justify-between header-inner"><div class="flex items-center justify-between gap-space-lg header-top"><div class="flex items-center gap-space-lg"><div class="flex items-center gap-space-sm"><div class="flex items-center gap-2"><span class="material-symbols-outlined text-primary text-2xl">analytics</span><span class="font-headline-md text-headline-md text-primary tracking-tight font-bold">갤러리 분석기</span></div></div><nav class="section-nav" aria-label="분석 구간 이동"><a class="section-nav-link" data-path="overview-dashboard" href="#dashboard-top" id="nav-overview" data-section="overview" onclick="navigateSection('overview'); return false;" aria-current="location">대시보드 종합</a><a class="section-nav-link" data-path="board-deep-dive" href="#overview-chart-panel" id="nav-timeline" data-section="timeline" onclick="navigateSection('timeline'); return false;">시간대별 분석</a><a class="section-nav-link" data-path="author-analytics" href="#user-workspace" id="nav-ranking" data-section="ranking" onclick="navigateSection('ranking'); return false;">사용자 분석</a></nav></div><div class="flex items-center gap-space-md"><div class="hidden md:flex items-center gap-space-xs px-space-sm py-space-2xs rounded-full bg-surface-container-low text-on-surface"><span id="header-sync-status" class="font-code-mono text-code-mono text-on-surface-variant" role="status">불러오는 중</span></div><button aria-label="테마 전환" class="p-space-xs rounded-xl text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors flex items-center justify-center" type="button" id="theme-toggle" onclick="toggleTheme()" aria-pressed="false"><span class="material-symbols-outlined" id="theme-icon">light_mode</span></button><div class="flex items-center gap-space-sm pl-space-xs"><div class="hidden lg:flex flex-col"></div></div></div></div><div class="flex items-center justify-between gap-space-md header-toolbar"><div class="flex items-center gap-space-lg overflow-x-auto"><div class="flex items-center gap-space-xs"><span class="font-label-caps text-label-caps text-on-surface-variant uppercase">조회 기준</span><div class="flex items-center p-0.5 bg-surface-container-low rounded-xl"><button class="px-space-sm py-space-2xs rounded-lg font-body-sm-medium text-body-sm-medium bg-surface-container-lowest text-on-surface shadow-[0_1px_4px_rgba(0,0,0,0.04)]" type="button" id="today-btn" onclick="selectToday()">오늘</button><button class="px-space-sm py-space-2xs rounded-lg font-body-sm-medium text-body-sm-medium text-on-surface-variant hover:text-on-surface flex items-center gap-1" type="button" id="date-open-btn" onclick="openDatePicker()"><span class="material-symbols-outlined text-xs">calendar_today</span>날짜 선택</button></div></div><div class="flex items-center gap-space-xs"><span class="font-label-caps text-label-caps text-on-surface-variant uppercase">시간대</span><div class="flex items-center p-0.5 bg-surface-container-low rounded-xl"><button class="px-space-sm py-space-2xs rounded-lg font-body-sm-medium text-body-sm-medium bg-surface-container-lowest text-on-surface shadow-[0_1px_4px_rgba(0,0,0,0.04)]" type="button" id="hours-all" onclick="setTimeRange('all')">24시간 전체</button><button class="px-space-sm py-space-2xs rounded-lg font-body-sm-medium text-body-sm-medium text-on-surface-variant hover:text-on-surface" type="button" id="hours-peak" onclick="setTimeRange('peak')" title="선택 날짜의 00~02시 및 19~23시 데이터만 표시합니다.">피크타임 (19~02시)</button></div></div></div><div class="flex items-center gap-space-xs flex-shrink-0"><button class="px-space-sm py-space-xs rounded-xl bg-surface-container-low text-on-surface font-body-sm-medium text-body-sm-medium hover:bg-surface-container hover:text-on-surface transition-colors flex items-center gap-space-xs" type="button" id="refresh-btn" onclick="refreshCurrentData()"><span class="material-symbols-outlined text-sm" id="sync-refresh-icon">sync</span><span class="">데이터 새로고침</span></button></div></div></div></header><main class="w-full  bg-surface" id="dashboard-content"><div class="flex flex-col w-full">
 <div class="w-full px-margin-screen py-space-md flex flex-col gap-space-md bg-surface">
-<div class="w-full flex flex-col lg:flex-row lg:items-center justify-between gap-space-md bg-surface-container-lowest p-space-md rounded-xl shadow-sm">
-<div class="flex flex-wrap items-center gap-space-md">
-<div class="flex items-center gap-space-xs px-space-sm py-1.5 rounded-lg bg-primary/10 text-primary"><span class="material-symbols-outlined text-base">target</span><span class="font-label-caps text-label-caps text-on-surface-variant font-semibold">수집 대상:</span><span class="font-headline-sm text-headline-sm font-bold tracking-tight text-primary">디시인사이드 블루아카이브 갤러리</span><span class="px-1.5 py-0.5 rounded bg-surface-container text-on-surface-variant font-code-mono text-xs">projectmx</span></div>
-<div class="h-4 w-px bg-surface-container"></div>
-<div class="flex items-center gap-space-xs">
+<div class="w-full flex flex-col lg:flex-row lg:items-center justify-between gap-space-md bg-surface-container-lowest p-space-md rounded-xl shadow-sm" id="gallery-summary">
+<div class="flex flex-wrap items-center gap-space-md" id="gallery-summary-content">
+<div class="flex items-center gap-space-xs px-space-sm py-1.5 rounded-lg bg-primary/10 text-primary" id="gallery-target"><span class="material-symbols-outlined text-base">target</span><span class="font-label-caps text-label-caps text-on-surface-variant font-semibold">수집 대상:</span><span class="font-headline-sm text-headline-sm font-bold tracking-tight text-primary" id="gallery-target-title">디시인사이드 블루아카이브 갤러리</span><span class="px-1.5 py-0.5 rounded bg-surface-container text-on-surface-variant font-code-mono text-xs">projectmx</span></div>
+<div class="h-4 w-px bg-surface-container" id="gallery-summary-divider"></div>
+<div class="flex items-center gap-space-xs" id="analysis-date-control">
 <label class="font-body-sm-medium text-body-sm-medium text-on-surface-variant flex items-center gap-1" for="archive-date-input">
 <span class="material-symbols-outlined text-sm">calendar_month</span>
             분석 일자
@@ -312,7 +355,7 @@ button:focus-visible,a:focus-visible,input:focus-visible,tr:focus-visible,th:foc
 <input class="bg-surface-container-low text-on-surface font-body-sm-medium text-body-sm-medium px-space-sm py-1.5 rounded-lg focus:outline-none focus:bg-surface-container cursor-pointer" id="archive-date-input" type="date" onchange="changeAnalysisDate(this.value)">
 </div>
 </div>
-<div class="flex items-center gap-space-xs px-space-sm py-1 rounded-full bg-surface-container-low">
+<div class="flex items-center gap-space-xs px-space-sm py-1 rounded-full bg-surface-container-low" id="collection-sync">
 <span class="w-2 h-2 rounded-full bg-tertiary-container animate-pulse" id="status-dot"></span>
 <span class="font-code-mono text-code-mono text-on-surface-variant" id="auto-refresh-label">오늘 · 5분 자동 갱신</span>
 <span class="font-code-mono text-code-mono text-tertiary font-bold ml-1" id="last-sync-timestamp">—</span>
@@ -320,7 +363,7 @@ button:focus-visible,a:focus-visible,input:focus-visible,tr:focus-visible,th:foc
 </div>
 </div>
 <div id="status-text" class="connection-status text-on-surface-variant" role="status" aria-live="polite">데이터를 불러오는 중입니다.</div><div class="w-full flex items-center justify-between border-b-0 pb-1">
-<div class="flex items-center gap-space-xs bg-surface-container-low p-1 rounded-xl">
+<div class="flex items-center gap-space-xs bg-surface-container-low p-1 rounded-xl" id="dashboard-view-tabs">
 <button class="px-space-lg py-space-xs rounded-lg font-body-md-medium text-body-md-medium bg-surface-container-lowest text-primary shadow-sm flex items-center gap-2 transition-all" id="tab-overview" onclick="switchMainTab('overview')" type="button">
 <span class="material-symbols-outlined text-base">insights</span>
           종합 대시보드 (24시간 상세 추이)
@@ -1458,6 +1501,12 @@ function toggleTheme() {const dark=document.documentElement.classList.toggle('da
             if (element.tagName.toLowerCase() === 'img') {
                 element.addEventListener('load', () => {
                     if (mediaLightboxCurrentElement !== element) return;
+                    // 디시콘과 움직이는 이미지는 원본 img를 유지해야 재생됩니다.
+                    if (mediaKind === 'dccon' || mediaKind === 'dccon_motion' ||
+                        isDcconMediaUrl(displayUrl) || isAnimatedImageUrl(displayUrl)) {
+                        status.textContent = '';
+                        return;
+                    }
                     try {
                         const frozen = freezeLoadedImageToCanvas(element, stage, title);
                         if (frozen) {
@@ -1472,6 +1521,7 @@ function toggleTheme() {const dark=document.documentElement.classList.toggle('da
             }
 
             element.addEventListener('error', () => {
+                if (mediaLightboxCurrentElement !== element) return;
                 const isDccon = mediaKind === 'dccon' || mediaKind === 'dccon_motion';
                 if (isDccon && !dcconFallbackTried) {
                     dcconFallbackTried = true;
@@ -1486,8 +1536,19 @@ function toggleTheme() {const dark=document.documentElement.classList.toggle('da
             if (element.tagName.toLowerCase() === 'img') element.referrerPolicy = 'no-referrer';
             element.src = displayUrl;
             if (element.tagName.toLowerCase() === 'video') {
+                element.addEventListener('playing', () => {
+                    if (mediaLightboxCurrentElement === element) status.textContent = '';
+                });
                 const playPromise = element.play();
-                if (playPromise && typeof playPromise.catch === 'function') playPromise.catch(() => {});
+                if (playPromise && typeof playPromise.catch === 'function') {
+                    playPromise.catch(error => {
+                        if (mediaLightboxCurrentElement !== element) return;
+                        element.controls = true;
+                        status.textContent = error.name === 'NotAllowedError'
+                            ? '자동 재생이 차단되었습니다. 재생 버튼을 눌러 주세요.'
+                            : '재생하지 못했습니다. 브라우저의 미디어 지원 또는 파일 응답을 확인해 주세요.';
+                    });
+                }
             }
         };
 
