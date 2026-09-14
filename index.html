@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>블루아카이브 갤러리 분석기 | ProjectMX</title><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Noto+Sans+KR:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500;600&amp;display=swap"><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config = {
+<html lang="ko"><head><meta charset="utf-8"><meta name="projectmx-dashboard-version" content="20260913-critical-fix-1"><meta name="viewport" content="width=device-width, initial-scale=1"><title>블루아카이브 갤러리 분석기 | ProjectMX</title><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Noto+Sans+KR:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500;600&amp;display=swap"><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config = {
     darkMode: "class",
     theme: {
       extend: {
@@ -274,7 +274,7 @@ button:focus-visible,a:focus-visible,input:focus-visible,tr:focus-visible,th:foc
 [id^=subtab-]{background:transparent!important;color:rgb(var(--on-surface-variant))!important;box-shadow:none!important}
 [id^=subtab-][aria-selected=true]{background:rgb(var(--surface-container-lowest))!important;color:rgb(var(--on-surface))!important;box-shadow:0 1px 3px #0001!important}
 .user-list-panel,.user-detail-panel,.name-cell{min-width:0}
-.user-detail-panel{align-self:start;max-height:calc(100vh - 150px);overflow:auto}
+.user-detail-panel{align-self:start;max-height:none;overflow:visible}
 .user-list-panel table{width:100%;min-width:610px;border-collapse:collapse;font-size:12px}
 .user-list-panel th{cursor:pointer;user-select:none;white-space:nowrap}
 .user-row{cursor:pointer;border-bottom:1px solid rgb(var(--outline-variant) / .18);transition:background .15s}
@@ -290,7 +290,8 @@ button:focus-visible,a:focus-visible,input:focus-visible,tr:focus-visible,th:foc
 .detail-empty{min-height:285px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:26px 12px;text-align:center}.detail-empty p{font-size:12px;line-height:1.8}
 #detail-nick{overflow-wrap:anywhere}#detail-uid{overflow-wrap:anywhere;font-size:11px}#detail-avatar{flex-shrink:0}#detail-type-badge{white-space:nowrap}#detail-content>div:first-child>div:first-child{gap:8px;flex-wrap:wrap}
 #detail-fav-btn{color:rgb(var(--outline))!important}#detail-fav-btn.is-favorite{color:#d29400!important}
-.activity-list{display:flex;flex-direction:column;gap:10px;max-height:400px;overflow:auto}.activity-state{color:rgb(var(--on-surface-variant));background:rgb(var(--surface-container-low));border:0;border-radius:10px;padding:20px 14px;font-size:12px;line-height:1.8}.activity-state.error{color:rgb(var(--error))}
+.activity-pane{max-height:18rem;overflow-y:auto;overflow-x:hidden;scrollbar-gutter:stable;padding-right:4px}
+.activity-list{display:flex;flex-direction:column;gap:10px;max-height:none;overflow:visible}.activity-state{color:rgb(var(--on-surface-variant));background:rgb(var(--surface-container-low));border:0;border-radius:10px;padding:20px 14px;font-size:12px;line-height:1.8}.activity-state.error{color:rgb(var(--error))}
 .activity-item{color:rgb(var(--on-surface));background:rgb(var(--surface-container-lowest));border-color:rgb(var(--outline-variant) / .4)}.activity-item-title{color:rgb(var(--primary))}.activity-item-meta,.activity-item-body,.activity-parent-link{color:rgb(var(--on-surface-variant))}
 .is-spinning{animation:sync-spin 1s linear infinite}@keyframes sync-spin{to{transform:rotate(360deg)}}
 @media(max-width:1279px){.user-detail-panel{position:static!important;max-height:none;overflow:visible}}
@@ -451,14 +452,14 @@ button:focus-visible,a:focus-visible,input:focus-visible,tr:focus-visible,th:foc
 <div class="flex items-center justify-between">
 <div class="flex items-center gap-2">
 <h3 class="font-headline-sm text-headline-sm text-on-surface font-bold">유저 랭킹</h3>
-<span class="px-2 py-0.5 rounded-full bg-surface-container-high text-on-surface font-code-mono text-xs" id="rank-count-badge">0명 집계</span>
+<span class="px-2 py-0.5 rounded-full bg-surface-container-high text-on-surface font-code-mono text-xs" id="rank-count-badge" title="선택한 날짜·시간대의 글과 댓글 합계 기준">상위 0명</span>
 </div>
 <span class="font-body-sm text-body-sm text-on-surface-variant">유저 클릭 시 상세 분석</span>
 </div>
 <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-space-xs">
 <div class="relative flex-1">
 <span class="material-symbols-outlined absolute left-3 top-2.5 text-on-surface-variant text-sm">search</span>
-<input class="w-full bg-surface-container-low pl-9 pr-8 py-2 rounded-lg font-body-sm-medium text-body-sm-medium text-on-surface placeholder:text-outline focus:outline-none focus:bg-surface-container transition-all" id="user-search-input" placeholder="닉네임 또는 UID, IP(예: 118.235.*) 검색..." type="text" oninput="filterUserTable()" aria-label="닉네임 또는 UID, IP 검색">
+<input class="w-full bg-surface-container-low pl-9 pr-8 py-2 rounded-lg font-body-sm-medium text-body-sm-medium text-on-surface placeholder:text-outline focus:outline-none focus:bg-surface-container transition-all" id="user-search-input" placeholder="상위 20명 내 닉네임·UID·IP 검색" type="text" oninput="filterUserTable()" aria-label="상위 20명 내 닉네임 또는 UID, IP 검색">
 <button class="material-symbols-outlined absolute right-2.5 top-2.5 text-on-surface-variant text-sm hover:text-on-surface" onclick="clearSearch()" type="button">close</button>
 </div>
 <div class="flex items-center gap-1 bg-surface-container-low p-1 rounded-lg self-start sm:self-auto overflow-x-auto">
@@ -491,13 +492,13 @@ button:focus-visible,a:focus-visible,input:focus-visible,tr:focus-visible,th:foc
 </div>
 <div class="hidden flex-col items-center justify-center py-10 px-4 text-center bg-surface-container-low rounded-lg" id="table-empty-state">
 <span class="material-symbols-outlined text-3xl text-outline mb-2">person_search</span>
-<p class="font-headline-sm text-headline-sm text-on-surface font-semibold">선택하신 조건의 활동 데이터가 존재하지 않습니다.</p>
+<p class="font-headline-sm text-headline-sm text-on-surface font-semibold">상위 20명 중 검색 조건에 맞는 유저가 없습니다.</p>
 <p class="font-body-sm text-body-sm text-on-surface-variant mt-1">검색어를 재설정하거나 날짜 및 필터 조건을 변경해 주세요.</p>
 <button class="mt-4 px-3 py-1.5 rounded-lg bg-surface-container-lowest text-primary font-body-sm-medium text-body-sm-medium shadow-sm hover:bg-surface-container" onclick="resetTableFilter()" type="button">
             필터 초기화
           </button>
 </div>
-<div class="flex flex-col sm:flex-row items-center justify-between gap-2 pt-2 border-t-0 text-on-surface-variant font-body-sm text-body-sm"><span id="table-summary">검색 결과 0명</span><div id="table-pagination" class="flex flex-wrap items-center gap-1" aria-label="사용자 목록 페이지"></div></div>
+<div class="flex flex-col sm:flex-row items-center justify-between gap-2 pt-2 border-t-0 text-on-surface-variant font-body-sm text-body-sm"><span id="table-summary">상위 0명 중 0명 표시</span><div id="table-pagination" class="hidden" hidden aria-label="사용자 목록 페이지"></div></div>
 </div>
 <div class="xl:col-span-5 bg-surface-container-lowest rounded-xl p-5 shadow-sm flex flex-col gap-space-md sticky top-32 user-detail-panel" id="user-detail-panel">
 <div class="flex items-center justify-between gap-2"><h3 class="text-headline-sm font-semibold text-on-surface">유저 활동 분석</h3><button id="clear-selection" type="button" onclick="clearSelectedUser()" class="text-body-sm text-on-surface-variant" hidden>선택 해제</button></div><div id="detail-empty" class="detail-empty bg-surface-container-low rounded-xl text-on-surface-variant"><span class="material-symbols-outlined text-3xl text-outline">person_search</span><h3 class="text-headline-sm font-semibold text-on-surface">유저를 선택해 주세요</h3><p>랭킹이나 검색 결과에서 유저를 선택하면<br>활동 그래프와 최근 내역을 확인할 수 있습니다.</p></div><div id="detail-content" class="flex flex-col gap-space-md" hidden="hidden"><div class="bg-surface-container-low p-4 rounded-xl flex flex-col gap-3">
@@ -551,8 +552,8 @@ button:focus-visible,a:focus-visible,input:focus-visible,tr:focus-visible,th:foc
           </button>
 </div>
 <div class="flex flex-col gap-space-sm" id="pane-user-hourly" role="tabpanel" aria-labelledby="subtab-hourly"><div class="flex flex-wrap items-center justify-between gap-2 font-body-sm-medium text-body-sm-medium"><span class="text-on-surface font-semibold">시간대별 글·댓글 작성 분포</span><span id="user-peak-time" class="font-code-mono text-error text-xs">활동 없음</span></div><div id="chart-container" class="bg-surface-container-low rounded-lg" role="img" aria-label="선택 유저의 시간대별 글과 댓글"></div></div>
-<div class="hidden flex-col gap-2 max-h-72 overflow-y-auto pr-1" id="pane-user-posts" role="tabpanel" aria-labelledby="subtab-recent-posts"><div id="recent-posts" class="activity-list" aria-live="polite"></div></div>
-<div class="hidden flex-col gap-2 max-h-72 overflow-y-auto pr-1" id="pane-user-comments" role="tabpanel" aria-labelledby="subtab-recent-comments"><div id="recent-comments" class="activity-list" aria-live="polite"></div></div>
+<div class="hidden flex-col gap-2 activity-pane" id="pane-user-posts" role="tabpanel" aria-labelledby="subtab-recent-posts" tabindex="0"><div id="recent-posts" class="activity-list" aria-live="polite"></div></div>
+<div class="hidden flex-col gap-2 activity-pane" id="pane-user-comments" role="tabpanel" aria-labelledby="subtab-recent-comments" tabindex="0"><div id="recent-comments" class="activity-list" aria-live="polite"></div></div>
 </div><a class="w-full py-2.5 rounded-lg bg-surface-container-low hover:bg-surface-container text-on-surface font-body-sm-medium text-body-sm-medium flex items-center justify-center gap-2 transition-colors" href="https://gall.dcinside.com/mgallery/board/lists/?id=projectmx" rel="noopener noreferrer" target="_blank">
 <span class="">디시인사이드 블루아카 갤러리 바로가기</span>
 <span class="material-symbols-outlined text-sm">north_east</span>
@@ -561,7 +562,7 @@ button:focus-visible,a:focus-visible,input:focus-visible,tr:focus-visible,th:foc
 </div>
 </div>
 </div>
-</main><footer class="w-full bg-surface-container-low py-space-lg"><div class="w-full px-margin-screen flex flex-col md:flex-row items-center justify-between gap-space-md text-on-surface-variant font-body-sm text-body-sm"><div class="flex items-center gap-space-md"></div><div class="flex items-center gap-space-lg"></div></div></footer><div id="media-lightbox" class="media-lightbox" role="dialog" aria-modal="true" aria-hidden="true" aria-label="미디어 보기">
+</main><footer class="w-full bg-surface-container-low py-space-lg"><div class="w-full px-margin-screen flex flex-col md:flex-row items-center justify-between gap-space-md text-on-surface-variant font-body-sm text-body-sm"><div class="flex items-center gap-space-md"><span id="dashboard-build-label">화면 버전 2026.09.13-1</span></div><div class="flex items-center gap-space-lg"></div></div></footer><div id="media-lightbox" class="media-lightbox" role="dialog" aria-modal="true" aria-hidden="true" aria-label="미디어 보기">
     <div class="media-lightbox-panel" role="document">
         <button id="media-lightbox-close" class="media-lightbox-close" type="button" aria-label="미디어 닫기">×</button>
         <div id="media-lightbox-stage" class="media-lightbox-stage"></div>
@@ -589,7 +590,8 @@ let sectionScrollOffset=128, navigationUpdateQueued=false;
 let tableSort = {key:'total', direction:-1}, adapterMissing = false;
 let totals = {post:0, comment:0, total:0}, bookmarks = [];
 let parquetModulePromise = null;
-const parquetCache = new Map(), PAGE_SIZE = 7;
+const parquetCache = new Map(), RANKING_LIMIT = 20;
+console.info('[ProjectMX] dashboard 20260913-critical-fix-1 · 랭킹 최대 20명');
 const seriesVisible = {posts:true, comments:true, users:true};
 const unadaptedFetch = window.fetch;
 const todayKst = kstToday();
@@ -827,11 +829,13 @@ function resetTableFilter() {typeFilter='ALL';dom('user-search-input').value='';
 function sortUserTable(key) {if(!['rank','bookmark','nickname','type','post','comment','total'].includes(key))return;tableSort={key,direction:tableSort.key===key?-tableSort.direction:(['post','comment','total','bookmark'].includes(key)?-1:1)};tablePage=1;renderTable();}
 function renderTable() {
     const query=cleanText(dom('user-search-input').value).toLowerCase(),typeMap={GONIC:'고닉',SEMI:'반고닉',ANON:'유동'};
-    const filtered=currentData.filter(u=>(typeFilter==='ALL'||(typeFilter==='FAV'?isUserBookmarked(u):u.type===typeMap[typeFilter]))&&matchesQuery(u,query));
+    // 전체 집계는 보존하고, 현재 날짜·시간대의 전체 순위 1~20위만 목록 대상으로 삼습니다.
+    const rankingUsers=[...currentData].sort((a,b)=>b.total-a.total||a.user_key.localeCompare(b.user_key)).slice(0,RANKING_LIMIT);
+    const filtered=rankingUsers.filter(u=>(typeFilter==='ALL'||(typeFilter==='FAV'?isUserBookmarked(u):u.type===typeMap[typeFilter]))&&matchesQuery(u,query));
     const sortValue=u=>tableSort.key==='bookmark'?Number(isUserBookmarked(u)):u[tableSort.key];
     filtered.sort((a,b)=>{const av=sortValue(a),bv=sortValue(b);return tableSort.direction*(typeof av==='number'?av-bv:cleanText(av).localeCompare(cleanText(bv),'ko'))||a.rank-b.rank;});
-    const pages=Math.max(1,Math.ceil(filtered.length/PAGE_SIZE));tablePage=Math.max(1,Math.min(tablePage,pages));
-    const start=(tablePage-1)*PAGE_SIZE,rows=filtered.slice(start,start+PAGE_SIZE),tbody=dom('user-table-body');tbody.replaceChildren();
+    tablePage=1;
+    const rows=filtered.slice(0,RANKING_LIMIT),tbody=dom('user-table-body');tbody.replaceChildren();
     for(const user of rows){
         const tr=document.createElement('tr');tr.dataset.userKey=user.user_key;tr.tabIndex=0;tr.className='user-row';
         tr.classList.toggle('selected',selectedUser?.user_key===user.user_key);tr.setAttribute('aria-label',user.nickname+' 활동 분석 보기');
@@ -840,17 +844,13 @@ function renderTable() {
         tr.onclick=()=>selectUser(user);tr.addEventListener('keydown',event=>{if(event.target===tr&&['Enter',' '].includes(event.key)){event.preventDefault();selectUser(user);}});
         tr.querySelector('button').onclick=event=>{event.stopPropagation();toggleBookmarkUser(user);};tbody.appendChild(tr);
     }
-    textAt('rank-count-badge',numberText(currentData.length)+'명 집계');
-    textAt('table-summary',filtered.length?`검색 결과 ${numberText(filtered.length)}명 중 ${start+1}~${Math.min(start+PAGE_SIZE,filtered.length)}명 표시`:'검색 결과 0명');
+    textAt('rank-count-badge','상위 '+numberText(rankingUsers.length)+'명');
+    textAt('table-summary',`상위 ${numberText(rankingUsers.length)}명 중 ${numberText(filtered.length)}명 표시`);
     show('table-empty-state',!filtered.length);
     ['ALL','GONIC','SEMI','ANON','FAV'].forEach(k=>dom('filter-'+k.toLowerCase()).setAttribute('aria-pressed',String(typeFilter===k)));
     document.querySelectorAll('th[data-sort-key]').forEach(th=>{const active=th.dataset.sortKey===tableSort.key;th.setAttribute('aria-sort',active?(tableSort.direction===1?'ascending':'descending'):'none');textAt('sort-'+th.dataset.sortKey,active?(tableSort.direction===1?' ↑':' ↓'):'');});
     const pagination=dom('table-pagination');pagination.replaceChildren();
-    function button(label,page,disabled=false){const b=document.createElement('button');b.type='button';b.textContent=String(label);b.className='page-button';b.disabled=disabled;b.setAttribute('aria-label',label==='‹'?'이전 페이지':label==='›'?'다음 페이지':page+' 페이지');if(page===tablePage&&typeof label==='number')b.setAttribute('aria-current','page');b.onclick=()=>{tablePage=page;renderTable();};pagination.appendChild(b);}
-    button('‹',tablePage-1,tablePage===1);
-    const pageNumbers=[...new Set([1,tablePage-1,tablePage,tablePage+1,pages])].filter(p=>p>=1&&p<=pages).sort((a,b)=>a-b);
-    pageNumbers.forEach((p,i)=>{if(i&&p-pageNumbers[i-1]>1){const gap=document.createElement('span');gap.textContent='…';gap.className='page-gap';pagination.appendChild(gap);}button(p,p);});
-    button('›',tablePage+1,tablePage===pages);
+    show('table-pagination',false);
     scheduleNavigationUpdate();
 }
 function toggleBookmarkUser(user) {
@@ -862,13 +862,26 @@ function toggleBookmarkUser(user) {
 function toggleDetailFav() {if(selectedUser)toggleBookmarkUser(selectedUser);}
 function updateDetailFavorite() {const value=selectedUser?isUserBookmarked(selectedUser):false;dom('detail-fav-btn').setAttribute('aria-pressed',String(value));dom('detail-fav-icon').style.fontVariationSettings=`'FILL' ${value?1:0}`;dom('detail-fav-btn').classList.toggle('is-favorite',value);}
 function clearSelectedUser() {selectedUser=null;++modalLoadSequence;show('detail-content',false);show('detail-empty',true);show('clear-selection',false);modalChart?.clear();setActivityState('recent-posts','유저를 선택해 주세요.');setActivityState('recent-comments','유저를 선택해 주세요.');document.querySelectorAll('.user-row.selected').forEach(n=>n.classList.remove('selected'));}
+function resetActivityPaneScroll(tab) {
+    for(const id of ['pane-user-'+tab,tab==='posts'?'recent-posts':tab==='comments'?'recent-comments':'chart-container']){
+        const node=dom(id);if(node){node.scrollTop=0;node.scrollLeft=0;}
+    }
+}
+function resetUserActivityScroll() {
+    const panel=dom('user-detail-panel');if(panel){panel.scrollTop=0;panel.scrollLeft=0;}
+    for(const tab of ['hourly','posts','comments']){
+        resetActivityPaneScroll(tab);
+        // 숨겨진 탭은 표시 직후 한 번 더 초기화해 브라우저의 이전 위치 복원을 방지합니다.
+        dom('pane-user-'+tab).dataset.scrollResetPending='1';
+    }
+}
 function selectUser(user) {
     const found=currentData.find(u=>u.user_key===(typeof user==='string'?user:user.user_key));if(!found)return;
     selectedUser=found;const sequence=++modalLoadSequence;show('detail-content',true);show('detail-empty',false);show('clear-selection',true);
     textAt('detail-avatar',Array.from(found.nickname)[0]||'?');textAt('detail-nick',found.nickname);textAt('detail-type-badge',found.type);
     textAt('detail-uid',(found.type==='유동'?'IP: ':'UID: ')+(formatUserIdentity(found)||'없음'));
     textAt('detail-post-count',numberText(found.post));textAt('detail-comment-count',numberText(found.comment));textAt('detail-total-share',totals.total?(100*found.total/totals.total).toFixed(1)+'%':'—');
-    updateDetailFavorite();switchUserSubTab('hourly');renderTable();
+    resetUserActivityScroll();updateDetailFavorite();switchUserSubTab('hourly');renderTable();
     setActivityState('recent-posts','최근 게시글을 확인하는 중입니다.');setActivityState('recent-comments','최근 댓글을 확인하는 중입니다.');
     Promise.resolve(loadRecentUserActivity(found,sequence)).catch(()=>{if(sequence===modalLoadSequence){setActivityState('recent-posts','최근 게시글을 불러오지 못했습니다.',true);setActivityState('recent-comments','최근 댓글을 불러오지 못했습니다.',true);}});
     if(window.matchMedia?.('(max-width: 1279px)').matches)dom('user-detail-panel').scrollIntoView({behavior:'smooth',block:'start'});
@@ -884,7 +897,7 @@ function renderUserChart() {
     option.series=[{name:'게시글',type:'bar',data:posts,itemStyle:{color:c.post,borderRadius:[3,3,0,0]},barMaxWidth:12},{name:'댓글',type:'bar',data:comments,itemStyle:{color:c.comment,borderRadius:[3,3,0,0]},barMaxWidth:12}];
     modalChart.setOption(option,true);requestAnimationFrame(()=>modalChart?.resize());
 }
-function switchUserSubTab(tab) { if(!['hourly','posts','comments'].includes(tab))return;detailTab=tab;const ids={hourly:'hourly',posts:'recent-posts',comments:'recent-comments'};Object.keys(ids).forEach(key=>{show('pane-user-'+key,key===tab);dom('subtab-'+ids[key]).setAttribute('aria-selected',String(key===tab));});if(tab==='hourly')renderUserChart(); }
+function switchUserSubTab(tab) { if(!['hourly','posts','comments'].includes(tab))return;detailTab=tab;const ids={hourly:'hourly',posts:'recent-posts',comments:'recent-comments'};Object.keys(ids).forEach(key=>{show('pane-user-'+key,key===tab);dom('subtab-'+ids[key]).setAttribute('aria-selected',String(key===tab));});const pane=dom('pane-user-'+tab);if(pane.dataset.scrollResetPending==='1'){resetActivityPaneScroll(tab);delete pane.dataset.scrollResetPending;}if(tab==='hourly')renderUserChart(); }
 function switchMainTab(tab) {if(!['overview','ranking'].includes(tab))return;activeTab=tab;show('overview-chart-panel',tab==='overview');['overview','ranking'].forEach(k=>dom('tab-'+k).setAttribute('aria-selected',String(k===tab)));if(tab==='overview')requestAnimationFrame(()=>mainTrendChart?.resize());scheduleNavigationUpdate();}
 function initializeSectionNavigation() {
     window.addEventListener('scroll',scheduleNavigationUpdate,{passive:true});
@@ -1497,6 +1510,7 @@ function toggleTheme() {const dark=document.documentElement.classList.toggle('da
 
             const element = createMediaLightboxElement(renderKind, title);
             mediaLightboxCurrentElement = element;
+            let loadFailed = false;
 
             if (element.tagName.toLowerCase() === 'img') {
                 element.addEventListener('load', () => {
@@ -1522,14 +1536,19 @@ function toggleTheme() {const dark=document.documentElement.classList.toggle('da
 
             element.addEventListener('error', () => {
                 if (mediaLightboxCurrentElement !== element) return;
+                loadFailed = true;
                 const isDccon = mediaKind === 'dccon' || mediaKind === 'dccon_motion';
-                if (isDccon && !dcconFallbackTried) {
+                // img 디시콘은 이미지로만 표시합니다. 실패해도 같은 URL을 video로 요청하지 않습니다.
+                if (isDccon && element.tagName.toLowerCase() === 'video' && !dcconFallbackTried) {
                     dcconFallbackTried = true;
-                    const replacementKind = element.tagName.toLowerCase() === 'video' ? 'dccon' : 'dccon_motion';
-                    mount(replacementKind);
+                    mount('dccon');
                     return;
                 }
-                status.textContent = '미디어를 표시하지 못했습니다. 새로 수집된 데이터인지와 Worker 배포 상태를 확인해 주세요.';
+                status.textContent = isDcconMediaUrl(displayUrl) && !relayOriginalMediaUrl(displayUrl)
+                    ? '디시인사이드 원본 URL에서 디시콘을 불러오지 못했습니다. 저장 데이터에 이 디시콘의 서명된 미디어 중계 URL이 필요합니다.'
+                    : relayOriginalMediaUrl(displayUrl)
+                        ? '미디어 중계 요청으로 표시하지 못했습니다. Network에서 중계 URL의 응답 상태를 확인해 주세요.'
+                        : '미디어를 불러오지 못했습니다. Network에서 파일 URL의 응답 상태를 확인해 주세요.';
             }, { once: true });
 
             stage.appendChild(element);
@@ -1542,7 +1561,7 @@ function toggleTheme() {const dark=document.documentElement.classList.toggle('da
                 const playPromise = element.play();
                 if (playPromise && typeof playPromise.catch === 'function') {
                     playPromise.catch(error => {
-                        if (mediaLightboxCurrentElement !== element) return;
+                        if (mediaLightboxCurrentElement !== element || loadFailed) return;
                         element.controls = true;
                         status.textContent = error.name === 'NotAllowedError'
                             ? '자동 재생이 차단되었습니다. 재생 버튼을 눌러 주세요.'
@@ -1708,6 +1727,48 @@ function toggleTheme() {const dark=document.documentElement.classList.toggle('da
         return map;
     }
 
+    function isStoredSignedDcconRelayUrl(url) {
+        const safeUrl = cleanText(url);
+        if (!isSafeHttpUrl(safeUrl)) return false;
+        try {
+            const parsed = new URL(safeUrl, window.location.href);
+            return parsed.protocol === 'https:' && parsed.pathname === '/image' &&
+                Boolean(parsed.searchParams.get('s')) && Boolean(parsed.searchParams.get('p')) &&
+                /^[a-f0-9]{64}$/i.test(parsed.searchParams.get('sig') || '') &&
+                isDcconMediaUrl(relayOriginalMediaUrl(safeUrl));
+        } catch (_) {
+            return false;
+        }
+    }
+
+    function buildStoredMediaUrlMap(row, root = null) {
+        const map = new Map();
+        const put = rawUrl => {
+            const url = cleanText(rawUrl);
+            // 서명을 만들거나 고치지 않고 이 게시글/댓글에 이미 저장된 URL만 재사용합니다.
+            // 서명의 실제 유효성은 미디어 Worker가 검증합니다.
+            if (isStoredSignedDcconRelayUrl(url)) {
+                const key = mediaIdentityKey(url);
+                if (!map.has(key)) map.set(key, url);
+            }
+        };
+        for (const field of ['dccon_urls', 'image_urls', 'animated_image_urls', 'video_urls']) {
+            normalizeUrlArray(row && row[field]).forEach(put);
+        }
+        if (root) {
+            for (const node of root.querySelectorAll('img, video, source')) {
+                for (const attr of ['src', 'data-src', 'data-original']) put(node.getAttribute(attr));
+            }
+        }
+        return map;
+    }
+
+    function preferredStoredMediaUrl(url, urlMap) {
+        const safeUrl = cleanText(url);
+        if (isStoredSignedDcconRelayUrl(safeUrl)) return safeUrl;
+        return (isDcconMediaUrl(safeUrl) && urlMap && urlMap.get(mediaIdentityKey(safeUrl))) || safeUrl;
+    }
+
     function storedMediaType(node, fallbackTag = '') {
         const marked = cleanText(node && node.getAttribute ? node.getAttribute('data-media-type') : '');
         const normalized = normalizedStoredMediaType(marked);
@@ -1747,7 +1808,7 @@ function toggleTheme() {const dark=document.documentElement.classList.toggle('da
         return 'image';
     }
 
-    function appendStoredHtmlNode(node, container, seenUrls, allowVideo, imageLabel = '이미지', referer = '', typeMap = null) {
+    function appendStoredHtmlNode(node, container, seenUrls, allowVideo, imageLabel = '이미지', referer = '', typeMap = null, urlMap = null) {
         if (node.nodeType === Node.TEXT_NODE) {
             const rawText = String(node.nodeValue || '');
             // HTML 직렬화 과정에서 생긴 들여쓰기용 개행/공백은 화면에 빈 줄을 만들지 않습니다.
@@ -1767,7 +1828,7 @@ function toggleTheme() {const dark=document.documentElement.classList.toggle('da
         }
 
         if (tag === 'img') {
-            const url = preferredStoredImageUrl(node);
+            const url = preferredStoredMediaUrl(preferredStoredImageUrl(node), urlMap);
             if (isSafeHttpUrl(url)) {
                 const identity = mediaIdentityKey(url);
                 if (seenUrls.has(identity)) return;
@@ -1784,13 +1845,14 @@ function toggleTheme() {const dark=document.documentElement.classList.toggle('da
             return;
         }
 
-        if (tag === 'video') {
-            let url = cleanText(node.getAttribute('src'));
+        if (tag === 'video' || tag === 'source') {
+            let url = cleanText(node.getAttribute('src')) || cleanText(node.getAttribute('data-src'));
             let sourceNode = null;
             if (!url) {
-                sourceNode = node.querySelector('source[src]');
-                if (sourceNode) url = cleanText(sourceNode.getAttribute('src'));
+                sourceNode = node.querySelector('source[src], source[data-src]');
+                if (sourceNode) url = cleanText(sourceNode.getAttribute('src')) || cleanText(sourceNode.getAttribute('data-src'));
             }
+            url = preferredStoredMediaUrl(url, urlMap);
             if (isSafeHttpUrl(url)) {
                 const identity = mediaIdentityKey(url);
                 if (seenUrls.has(identity)) return;
@@ -1804,7 +1866,8 @@ function toggleTheme() {const dark=document.documentElement.classList.toggle('da
                     if (parentMarked === 'dccon') type = 'dccon';
                 }
                 const label = mediaDisplayLabel(url, imageLabel, 'video', type);
-                const viewerKind = viewerKindForStoredMedia(type, 'video', url);
+                const sourceTag = cleanText(node.getAttribute('type')).toLowerCase().startsWith('image/') ? 'img' : 'video';
+                const viewerKind = viewerKindForStoredMedia(type, sourceTag, url);
                 const link = createActivityLink(url, label, 'activity-inline-link', viewerKind, referer);
                 if (link) {
                     container.appendChild(link);
@@ -1814,12 +1877,10 @@ function toggleTheme() {const dark=document.documentElement.classList.toggle('da
             return;
         }
 
-        if (tag === 'source') return;
-
         if (tag === 'a') {
             if (node.querySelector('img, video, source')) {
                 for (const child of node.childNodes) {
-                    appendStoredHtmlNode(child, container, seenUrls, allowVideo, imageLabel, referer, typeMap);
+                    appendStoredHtmlNode(child, container, seenUrls, allowVideo, imageLabel, referer, typeMap, urlMap);
                 }
                 return;
             }
@@ -1838,7 +1899,7 @@ function toggleTheme() {const dark=document.documentElement.classList.toggle('da
 
         const blockTags = new Set(['div', 'p', 'li', 'section', 'article', 'blockquote', 'pre']);
         for (const child of node.childNodes) {
-            appendStoredHtmlNode(child, container, seenUrls, allowVideo, imageLabel, referer, typeMap);
+            appendStoredHtmlNode(child, container, seenUrls, allowVideo, imageLabel, referer, typeMap, urlMap);
         }
         if (blockTags.has(tag)) appendBreakIfNeeded(container);
     }
@@ -1848,23 +1909,74 @@ function toggleTheme() {const dark=document.documentElement.classList.toggle('da
         return Boolean(container.querySelector('a'));
     }
 
+    function normalizeStoredDcconNodes(root, typeMap) {
+        const imageKeys = new Set(Array.from(root.querySelectorAll('img'))
+            .filter(node => !node.closest('video'))
+            .map(preferredStoredImageUrl).filter(isSafeHttpUrl).map(mediaIdentityKey));
+        const blockedMediaKeys = new Set();
+        let hadDccon = Boolean(root.querySelector('.written_dccon, [data-media-type="dccon"]'));
+        for (const video of root.querySelectorAll('video')) {
+            const candidates = [video, ...video.querySelectorAll('source')];
+            const urls = candidates.flatMap(node => ['src', 'data-src'].map(attr => cleanText(node.getAttribute(attr))))
+                .filter(isSafeHttpUrl);
+            const isDccon = video.classList.contains('written_dccon') || candidates.some(node => {
+                if (storedMediaType(node, '') === 'dccon') return true;
+                return ['src', 'data-src'].some(attr => {
+                    const url = cleanText(node.getAttribute(attr));
+                    return isSafeHttpUrl(url) && resolvedStoredMediaType(node, url, 'video', typeMap) === 'dccon';
+                });
+            });
+            if (!isDccon) continue;
+            hadDccon = true;
+            const pairedImage = urls.find(url => imageKeys.has(mediaIdentityKey(url)));
+            const representative = cleanText(video.getAttribute('data-src'));
+            // 실제 img가 확인되거나 별도 대표 이미지 주소가 있을 때만 보조 영상을 제외합니다.
+            // URL 끝을 잘라 이미지 주소를 추측하지 않습니다.
+            const imageUrl = pairedImage || (isDcconMediaUrl(representative) ? representative : '');
+            if (!imageUrl) continue; // 원본이 video/source만 남은 과거 자료는 삭제하지 않습니다.
+            const imageKey = mediaIdentityKey(imageUrl);
+            for (const url of urls) {
+                const key = mediaIdentityKey(url);
+                if (key !== imageKey && !imageKeys.has(key)) blockedMediaKeys.add(key);
+            }
+            if (pairedImage) {
+                video.remove();
+            } else {
+                const image = video.ownerDocument.createElement('img');
+                image.setAttribute('src', imageUrl);
+                image.setAttribute('data-media-type', 'dccon');
+                for (const attr of ['alt', 'conalt', 'title']) {
+                    if (video.hasAttribute(attr)) image.setAttribute(attr, video.getAttribute(attr));
+                }
+                video.replaceWith(image);
+                imageKeys.add(imageKey);
+            }
+        }
+        return { blockedMediaKeys, hadDccon };
+    }
+
     function renderStoredContent(row, body, allowVideo, imageLabel = '이미지') {
         const seenUrls = new Set();
         const storedHtml = cleanText(row.content_html);
         const referer = cleanText(row.url || row.post_url);
         const typeMap = buildStoredMediaTypeMap(row);
-        let storedHtmlHasMedia = false;
+        let urlMap = buildStoredMediaUrlMap(row);
+        let blockedMediaKeys = new Set();
+        let hadDccon = cleanText(row.content_type) === 'dccon';
 
         if (storedHtml) {
             try {
                 const parsed = new DOMParser().parseFromString(`<div id="stored-content-root">${storedHtml}</div>`, 'text/html');
                 const root = parsed.getElementById('stored-content-root');
                 if (root) {
-                    // 실제로 미디어 태그가 저장돼 있다면 배열 기반 보조 링크는 만들지 않습니다.
-                    // 움직이는 디시콘의 video/source 표현이 여러 개여도 본문 렌더링만 사용합니다.
-                    storedHtmlHasMedia = Boolean(root.querySelector('img, video, source[src], source[data-src]'));
+                    const normalized = normalizeStoredDcconNodes(root, typeMap);
+                    blockedMediaKeys = normalized.blockedMediaKeys;
+                    hadDccon = hadDccon || normalized.hadDccon;
+                    // 중복 제거 전에 본문과 배열 전체에서 동일 디시콘의 중계 URL을 찾습니다.
+                    // 원본 링크가 먼저 나와도 뒤의 중계 링크가 버려지지 않도록 합니다.
+                    urlMap = buildStoredMediaUrlMap(row, root);
                     for (const child of root.childNodes) {
-                        appendStoredHtmlNode(child, body, seenUrls, allowVideo, imageLabel, referer, typeMap);
+                        appendStoredHtmlNode(child, body, seenUrls, allowVideo, imageLabel, referer, typeMap, urlMap);
                     }
                 }
             } catch (error) {
@@ -1885,8 +1997,9 @@ function toggleTheme() {const dark=document.documentElement.classList.toggle('da
         const extras = [];
 
         const addMediaExtra = (url, fallbackType) => {
+            url = preferredStoredMediaUrl(url, urlMap);
             const key = mediaIdentityKey(url);
-            if (seenUrls.has(key)) return;
+            if (seenUrls.has(key) || blockedMediaKeys.has(key)) return;
             const type = typeMap.get(url) || normalizedStoredMediaType(fallbackType) || 'image';
             const label = mediaDisplayLabel(url, imageLabel, fallbackType === 'video' ? 'video' : 'image', type);
             const viewerKind = viewerKindForStoredMedia(type, '', url);
@@ -1894,18 +2007,11 @@ function toggleTheme() {const dark=document.documentElement.classList.toggle('da
             seenUrls.add(key);
         };
 
-        // content_html 안에 이미 이미지/영상/디시콘 링크가 렌더링된 경우에는
-        // 배열에서 같은 미디어 링크를 본문 아래에 다시 생성하지 않습니다.
-        // 구버전처럼 content_html에 미디어 자체가 없는 경우에만 배열을 fallback으로 사용합니다.
-        const hasInlineMedia = Boolean(body.querySelector('a.activity-inline-link[data-media-viewer="1"]'));
-        // content_html에 미디어 태그가 존재하면 렌더링 성공 여부와 무관하게 배열에서
-        // 두 번째 미디어 링크를 만들지 않습니다. 배열 fallback은 미디어 HTML이 없는 레거시 데이터에만 사용합니다.
-        if (!storedHtmlHasMedia && !hasInlineMedia) {
-            imageUrls.forEach(url => addMediaExtra(url, 'image'));
-            animatedImageUrls.forEach(url => addMediaExtra(url, 'image'));
-            videoUrls.forEach(url => addMediaExtra(url, isKnownImageMediaUrl(url) ? 'image' : 'video'));
-            dcconUrls.forEach(url => addMediaExtra(url, 'dccon'));
-        }
+        // 실제 표시한 URL만 중복 제외합니다. HTML 태그가 있다는 이유로 별도 저장 URL을 버리지 않습니다.
+        imageUrls.forEach(url => addMediaExtra(url, 'image'));
+        animatedImageUrls.forEach(url => addMediaExtra(url, 'image'));
+        videoUrls.forEach(url => addMediaExtra(url, isKnownImageMediaUrl(url) ? 'image' : 'video'));
+        dcconUrls.forEach(url => addMediaExtra(url, 'dccon'));
         linkUrls.forEach(url => {
             const key = mediaIdentityKey(url);
             if (!seenUrls.has(key)) {
@@ -1915,7 +2021,7 @@ function toggleTheme() {const dark=document.documentElement.classList.toggle('da
         });
 
         if (!hasVisibleContent(body) && extras.length === 0) {
-            body.textContent = '내용이 없습니다.';
+            body.textContent = hadDccon ? '디시콘 이미지 정보가 저장되어 있지 않습니다.' : '내용이 없습니다.';
             body.classList.add('empty');
             return null;
         }
@@ -2043,6 +2149,7 @@ function toggleTheme() {const dark=document.documentElement.classList.toggle('da
     function renderPostItems(posts) {
         const container = document.getElementById('recent-posts');
         container.replaceChildren();
+        resetActivityPaneScroll('posts');
 
         if (!posts.length) {
             setActivityState('recent-posts', '최근 게시글 내용 데이터가 없습니다.');
@@ -2089,6 +2196,7 @@ function toggleTheme() {const dark=document.documentElement.classList.toggle('da
     function renderCommentItems(comments) {
         const container = document.getElementById('recent-comments');
         container.replaceChildren();
+        resetActivityPaneScroll('comments');
 
         if (!comments.length) {
             setActivityState('recent-comments', '최근 댓글 내용 데이터가 없습니다.');
