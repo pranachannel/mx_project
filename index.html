@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ko"><head><meta charset="utf-8"><meta name="projectmx-dashboard-version" content="20260913-critical-fix-1"><meta name="viewport" content="width=device-width, initial-scale=1"><title>블루아카이브 갤러리 분석기 | ProjectMX</title><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Noto+Sans+KR:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500;600&amp;display=swap"><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config = {
+<html lang="ko"><head><meta charset="utf-8"><meta name="projectmx-dashboard-version" content="20260915-media-repair-2"><meta name="viewport" content="width=device-width, initial-scale=1"><title>블루아카이브 갤러리 분석기 | ProjectMX</title><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Noto+Sans+KR:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500;600&amp;display=swap"><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config = {
     darkMode: "class",
     theme: {
       extend: {
@@ -269,8 +269,9 @@ button:focus-visible,a:focus-visible,input:focus-visible,tr:focus-visible,th:foc
 [id^=filter-][aria-pressed=true]{color:rgb(var(--on-primary))!important;background:rgb(var(--primary))!important;box-shadow:0 1px 3px #0001!important}
 #hours-all,#hours-peak{background:transparent!important;color:rgb(var(--on-surface-variant))!important;box-shadow:none!important}
 #hours-all[aria-pressed=true],#hours-peak[aria-pressed=true]{background:rgb(var(--surface-container-lowest))!important;color:rgb(var(--primary))!important;box-shadow:0 1px 3px #0001!important}
-#tab-overview,#tab-ranking{border-bottom:2px solid transparent!important;color:rgb(var(--on-surface-variant))!important}
-#tab-overview[aria-selected=true],#tab-ranking[aria-selected=true]{border-bottom-color:rgb(var(--primary))!important;color:rgb(var(--primary))!important}
+#tab-overview,#tab-ranking{border:0!important;background:transparent!important;box-shadow:none!important;color:rgb(var(--on-surface-variant))!important}
+#tab-overview[aria-selected=true],#tab-ranking[aria-selected=true]{background:rgb(var(--surface-container-lowest))!important;box-shadow:0 1px 4px #0002!important;color:rgb(var(--primary))!important}
+#tab-overview:focus-visible,#tab-ranking:focus-visible{outline:2px solid rgb(var(--primary));outline-offset:2px}
 [id^=subtab-]{background:transparent!important;color:rgb(var(--on-surface-variant))!important;box-shadow:none!important}
 [id^=subtab-][aria-selected=true]{background:rgb(var(--surface-container-lowest))!important;color:rgb(var(--on-surface))!important;box-shadow:0 1px 3px #0001!important}
 .user-list-panel,.user-detail-panel,.name-cell{min-width:0}
@@ -364,14 +365,14 @@ button:focus-visible,a:focus-visible,input:focus-visible,tr:focus-visible,th:foc
 </div>
 </div>
 <div id="status-text" class="connection-status text-on-surface-variant" role="status" aria-live="polite">데이터를 불러오는 중입니다.</div><div class="w-full flex items-center justify-between border-b-0 pb-1">
-<div class="flex items-center gap-space-xs bg-surface-container-low p-1 rounded-xl" id="dashboard-view-tabs">
-<button class="px-space-lg py-space-xs rounded-lg font-body-md-medium text-body-md-medium bg-surface-container-lowest text-primary shadow-sm flex items-center gap-2 transition-all" id="tab-overview" onclick="switchMainTab('overview')" type="button">
-<span class="material-symbols-outlined text-base">insights</span>
+<div class="flex items-center gap-space-xs bg-surface-container-low p-1 rounded-xl" id="dashboard-view-tabs" role="tablist" aria-label="대시보드 보기" onkeydown="handleMainTabKey(event)">
+<button class="px-space-lg py-space-xs rounded-lg font-body-md-medium text-body-md-medium flex items-center gap-2 transition-all" id="tab-overview" onclick="switchMainTab('overview')" type="button" role="tab" aria-selected="true" aria-controls="overview-chart-panel user-workspace" tabindex="0">
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 20h16M6 16v-5m6 5V4m6 12V8"/></svg>
           종합 대시보드 (24시간 상세 추이)
         </button>
-<button class="px-space-lg py-space-xs rounded-lg font-body-md-medium text-body-md-medium text-on-surface-variant hover:text-on-surface flex items-center gap-2 transition-all" id="tab-ranking" onclick="switchMainTab('ranking')" type="button">
-<span class="material-symbols-outlined text-base">group</span>
-          유저 랭킹 &amp; 활동 분석
+<button class="px-space-lg py-space-xs rounded-lg font-body-md-medium text-body-md-medium flex items-center gap-2 transition-all" id="tab-ranking" onclick="switchMainTab('ranking')" type="button" role="tab" aria-selected="false" aria-controls="user-workspace" tabindex="-1">
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="9" cy="8" r="3"/><path d="M3 20v-2a6 6 0 0 1 12 0v2m1-15a3 3 0 0 1 0 6m2 3a5 5 0 0 1 3 4v2"/></svg>
+          전체 유저 리스트
         </button>
 </div>
 
@@ -451,7 +452,7 @@ button:focus-visible,a:focus-visible,input:focus-visible,tr:focus-visible,th:foc
 <div class="flex flex-col gap-space-sm">
 <div class="flex items-center justify-between">
 <div class="flex items-center gap-2">
-<h3 class="font-headline-sm text-headline-sm text-on-surface font-bold">유저 랭킹</h3>
+<h3 class="font-headline-sm text-headline-sm text-on-surface font-bold" id="user-list-title">유저 랭킹</h3>
 <span class="px-2 py-0.5 rounded-full bg-surface-container-high text-on-surface font-code-mono text-xs" id="rank-count-badge" title="선택한 날짜·시간대의 글과 댓글 합계 기준">상위 0명</span>
 </div>
 <span class="font-body-sm text-body-sm text-on-surface-variant">유저 클릭 시 상세 분석</span>
@@ -492,7 +493,7 @@ button:focus-visible,a:focus-visible,input:focus-visible,tr:focus-visible,th:foc
 </div>
 <div class="hidden flex-col items-center justify-center py-10 px-4 text-center bg-surface-container-low rounded-lg" id="table-empty-state">
 <span class="material-symbols-outlined text-3xl text-outline mb-2">person_search</span>
-<p class="font-headline-sm text-headline-sm text-on-surface font-semibold">상위 20명 중 검색 조건에 맞는 유저가 없습니다.</p>
+<p class="font-headline-sm text-headline-sm text-on-surface font-semibold" id="user-list-empty-message">상위 20명 중 검색 조건에 맞는 유저가 없습니다.</p>
 <p class="font-body-sm text-body-sm text-on-surface-variant mt-1">검색어를 재설정하거나 날짜 및 필터 조건을 변경해 주세요.</p>
 <button class="mt-4 px-3 py-1.5 rounded-lg bg-surface-container-lowest text-primary font-body-sm-medium text-body-sm-medium shadow-sm hover:bg-surface-container" onclick="resetTableFilter()" type="button">
             필터 초기화
@@ -562,7 +563,7 @@ button:focus-visible,a:focus-visible,input:focus-visible,tr:focus-visible,th:foc
 </div>
 </div>
 </div>
-</main><footer class="w-full bg-surface-container-low py-space-lg"><div class="w-full px-margin-screen flex flex-col md:flex-row items-center justify-between gap-space-md text-on-surface-variant font-body-sm text-body-sm"><div class="flex items-center gap-space-md"><span id="dashboard-build-label">화면 버전 2026.09.13-1</span></div><div class="flex items-center gap-space-lg"></div></div></footer><div id="media-lightbox" class="media-lightbox" role="dialog" aria-modal="true" aria-hidden="true" aria-label="미디어 보기">
+</main><footer class="w-full bg-surface-container-low py-space-lg"><div class="w-full px-margin-screen flex flex-col md:flex-row items-center justify-between gap-space-md text-on-surface-variant font-body-sm text-body-sm"><div class="flex items-center gap-space-md"><span id="dashboard-build-label">화면 버전 2026.09.15-2</span></div><div class="flex items-center gap-space-lg"></div></div></footer><div id="media-lightbox" class="media-lightbox" role="dialog" aria-modal="true" aria-hidden="true" aria-label="미디어 보기">
     <div class="media-lightbox-panel" role="document">
         <button id="media-lightbox-close" class="media-lightbox-close" type="button" aria-label="미디어 닫기">×</button>
         <div id="media-lightbox-stage" class="media-lightbox-stage"></div>
@@ -590,8 +591,8 @@ let sectionScrollOffset=128, navigationUpdateQueued=false;
 let tableSort = {key:'total', direction:-1}, adapterMissing = false;
 let totals = {post:0, comment:0, total:0}, bookmarks = [];
 let parquetModulePromise = null;
-const parquetCache = new Map(), RANKING_LIMIT = 20;
-console.info('[ProjectMX] dashboard 20260913-critical-fix-1 · 랭킹 최대 20명');
+const parquetCache = new Map(), RANKING_LIMIT = 20, USER_LIST_PAGE_SIZE = 20;
+console.info('[ProjectMX] dashboard 20260915-media-repair-2 · 전체 유저 20명씩');
 const seriesVisible = {posts:true, comments:true, users:true};
 const unadaptedFetch = window.fetch;
 const todayKst = kstToday();
@@ -829,13 +830,17 @@ function resetTableFilter() {typeFilter='ALL';dom('user-search-input').value='';
 function sortUserTable(key) {if(!['rank','bookmark','nickname','type','post','comment','total'].includes(key))return;tableSort={key,direction:tableSort.key===key?-tableSort.direction:(['post','comment','total','bookmark'].includes(key)?-1:1)};tablePage=1;renderTable();}
 function renderTable() {
     const query=cleanText(dom('user-search-input').value).toLowerCase(),typeMap={GONIC:'고닉',SEMI:'반고닉',ANON:'유동'};
-    // 전체 집계는 보존하고, 현재 날짜·시간대의 전체 순위 1~20위만 목록 대상으로 삼습니다.
-    const rankingUsers=[...currentData].sort((a,b)=>b.total-a.total||a.user_key.localeCompare(b.user_key)).slice(0,RANKING_LIMIT);
-    const filtered=rankingUsers.filter(u=>(typeFilter==='ALL'||(typeFilter==='FAV'?isUserBookmarked(u):u.type===typeMap[typeFilter]))&&matchesQuery(u,query));
+    const allUsers=activeTab==='ranking';
+    const ranked=[...currentData].sort((a,b)=>b.total-a.total||a.user_key.localeCompare(b.user_key));
+    const listUsers=allUsers?ranked:ranked.slice(0,RANKING_LIMIT);
+    const filtered=listUsers.filter(u=>(typeFilter==='ALL'||(typeFilter==='FAV'?isUserBookmarked(u):u.type===typeMap[typeFilter]))&&matchesQuery(u,query));
     const sortValue=u=>tableSort.key==='bookmark'?Number(isUserBookmarked(u)):u[tableSort.key];
     filtered.sort((a,b)=>{const av=sortValue(a),bv=sortValue(b);return tableSort.direction*(typeof av==='number'?av-bv:cleanText(av).localeCompare(cleanText(bv),'ko'))||a.rank-b.rank;});
-    tablePage=1;
-    const rows=filtered.slice(0,RANKING_LIMIT),tbody=dom('user-table-body');tbody.replaceChildren();
+    const pageSize=allUsers?USER_LIST_PAGE_SIZE:RANKING_LIMIT;
+    const pages=allUsers?Math.max(1,Math.ceil(filtered.length/pageSize)):1;
+    tablePage=Math.max(1,Math.min(tablePage,pages));
+    const start=(tablePage-1)*pageSize;
+    const rows=filtered.slice(start,start+pageSize),tbody=dom('user-table-body');tbody.replaceChildren();
     for(const user of rows){
         const tr=document.createElement('tr');tr.dataset.userKey=user.user_key;tr.tabIndex=0;tr.className='user-row';
         tr.classList.toggle('selected',selectedUser?.user_key===user.user_key);tr.setAttribute('aria-label',user.nickname+' 활동 분석 보기');
@@ -844,13 +849,30 @@ function renderTable() {
         tr.onclick=()=>selectUser(user);tr.addEventListener('keydown',event=>{if(event.target===tr&&['Enter',' '].includes(event.key)){event.preventDefault();selectUser(user);}});
         tr.querySelector('button').onclick=event=>{event.stopPropagation();toggleBookmarkUser(user);};tbody.appendChild(tr);
     }
-    textAt('rank-count-badge','상위 '+numberText(rankingUsers.length)+'명');
-    textAt('table-summary',`상위 ${numberText(rankingUsers.length)}명 중 ${numberText(filtered.length)}명 표시`);
+    textAt('user-list-title',allUsers?'전체 유저 리스트':'유저 랭킹');
+    textAt('rank-count-badge',(allUsers?'전체 ':'상위 ')+numberText(listUsers.length)+'명');
+    const searchLabel=allUsers?'전체 유저에서 닉네임·UID·IP 검색':'상위 20명 내 닉네임·UID·IP 검색';
+    dom('user-search-input').placeholder=searchLabel;dom('user-search-input').setAttribute('aria-label',searchLabel);
+    textAt('user-list-empty-message',allUsers?'검색 조건에 맞는 유저가 없습니다.':'상위 20명 중 검색 조건에 맞는 유저가 없습니다.');
+    textAt('table-summary',allUsers?(filtered.length?`검색 결과 ${numberText(filtered.length)}명 중 ${start+1}~${start+rows.length}명 표시`:'검색 결과 0명'):`상위 ${numberText(listUsers.length)}명 중 ${numberText(filtered.length)}명 표시`);
     show('table-empty-state',!filtered.length);
     ['ALL','GONIC','SEMI','ANON','FAV'].forEach(k=>dom('filter-'+k.toLowerCase()).setAttribute('aria-pressed',String(typeFilter===k)));
     document.querySelectorAll('th[data-sort-key]').forEach(th=>{const active=th.dataset.sortKey===tableSort.key;th.setAttribute('aria-sort',active?(tableSort.direction===1?'ascending':'descending'):'none');textAt('sort-'+th.dataset.sortKey,active?(tableSort.direction===1?' ↑':' ↓'):'');});
     const pagination=dom('table-pagination');pagination.replaceChildren();
-    show('table-pagination',false);
+    show('table-pagination',allUsers&&pages>1);
+    pagination.classList.add('flex','flex-wrap','items-center','gap-1');
+    if(allUsers&&pages>1){
+        const button=(label,page,disabled=false)=>{
+            const b=document.createElement('button');b.type='button';b.className='page-button';b.textContent=String(label);b.disabled=disabled;
+            b.setAttribute('aria-label',label==='‹'?'이전 페이지':label==='›'?'다음 페이지':page+' 페이지');
+            if(typeof label==='number'&&page===tablePage)b.setAttribute('aria-current','page');
+            b.onclick=()=>{tablePage=page;renderTable();};pagination.appendChild(b);
+        };
+        button('‹',tablePage-1,tablePage===1);
+        const numbers=[...new Set([1,tablePage-1,tablePage,tablePage+1,pages])].filter(p=>p>=1&&p<=pages).sort((a,b)=>a-b);
+        numbers.forEach((p,i)=>{if(i&&p-numbers[i-1]>1){const gap=document.createElement('span');gap.className='page-gap';gap.textContent='…';pagination.appendChild(gap);}button(p,p);});
+        button('›',tablePage+1,tablePage===pages);
+    }
     scheduleNavigationUpdate();
 }
 function toggleBookmarkUser(user) {
@@ -898,7 +920,20 @@ function renderUserChart() {
     modalChart.setOption(option,true);requestAnimationFrame(()=>modalChart?.resize());
 }
 function switchUserSubTab(tab) { if(!['hourly','posts','comments'].includes(tab))return;detailTab=tab;const ids={hourly:'hourly',posts:'recent-posts',comments:'recent-comments'};Object.keys(ids).forEach(key=>{show('pane-user-'+key,key===tab);dom('subtab-'+ids[key]).setAttribute('aria-selected',String(key===tab));});const pane=dom('pane-user-'+tab);if(pane.dataset.scrollResetPending==='1'){resetActivityPaneScroll(tab);delete pane.dataset.scrollResetPending;}if(tab==='hourly')renderUserChart(); }
-function switchMainTab(tab) {if(!['overview','ranking'].includes(tab))return;activeTab=tab;show('overview-chart-panel',tab==='overview');['overview','ranking'].forEach(k=>dom('tab-'+k).setAttribute('aria-selected',String(k===tab)));if(tab==='overview')requestAnimationFrame(()=>mainTrendChart?.resize());scheduleNavigationUpdate();}
+function switchMainTab(tab) {
+    if(!['overview','ranking'].includes(tab))return;
+    if(activeTab!==tab)tablePage=1;
+    activeTab=tab;show('overview-chart-panel',tab==='overview');show('user-workspace',true);
+    ['overview','ranking'].forEach(k=>{const button=dom('tab-'+k);button.setAttribute('aria-selected',String(k===tab));button.tabIndex=k===tab?0:-1;});
+    renderTable();if(tab==='overview')requestAnimationFrame(()=>mainTrendChart?.resize());
+    if(selectedUser)renderUserChart();scheduleNavigationUpdate();
+}
+function handleMainTabKey(event) {
+    if(!['ArrowLeft','ArrowRight','Home','End'].includes(event.key))return;
+    event.preventDefault();
+    const tab=event.key==='Home'?'overview':event.key==='End'?'ranking':activeTab==='overview'?'ranking':'overview';
+    switchMainTab(tab);dom('tab-'+tab).focus();
+}
 function initializeSectionNavigation() {
     window.addEventListener('scroll',scheduleNavigationUpdate,{passive:true});
     window.addEventListener('load',refreshNavigationGeometry);
@@ -939,7 +974,7 @@ function updateActiveNavigation() {
 function navigateSection(section) {
     if(!['overview','timeline','ranking'].includes(section))return;
     // Header links move around the complete dashboard; the local view tabs stay separate.
-    if(activeTab!=='overview')switchMainTab('overview');
+    if(activeTab!=='overview'&&section!=='ranking')switchMainTab('overview');
     refreshNavigationGeometry();
     const target=section==='overview'?null:dom(section==='timeline'?'overview-chart-panel':'user-ranking-panel');
     const top=target?Math.max(0,(window.scrollY||0)+target.getBoundingClientRect().top-sectionScrollOffset):0;
@@ -1591,6 +1626,9 @@ function toggleTheme() {const dark=document.documentElement.classList.toggle('da
             // href에 원본/Worker URL을 넣지 않아 중클릭이나 브라우저 기본 동작으로 별도 탭이 열리는 것도 막습니다.
             link.href = '#';
             link.dataset.mediaViewer = '1';
+            link.dataset.mediaSource = safeUrl;
+            link.dataset.mediaOriginal = effectiveMediaSourceUrl(safeUrl) || safeUrl;
+            link.dataset.mediaKind = viewerKind;
             link.addEventListener('click', event => {
                 event.preventDefault();
                 event.stopPropagation();
@@ -1732,7 +1770,7 @@ function toggleTheme() {const dark=document.documentElement.classList.toggle('da
         if (!isSafeHttpUrl(safeUrl)) return false;
         try {
             const parsed = new URL(safeUrl, window.location.href);
-            return parsed.protocol === 'https:' && parsed.pathname === '/image' &&
+            return parsed.protocol === 'https:' && (parsed.pathname === '/image' || /^\/image\/[0-9a-f]{16}(?:\.(?:jpg|jpeg|png|gif|webp|avif|bmp|ico|image|mp4|webm|mov|ogv|ogg))?$/.test(parsed.pathname)) &&
                 Boolean(parsed.searchParams.get('s')) && Boolean(parsed.searchParams.get('p')) &&
                 /^[a-f0-9]{64}$/i.test(parsed.searchParams.get('sig') || '') &&
                 isDcconMediaUrl(relayOriginalMediaUrl(safeUrl));
@@ -1929,7 +1967,18 @@ function toggleTheme() {const dark=document.documentElement.classList.toggle('da
             if (!isDccon) continue;
             hadDccon = true;
             const pairedImage = urls.find(url => imageKeys.has(mediaIdentityKey(url)));
-            const representative = cleanText(video.getAttribute('data-src'));
+            const lazyRepresentative = cleanText(video.getAttribute('data-src'));
+            const parentSrc = cleanText(video.getAttribute('src'));
+            // 이전 Go 정리기는 video.data-src를 src로 옮겼습니다. 같은 video의
+            // source와 다른 부모 주소가 남아 있으면 그 대표 이미지 관계를 복원합니다.
+            // 서로 관계없는 URL의 no 값이나 접미사는 비교/절단하지 않습니다.
+            const storedRepresentative = isDcconMediaUrl(parentSrc) &&
+                Array.from(video.querySelectorAll('source')).some(source =>
+                    ['src', 'data-src'].some(attr => {
+                        const url = cleanText(source.getAttribute(attr));
+                        return isDcconMediaUrl(url) && mediaIdentityKey(url) !== mediaIdentityKey(parentSrc);
+                    })) ? parentSrc : '';
+            const representative = isDcconMediaUrl(lazyRepresentative) ? lazyRepresentative : storedRepresentative;
             // 실제 img가 확인되거나 별도 대표 이미지 주소가 있을 때만 보조 영상을 제외합니다.
             // URL 끝을 잘라 이미지 주소를 추측하지 않습니다.
             const imageUrl = pairedImage || (isDcconMediaUrl(representative) ? representative : '');
@@ -1955,6 +2004,23 @@ function toggleTheme() {const dark=document.documentElement.classList.toggle('da
         return { blockedMediaKeys, hadDccon };
     }
 
+    const activityMediaDiagnostics = new WeakMap();
+    // 개발자 도구에서 문제 링크를 선택한 후 projectmxMediaDebug($0)로 확인합니다.
+    // 본문 텍스트/닉네임은 포함하지 않고, 자동 전송이나 추가 요청도 하지 않습니다.
+    function projectmxMediaDebug(element) {
+        const item = element?.closest?.('.activity-item');
+        const body = item?.querySelector('.activity-item-content');
+        if (!body) return { error: '게시글 또는 댓글의 디시콘 링크를 먼저 선택해 주세요.' };
+        return {
+            version: '20260915-media-repair-2',
+            ...activityMediaDiagnostics.get(body),
+            rendered: Array.from(item.querySelectorAll('a[data-media-viewer]'), link => ({
+                placement: link.closest('.activity-media-links') ? 'extra' : 'inline',
+                url: link.dataset.mediaSource, original: link.dataset.mediaOriginal, kind: link.dataset.mediaKind
+            }))
+        };
+    }
+
     function renderStoredContent(row, body, allowVideo, imageLabel = '이미지') {
         const seenUrls = new Set();
         const storedHtml = cleanText(row.content_html);
@@ -1963,18 +2029,33 @@ function toggleTheme() {const dark=document.documentElement.classList.toggle('da
         let urlMap = buildStoredMediaUrlMap(row);
         let blockedMediaKeys = new Set();
         let hadDccon = cleanText(row.content_type) === 'dccon';
+        const diagnostics = {
+            contentType: cleanText(row.content_type),
+            arrays: Object.fromEntries(['image_urls', 'animated_image_urls', 'video_urls', 'dccon_urls']
+                .map(key => [key, normalizeUrlArray(row[key])])),
+            nodes: [], blockedMediaKeys: []
+        };
+        activityMediaDiagnostics.set(body, diagnostics);
 
         if (storedHtml) {
             try {
                 const parsed = new DOMParser().parseFromString(`<div id="stored-content-root">${storedHtml}</div>`, 'text/html');
                 const root = parsed.getElementById('stored-content-root');
                 if (root) {
+                    const mediaNodes = Array.from(root.querySelectorAll('img, video, source'));
+                    diagnostics.nodes = mediaNodes.map(node => ({
+                        tag: node.tagName.toLowerCase(),
+                        videoParent: mediaNodes.indexOf(node.parentElement?.closest('video')),
+                        src: node.getAttribute('src'), dataSrc: node.getAttribute('data-src'),
+                        mediaType: node.getAttribute('data-media-type'), type: node.getAttribute('type')
+                    }));
+                    // 보조 video를 제거하기 전에 서명 URL을 보관합니다. 대표 이미지의
+                    // 유효한 중계 주소가 그 video에만 있어도 직접 URL로 되돌리지 않습니다.
+                    urlMap = buildStoredMediaUrlMap(row, root);
                     const normalized = normalizeStoredDcconNodes(root, typeMap);
                     blockedMediaKeys = normalized.blockedMediaKeys;
+                    diagnostics.blockedMediaKeys = Array.from(blockedMediaKeys);
                     hadDccon = hadDccon || normalized.hadDccon;
-                    // 중복 제거 전에 본문과 배열 전체에서 동일 디시콘의 중계 URL을 찾습니다.
-                    // 원본 링크가 먼저 나와도 뒤의 중계 링크가 버려지지 않도록 합니다.
-                    urlMap = buildStoredMediaUrlMap(row, root);
                     for (const child of root.childNodes) {
                         appendStoredHtmlNode(child, body, seenUrls, allowVideo, imageLabel, referer, typeMap, urlMap);
                     }
