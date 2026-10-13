@@ -938,7 +938,7 @@ function switchMainTab(tab) {
     if(!['overview','ranking'].includes(tab))return;
     if(activeTab!==tab)tablePage=1;
     activeTab=tab;show('overview-chart-panel',tab==='overview');show('user-workspace',true);
-    show('nav-timeline',tab==='overview');textAt('nav-overview',tab==='overview'?'대시보드 종합':'맨 위로');
+    show('nav-timeline',tab==='overview');textAt('nav-overview',tab==='overview'?'대시보드 종합':'대시보드 종합');
     ['overview','ranking'].forEach(k=>{const button=dom('tab-'+k);button.setAttribute('aria-selected',String(k===tab));button.tabIndex=k===tab?0:-1;});
     renderTable();if(tab==='overview')requestAnimationFrame(()=>mainTrendChart?.resize());
     if(selectedUser)renderUserChart();refreshNavigationGeometry();
