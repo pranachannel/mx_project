@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ko"><head><meta charset="utf-8"><meta name="projectmx-dashboard-version" content="20261014-crawler-status-disabled-1"><meta name="viewport" content="width=device-width, initial-scale=1"><title>블루아카이브 갤러리 분석기 | ProjectMX</title><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Noto+Sans+KR:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500;600&amp;display=swap"><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config = {
+<html lang="ko"><head><meta charset="utf-8"><meta name="projectmx-dashboard-version" content="20261014-header-tabs-1"><meta name="viewport" content="width=device-width, initial-scale=1"><title>블루아카이브 갤러리 분석기 | ProjectMX</title><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Noto+Sans+KR:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500;600&amp;display=swap"><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config = {
     darkMode: "class",
     theme: {
       extend: {
@@ -250,7 +250,10 @@ button{cursor:pointer}button:disabled{cursor:default;opacity:.4}
 button:focus-visible,a:focus-visible,input:focus-visible,tr:focus-visible,th:focus-visible{outline:2px solid rgb(var(--primary));outline-offset:3px}
 .material-symbols-outlined{font-family:'Material Symbols Outlined';font-weight:400;font-style:normal;font-size:24px;line-height:1;letter-spacing:normal;white-space:nowrap;word-wrap:normal;direction:ltr;font-feature-settings:'liga';-webkit-font-smoothing:antialiased;display:inline-block;flex-shrink:0}
 #app-header{z-index:40}.header-inner{height:auto;min-height:112px}.header-top{min-height:64px}.header-toolbar{min-height:48px}
-.section-nav{display:flex;align-items:center;gap:4px;min-width:0}.section-nav-link{display:block;padding:8px 12px;border-radius:12px;font-size:14px;font-weight:500;white-space:nowrap;background:transparent;color:rgb(var(--on-surface-variant));transition:background .15s,color .15s}.section-nav-link:hover{background:rgb(var(--surface-container));color:rgb(var(--on-surface))}.section-nav-link[aria-current=location]{background:rgb(var(--primary-container));color:rgb(var(--on-primary-container))}
+#app-header .header-primary{display:flex;align-items:center;gap:24px;min-width:0;flex:1}
+#app-header #dashboard-view-tabs{display:flex;align-items:stretch;gap:4px;min-width:0;padding:4px;border-radius:12px;background:rgb(var(--surface-container-low))}
+#app-header #dashboard-view-tabs button{display:flex;align-items:center;gap:8px;min-height:40px;padding:8px 12px;font-size:14px;line-height:1.5;white-space:nowrap}
+#app-header #dashboard-view-tabs svg{flex-shrink:0}
 #user-type-summary{display:flex;flex-wrap:wrap;justify-content:flex-start;align-items:center;gap:4px;text-align:left}#user-type-summary>span{white-space:nowrap}
 .connection-status{font-size:12px;line-height:1.6}
 .connection-status[data-state=error]{color:rgb(var(--error))}
@@ -296,7 +299,7 @@ button:focus-visible,a:focus-visible,input:focus-visible,tr:focus-visible,th:foc
 .activity-item{color:rgb(var(--on-surface));background:rgb(var(--surface-container-lowest));border-color:rgb(var(--outline-variant) / .4)}.activity-item-title{color:rgb(var(--primary))}.activity-item-meta,.activity-item-body,.activity-parent-link{color:rgb(var(--on-surface-variant))}
 .is-spinning{animation:sync-spin 1s linear infinite}@keyframes sync-spin{to{transform:rotate(360deg)}}
 @media(max-width:1279px){.user-detail-panel{position:static!important;max-height:none;overflow:visible}}
-@media(max-width:1023px){.header-top{height:auto!important;padding-top:10px;padding-bottom:10px;align-items:flex-start!important}.header-top>div:first-child{flex-wrap:wrap;min-width:0;gap:10px!important}.section-nav{flex-wrap:wrap;flex-basis:100%}.section-nav-link{padding:7px 9px}}
+@media(max-width:1023px){.header-top{height:auto!important;padding-top:10px;padding-bottom:10px;align-items:flex-start!important}.header-top>div:first-child{flex-wrap:wrap;min-width:0;gap:10px!important}}
 @media(max-width:767px){.header-inner{min-height:0;padding-left:16px!important;padding-right:16px!important}.header-top{height:auto!important;min-height:60px;gap:12px;flex-wrap:wrap;padding-top:10px;padding-bottom:10px}.header-top>div:first-child{gap:10px!important}.header-toolbar{height:auto!important;gap:10px;flex-wrap:wrap;padding-top:8px;padding-bottom:8px}.header-toolbar>div{flex-wrap:wrap}.chart-frame{height:250px}#header-sync-status{font-size:10px}.connection-status{font-size:11px}.user-row td{padding:10px 8px}}
 @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*,*::before,*::after{animation:none!important;transition:none!important}}
 </style><style id="responsive-refinements">/* Let the header grow with wrapped controls, regardless of Tailwind load order. */
@@ -311,12 +314,13 @@ button:focus-visible,a:focus-visible,input:focus-visible,tr:focus-visible,th:foc
  #app-header .header-top{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center!important}
  #app-header .header-top>div:first-child{display:contents}
  #app-header .header-top>div:last-child{grid-column:2;grid-row:1;justify-self:end}
- #app-header .section-nav{grid-column:1/-1;display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);width:100%}
- #app-header .section-nav-link{text-align:center;white-space:normal;word-break:keep-all;padding:10px 4px}
+ #app-header #dashboard-view-tabs{grid-column:1/-1;display:grid;grid-template-columns:minmax(0,1.8fr) minmax(0,1fr);width:100%;min-width:0}
+ #app-header #dashboard-view-tabs button{min-width:0;white-space:normal;word-break:keep-all;justify-content:center}
 }
 @media(max-width:767px){
  #app-header .header-inner{padding:10px 12px!important}
  #app-header .header-top{padding:0 0 8px;min-height:0}
+ #app-header #dashboard-view-tabs button{padding:8px 8px;gap:6px}
  #app-header .header-toolbar{display:grid;grid-template-columns:minmax(0,1fr);gap:8px;min-height:0}
  #app-header .header-toolbar>div:first-child{display:grid;gap:8px;width:100%}
  #app-header .header-toolbar>div:first-child>div{display:grid;grid-template-columns:48px minmax(0,1fr);gap:6px;min-width:0}
@@ -345,7 +349,16 @@ button:focus-visible,a:focus-visible,input:focus-visible,tr:focus-visible,th:foc
 </style><style id="crawler-runtime-styles">#crawler-runtime-panel{padding:18px;margin:0 0 18px;border:1px solid rgb(var(--outline-variant));border-radius:14px;background:rgb(var(--surface-container-lowest));color:rgb(var(--on-surface));font-family:inherit}
 .crawler-runtime-heading{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap}.crawler-runtime-heading h2{margin:0;font-size:17px;font-weight:700}.crawler-runtime-heading p{margin:6px 0 0;font-size:12px;color:rgb(var(--on-surface-variant))}.crawler-runtime-actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap}#crawler-phase{padding:5px 10px;border-radius:20px;font-size:12px;background:rgb(var(--surface-container-low));font-weight:600}#crawler-phase[data-tone=ready]{color:rgb(var(--tertiary))}#crawler-phase[data-tone=danger]{color:rgb(var(--error))}#crawler-phase[data-tone=waiting]{color:rgb(var(--secondary))}#crawler-refresh{font-size:12px;padding:6px 10px;border-radius:8px;background:rgb(var(--surface-container-low));color:inherit;border:1px solid rgb(var(--outline-variant));cursor:pointer}#crawler-refresh:focus-visible{outline:2px solid rgb(var(--primary));outline-offset:2px}#crawler-refresh:disabled{opacity:.6;cursor:wait}
 .crawler-runtime-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-top:16px}.crawler-runtime-grid>div{padding:12px;border-radius:10px;background:rgb(var(--surface-container-low));min-width:0}.crawler-runtime-grid span{display:block;font-size:12px;color:rgb(var(--on-surface-variant))}.crawler-runtime-grid strong{display:block;margin-top:7px;font-size:15px;line-height:1.6;overflow-wrap:anywhere}.crawler-runtime-meta{display:flex;flex-wrap:wrap;gap:6px 18px;margin-top:12px;font-size:12px;line-height:1.7;color:rgb(var(--on-surface-variant))}.crawler-runtime-meta p{margin:0;overflow-wrap:anywhere}#crawler-error,#crawler-updated{flex-basis:100%}@media(max-width:1000px){.crawler-runtime-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:440px){#crawler-runtime-panel{padding:14px}.crawler-runtime-grid{grid-template-columns:1fr}.crawler-runtime-actions{width:100%;justify-content:space-between}}
-</style></head><body id="dashboard-top" class="bg-surface font-body-md text-on-surface antialiased"><header class="sticky top-0 left-0 w-full z-50 bg-surface/90 backdrop-blur-xl shadow-[0_1px_8px_rgba(0,0,0,0.04)]" id="app-header"><div class="w-full px-margin-screen flex flex-col justify-between header-inner"><div class="flex items-center justify-between gap-space-lg header-top"><div class="flex items-center gap-space-lg"><div class="flex items-center gap-space-sm"><div class="flex items-center gap-2"><span class="material-symbols-outlined text-primary text-2xl">analytics</span><span class="font-headline-md text-headline-md text-primary tracking-tight font-bold">갤러리 분석기</span></div></div><nav class="section-nav" aria-label="분석 구간 이동"><a class="section-nav-link" data-path="overview-dashboard" href="#dashboard-top" id="nav-overview" data-section="overview" onclick="navigateSection('overview'); return false;" aria-current="location">대시보드 종합</a><a class="section-nav-link" data-path="board-deep-dive" href="#overview-chart-panel" id="nav-timeline" data-section="timeline" onclick="navigateSection('timeline'); return false;">시간대별 분석</a><a class="section-nav-link" data-path="author-analytics" href="#user-workspace" id="nav-ranking" data-section="ranking" onclick="navigateSection('ranking'); return false;">사용자 분석</a></nav></div><div class="flex items-center gap-space-md"><div class="hidden md:flex items-center gap-space-xs px-space-sm py-space-2xs rounded-full bg-surface-container-low text-on-surface"><span id="header-sync-status" class="font-code-mono text-code-mono text-on-surface-variant" role="status">불러오는 중</span></div><button aria-label="테마 전환" class="p-space-xs rounded-xl text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors flex items-center justify-center" type="button" id="theme-toggle" onclick="toggleTheme()" aria-pressed="false"><span class="material-symbols-outlined" id="theme-icon">light_mode</span></button><div class="flex items-center gap-space-sm pl-space-xs"><div class="hidden lg:flex flex-col"></div></div></div></div><div class="flex items-center justify-between gap-space-md header-toolbar"><div class="flex items-center gap-space-lg overflow-x-auto"><div class="flex items-center gap-space-xs"><span class="font-label-caps text-label-caps text-on-surface-variant uppercase">조회 기준</span><div class="flex items-center p-0.5 bg-surface-container-low rounded-xl"><button class="px-space-sm py-space-2xs rounded-lg font-body-sm-medium text-body-sm-medium bg-surface-container-lowest text-on-surface shadow-[0_1px_4px_rgba(0,0,0,0.04)]" type="button" id="today-btn" onclick="selectToday()">오늘</button><button class="px-space-sm py-space-2xs rounded-lg font-body-sm-medium text-body-sm-medium text-on-surface-variant hover:text-on-surface flex items-center gap-1" type="button" id="date-open-btn" onclick="openDatePicker()"><span class="material-symbols-outlined text-xs">calendar_today</span>날짜 선택</button></div></div><div class="flex items-center gap-space-xs"><span class="font-label-caps text-label-caps text-on-surface-variant uppercase">시간대</span><div class="flex items-center p-0.5 bg-surface-container-low rounded-xl"><button class="px-space-sm py-space-2xs rounded-lg font-body-sm-medium text-body-sm-medium bg-surface-container-lowest text-on-surface shadow-[0_1px_4px_rgba(0,0,0,0.04)]" type="button" id="hours-all" onclick="setTimeRange('all')">24시간 전체</button><button class="px-space-sm py-space-2xs rounded-lg font-body-sm-medium text-body-sm-medium text-on-surface-variant hover:text-on-surface" type="button" id="hours-peak" onclick="setTimeRange('peak')" title="선택 날짜의 00~02시 및 19~23시 데이터만 표시합니다.">피크타임 (19~02시)</button></div></div></div><div class="flex items-center gap-space-xs flex-shrink-0"><button class="px-space-sm py-space-xs rounded-xl bg-surface-container-low text-on-surface font-body-sm-medium text-body-sm-medium hover:bg-surface-container hover:text-on-surface transition-colors flex items-center gap-space-xs" type="button" id="refresh-btn" onclick="refreshCurrentData()"><span class="material-symbols-outlined text-sm" id="sync-refresh-icon">sync</span><span class="">데이터 새로고침</span></button></div></div></div></header><main class="w-full  bg-surface" id="dashboard-content"><div class="flex flex-col w-full">
+</style></head><body id="dashboard-top" class="bg-surface font-body-md text-on-surface antialiased"><header class="sticky top-0 left-0 w-full z-50 bg-surface/90 backdrop-blur-xl shadow-[0_1px_8px_rgba(0,0,0,0.04)]" id="app-header"><div class="w-full px-margin-screen flex flex-col justify-between header-inner"><div class="flex items-center justify-between gap-space-lg header-top"><div class="flex items-center gap-space-lg header-primary"><div class="flex items-center gap-space-sm"><div class="flex items-center gap-2"><span class="material-symbols-outlined text-primary text-2xl">analytics</span><span class="font-headline-md text-headline-md text-primary tracking-tight font-bold">갤러리 분석기</span></div></div><div class="flex items-center gap-space-xs bg-surface-container-low p-1 rounded-xl" id="dashboard-view-tabs" role="tablist" aria-label="대시보드 보기" onkeydown="handleMainTabKey(event)">
+<button class="px-space-lg py-space-xs rounded-lg font-body-md-medium text-body-md-medium flex items-center gap-2 transition-all" id="tab-overview" onclick="switchMainTab('overview')" type="button" role="tab" aria-selected="true" aria-controls="overview-chart-panel user-workspace" tabindex="0">
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 20h16M6 16v-5m6 5V4m6 12V8"/></svg>
+          종합 대시보드 (24시간 상세 추이)
+        </button>
+<button class="px-space-lg py-space-xs rounded-lg font-body-md-medium text-body-md-medium flex items-center gap-2 transition-all" id="tab-ranking" onclick="switchMainTab('ranking')" type="button" role="tab" aria-selected="false" aria-controls="user-workspace" tabindex="-1">
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="9" cy="8" r="3"/><path d="M3 20v-2a6 6 0 0 1 12 0v2m1-15a3 3 0 0 1 0 6m2 3a5 5 0 0 1 3 4v2"/></svg>
+          전체 유저 리스트
+        </button>
+</div></div><div class="flex items-center gap-space-md"><div class="hidden md:flex items-center gap-space-xs px-space-sm py-space-2xs rounded-full bg-surface-container-low text-on-surface"><span id="header-sync-status" class="font-code-mono text-code-mono text-on-surface-variant" role="status">불러오는 중</span></div><button aria-label="테마 전환" class="p-space-xs rounded-xl text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors flex items-center justify-center" type="button" id="theme-toggle" onclick="toggleTheme()" aria-pressed="false"><span class="material-symbols-outlined" id="theme-icon">light_mode</span></button><div class="flex items-center gap-space-sm pl-space-xs"><div class="hidden lg:flex flex-col"></div></div></div></div><div class="flex items-center justify-between gap-space-md header-toolbar"><div class="flex items-center gap-space-lg overflow-x-auto"><div class="flex items-center gap-space-xs"><span class="font-label-caps text-label-caps text-on-surface-variant uppercase">조회 기준</span><div class="flex items-center p-0.5 bg-surface-container-low rounded-xl"><button class="px-space-sm py-space-2xs rounded-lg font-body-sm-medium text-body-sm-medium bg-surface-container-lowest text-on-surface shadow-[0_1px_4px_rgba(0,0,0,0.04)]" type="button" id="today-btn" onclick="selectToday()">오늘</button><button class="px-space-sm py-space-2xs rounded-lg font-body-sm-medium text-body-sm-medium text-on-surface-variant hover:text-on-surface flex items-center gap-1" type="button" id="date-open-btn" onclick="openDatePicker()"><span class="material-symbols-outlined text-xs">calendar_today</span>날짜 선택</button></div></div><div class="flex items-center gap-space-xs"><span class="font-label-caps text-label-caps text-on-surface-variant uppercase">시간대</span><div class="flex items-center p-0.5 bg-surface-container-low rounded-xl"><button class="px-space-sm py-space-2xs rounded-lg font-body-sm-medium text-body-sm-medium bg-surface-container-lowest text-on-surface shadow-[0_1px_4px_rgba(0,0,0,0.04)]" type="button" id="hours-all" onclick="setTimeRange('all')">24시간 전체</button><button class="px-space-sm py-space-2xs rounded-lg font-body-sm-medium text-body-sm-medium text-on-surface-variant hover:text-on-surface" type="button" id="hours-peak" onclick="setTimeRange('peak')" title="선택 날짜의 00~02시 및 19~23시 데이터만 표시합니다.">피크타임 (19~02시)</button></div></div></div><div class="flex items-center gap-space-xs flex-shrink-0"><button class="px-space-sm py-space-xs rounded-xl bg-surface-container-low text-on-surface font-body-sm-medium text-body-sm-medium hover:bg-surface-container hover:text-on-surface transition-colors flex items-center gap-space-xs" type="button" id="refresh-btn" onclick="refreshCurrentData()"><span class="material-symbols-outlined text-sm" id="sync-refresh-icon">sync</span><span class="">데이터 새로고침</span></button></div></div></div></header><main class="w-full  bg-surface" id="dashboard-content"><div class="flex flex-col w-full">
 <div class="w-full px-margin-screen py-space-md flex flex-col gap-space-md bg-surface">
 <div class="w-full flex flex-col lg:flex-row lg:items-center justify-between gap-space-md bg-surface-container-lowest p-space-md rounded-xl shadow-sm" id="gallery-summary">
 <div class="flex flex-wrap items-center gap-space-md" id="gallery-summary-content">
@@ -377,19 +390,7 @@ button:focus-visible,a:focus-visible,input:focus-visible,tr:focus-visible,th:foc
   </div>
   <div class="crawler-runtime-meta"><p id="crawler-rate">최근 처리 속도 확인 중</p><p id="crawler-integrity">결과 검증: 기록 확인 중</p><p id="crawler-error">최근 오류: 확인 중</p><p id="crawler-updated">상태 정보 연결 중 · 1분 자동 갱신</p></div>
 </section>
-<div id="status-text" class="connection-status text-on-surface-variant" role="status" aria-live="polite">데이터를 불러오는 중입니다.</div><div class="w-full flex items-center justify-between border-b-0 pb-1">
-<div class="flex items-center gap-space-xs bg-surface-container-low p-1 rounded-xl" id="dashboard-view-tabs" role="tablist" aria-label="대시보드 보기" onkeydown="handleMainTabKey(event)">
-<button class="px-space-lg py-space-xs rounded-lg font-body-md-medium text-body-md-medium flex items-center gap-2 transition-all" id="tab-overview" onclick="switchMainTab('overview')" type="button" role="tab" aria-selected="true" aria-controls="overview-chart-panel user-workspace" tabindex="0">
-<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 20h16M6 16v-5m6 5V4m6 12V8"/></svg>
-          종합 대시보드 (24시간 상세 추이)
-        </button>
-<button class="px-space-lg py-space-xs rounded-lg font-body-md-medium text-body-md-medium flex items-center gap-2 transition-all" id="tab-ranking" onclick="switchMainTab('ranking')" type="button" role="tab" aria-selected="false" aria-controls="user-workspace" tabindex="-1">
-<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="9" cy="8" r="3"/><path d="M3 20v-2a6 6 0 0 1 12 0v2m1-15a3 3 0 0 1 0 6m2 3a5 5 0 0 1 3 4v2"/></svg>
-          전체 유저 리스트
-        </button>
-</div>
-
-</div>
+<div id="status-text" class="connection-status text-on-surface-variant" role="status" aria-live="polite">데이터를 불러오는 중입니다.</div>
 <div class="grid grid-cols-1 md:grid-cols-3 gap-space-md">
 <div class="bg-surface-container-lowest p-5 rounded-xl shadow-sm flex flex-col justify-between relative overflow-hidden group">
 <div class="flex items-center justify-between">
@@ -573,7 +574,7 @@ button:focus-visible,a:focus-visible,input:focus-visible,tr:focus-visible,th:foc
 </div>
 </div>
 </div>
-</main><footer class="w-full bg-surface-container-low py-space-lg"><div class="w-full px-margin-screen flex flex-col md:flex-row items-center justify-between gap-space-md text-on-surface-variant font-body-sm text-body-sm"><div class="flex items-center gap-space-md"><span id="dashboard-build-label">화면 버전 2026.09.20-1</span></div><div class="flex items-center gap-space-lg"></div></div></footer><div id="media-lightbox" class="media-lightbox" role="dialog" aria-modal="true" aria-hidden="true" aria-label="미디어 보기">
+</main><footer class="w-full bg-surface-container-low py-space-lg"><div class="w-full px-margin-screen flex flex-col md:flex-row items-center justify-between gap-space-md text-on-surface-variant font-body-sm text-body-sm"><div class="flex items-center gap-space-md"><span id="dashboard-build-label">화면 버전 2026.10.14-1</span></div><div class="flex items-center gap-space-lg"></div></div></footer><div id="media-lightbox" class="media-lightbox" role="dialog" aria-modal="true" aria-hidden="true" aria-label="미디어 보기">
     <div class="media-lightbox-panel" role="document">
         <button id="media-lightbox-close" class="media-lightbox-close" type="button" aria-label="미디어 닫기">×</button>
         <div id="media-lightbox-stage" class="media-lightbox-stage"></div>
@@ -597,12 +598,11 @@ let dailyLoadSequence = 0, dailyLoading = false, modalLoadSequence = 0;
 let mainTrendChart = null, dailyTrendData = null, selectedDate = '', timeRange = 'all';
 let selectedHour = null;
 let activeTab = 'overview', detailTab = 'hourly', typeFilter = 'ALL', tablePage = 1;
-let sectionScrollOffset=128, navigationUpdateQueued=false;
 let tableSort = {key:'total', direction:-1}, rankingMetric = 'total', adapterMissing = false;
 let totals = {post:0, comment:0, total:0}, bookmarks = [];
 let parquetModulePromise = null;
 const parquetCache = new Map(), RANKING_LIMIT = 20, USER_LIST_PAGE_SIZE = 20;
-console.info('[ProjectMX] dashboard 20261013-crawler-status-1 · 전체 유저 20명씩');
+console.info('[ProjectMX] dashboard 20261014-header-tabs-1 · 전체 유저 20명씩');
 const seriesVisible = {posts:true, comments:true, users:true};
 const unadaptedFetch = window.fetch;
 const todayKst = kstToday();
@@ -640,8 +640,7 @@ function initializeDashboard() {
     if(window.fetch===unadaptedFetch)adapterMissing=true;
     const date=dom('archive-date-input'); date.min=PROJECT_START_DATE;date.max=kstToday();date.value=kstToday();
     syncThemeButton(); switchMainTab('overview'); clearSelectedUser(); syncRangeButtons(); renderTable();
-    initializeSectionNavigation();
-    window.addEventListener('resize',()=>{mainTrendChart?.resize();modalChart?.resize();refreshNavigationGeometry();});
+    window.addEventListener('resize',()=>{mainTrendChart?.resize();modalChart?.resize();});
     document.addEventListener('visibilitychange',()=>{if(!document.hidden){date.max=kstToday();updateAutoRefreshLabel();}});
     document.addEventListener('keydown',event=>{if(event.key==='Escape')closeMediaLightbox();});
     dom('media-lightbox-close').addEventListener('click',closeMediaLightbox);
@@ -887,7 +886,6 @@ function renderTable() {
         numbers.forEach((p,i)=>{if(i&&p-numbers[i-1]>1){const gap=document.createElement('span');gap.className='page-gap';gap.textContent='…';pagination.appendChild(gap);}button(p,p);});
         button('›',tablePage+1,tablePage===pages);
     }
-    scheduleNavigationUpdate();
 }
 function toggleBookmarkUser(user) {
     const keys=bookmarkAliases(user);if(!keys.length)return;
@@ -938,63 +936,15 @@ function switchMainTab(tab) {
     if(!['overview','ranking'].includes(tab))return;
     if(activeTab!==tab)tablePage=1;
     activeTab=tab;show('overview-chart-panel',tab==='overview');show('user-workspace',true);
-    show('nav-timeline',tab==='overview');textAt('nav-overview',tab==='overview'?'대시보드 종합':'대시보드 종합');
     ['overview','ranking'].forEach(k=>{const button=dom('tab-'+k);button.setAttribute('aria-selected',String(k===tab));button.tabIndex=k===tab?0:-1;});
     renderTable();if(tab==='overview')requestAnimationFrame(()=>mainTrendChart?.resize());
-    if(selectedUser)renderUserChart();refreshNavigationGeometry();
+    if(selectedUser)renderUserChart();
 }
 function handleMainTabKey(event) {
     if(!['ArrowLeft','ArrowRight','Home','End'].includes(event.key))return;
     event.preventDefault();
     const tab=event.key==='Home'?'overview':event.key==='End'?'ranking':activeTab==='overview'?'ranking':'overview';
     switchMainTab(tab);dom('tab-'+tab).focus();
-}
-function initializeSectionNavigation() {
-    window.addEventListener('scroll',scheduleNavigationUpdate,{passive:true});
-    window.addEventListener('load',refreshNavigationGeometry);
-    if(typeof ResizeObserver==='function'){
-        const observer=new ResizeObserver(refreshNavigationGeometry);
-        observer.observe(dom('app-header'));observer.observe(dom('dashboard-content'));
-    }
-    document.fonts?.ready.then(refreshNavigationGeometry);
-    refreshNavigationGeometry();
-}
-function refreshNavigationGeometry() {
-    sectionScrollOffset=Math.ceil(dom('app-header').getBoundingClientRect().height||112)+16;
-    document.documentElement.style.setProperty('--section-scroll-offset',sectionScrollOffset+'px');
-    scheduleNavigationUpdate();
-}
-function scheduleNavigationUpdate() {
-    if(navigationUpdateQueued)return;
-    navigationUpdateQueued=true;
-    requestAnimationFrame(()=>{navigationUpdateQueued=false;updateActiveNavigation();});
-}
-function updateActiveNavigation() {
-    const scrollTop=Math.max(0,window.scrollY||0),marker=sectionScrollOffset+2;
-    let section='overview';
-    if(scrollTop>2){
-        for(const [key,id] of [['timeline','overview-chart-panel'],['ranking','user-ranking-panel']]){
-            const node=dom(id);
-            if(!node.hidden&&!node.classList.contains('hidden')&&node.getBoundingClientRect().top<=marker)section=key;
-        }
-        // At the end of a short page, the ranking title may not reach the header edge.
-        const height=Math.max(document.documentElement.scrollHeight,document.body.scrollHeight);
-        if(height>window.innerHeight+2&&scrollTop+window.innerHeight>=height-2&&dom('user-ranking-panel').getBoundingClientRect().top<window.innerHeight)section='ranking';
-    }
-    document.querySelectorAll('.section-nav-link').forEach(link=>{
-        if(link.dataset.section===section)link.setAttribute('aria-current','location');
-        else link.removeAttribute('aria-current');
-    });
-}
-function navigateSection(section) {
-    if(!['overview','timeline','ranking'].includes(section))return;
-    // Section navigation only scrolls within the current tab.
-    if(section==='timeline'&&activeTab!=='overview')return;
-    refreshNavigationGeometry();
-    const target=section==='overview'?null:dom(section==='timeline'?'overview-chart-panel':'user-ranking-panel');
-    const top=target?Math.max(0,(window.scrollY||0)+target.getBoundingClientRect().top-sectionScrollOffset):0;
-    window.scrollTo({top,behavior:window.matchMedia?.('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'});
-    scheduleNavigationUpdate();
 }
 function syncThemeButton() {const dark=document.documentElement.classList.contains('dark');textAt('theme-icon',dark?'light_mode':'dark_mode');dom('theme-toggle').setAttribute('aria-pressed',String(dark));dom('theme-toggle').setAttribute('aria-label',dark?'밝은 테마로 전환':'어두운 테마로 전환');}
 function toggleTheme() {const dark=document.documentElement.classList.toggle('dark');try{localStorage.setItem('projectmx_theme',dark?'dark':'light');}catch(_){}syncThemeButton();renderTrendChart();if(selectedUser&&detailTab==='hourly')renderUserChart();}
