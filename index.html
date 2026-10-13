@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ko"><head><meta charset="utf-8"><meta name="projectmx-dashboard-version" content="20260920-ranking-nav-1"><meta name="viewport" content="width=device-width, initial-scale=1"><title>블루아카이브 갤러리 분석기 | ProjectMX</title><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Noto+Sans+KR:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500;600&amp;display=swap"><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config = {
+<html lang="ko"><head><meta charset="utf-8"><meta name="projectmx-dashboard-version" content="20261013-crawler-status-1"><meta name="viewport" content="width=device-width, initial-scale=1"><title>블루아카이브 갤러리 분석기 | ProjectMX</title><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Noto+Sans+KR:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500;600&amp;display=swap"><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config = {
     darkMode: "class",
     theme: {
       extend: {
@@ -342,6 +342,9 @@ button:focus-visible,a:focus-visible,input:focus-visible,tr:focus-visible,th:foc
  .media-lightbox-panel{height:calc(100vh - 16px);height:calc(100dvh - 16px)}
  .media-lightbox-stage{padding:12px 8px 52px}
 }
+</style><style id="crawler-runtime-styles">#crawler-runtime-panel{padding:18px;margin:0 0 18px;border:1px solid rgb(var(--outline-variant));border-radius:14px;background:rgb(var(--surface-container-lowest));color:rgb(var(--on-surface));font-family:inherit}
+.crawler-runtime-heading{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap}.crawler-runtime-heading h2{margin:0;font-size:17px;font-weight:700}.crawler-runtime-heading p{margin:6px 0 0;font-size:12px;color:rgb(var(--on-surface-variant))}.crawler-runtime-actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap}#crawler-phase{padding:5px 10px;border-radius:20px;font-size:12px;background:rgb(var(--surface-container-low));font-weight:600}#crawler-phase[data-tone=ready]{color:rgb(var(--tertiary))}#crawler-phase[data-tone=danger]{color:rgb(var(--error))}#crawler-phase[data-tone=waiting]{color:rgb(var(--secondary))}#crawler-refresh{font-size:12px;padding:6px 10px;border-radius:8px;background:rgb(var(--surface-container-low));color:inherit;border:1px solid rgb(var(--outline-variant));cursor:pointer}#crawler-refresh:focus-visible{outline:2px solid rgb(var(--primary));outline-offset:2px}#crawler-refresh:disabled{opacity:.6;cursor:wait}
+.crawler-runtime-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-top:16px}.crawler-runtime-grid>div{padding:12px;border-radius:10px;background:rgb(var(--surface-container-low));min-width:0}.crawler-runtime-grid span{display:block;font-size:12px;color:rgb(var(--on-surface-variant))}.crawler-runtime-grid strong{display:block;margin-top:7px;font-size:15px;line-height:1.6;overflow-wrap:anywhere}.crawler-runtime-meta{display:flex;flex-wrap:wrap;gap:6px 18px;margin-top:12px;font-size:12px;line-height:1.7;color:rgb(var(--on-surface-variant))}.crawler-runtime-meta p{margin:0;overflow-wrap:anywhere}#crawler-error,#crawler-updated{flex-basis:100%}@media(max-width:1000px){.crawler-runtime-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:440px){#crawler-runtime-panel{padding:14px}.crawler-runtime-grid{grid-template-columns:1fr}.crawler-runtime-actions{width:100%;justify-content:space-between}}
 </style></head><body id="dashboard-top" class="bg-surface font-body-md text-on-surface antialiased"><header class="sticky top-0 left-0 w-full z-50 bg-surface/90 backdrop-blur-xl shadow-[0_1px_8px_rgba(0,0,0,0.04)]" id="app-header"><div class="w-full px-margin-screen flex flex-col justify-between header-inner"><div class="flex items-center justify-between gap-space-lg header-top"><div class="flex items-center gap-space-lg"><div class="flex items-center gap-space-sm"><div class="flex items-center gap-2"><span class="material-symbols-outlined text-primary text-2xl">analytics</span><span class="font-headline-md text-headline-md text-primary tracking-tight font-bold">갤러리 분석기</span></div></div><nav class="section-nav" aria-label="분석 구간 이동"><a class="section-nav-link" data-path="overview-dashboard" href="#dashboard-top" id="nav-overview" data-section="overview" onclick="navigateSection('overview'); return false;" aria-current="location">대시보드 종합</a><a class="section-nav-link" data-path="board-deep-dive" href="#overview-chart-panel" id="nav-timeline" data-section="timeline" onclick="navigateSection('timeline'); return false;">시간대별 분석</a><a class="section-nav-link" data-path="author-analytics" href="#user-workspace" id="nav-ranking" data-section="ranking" onclick="navigateSection('ranking'); return false;">사용자 분석</a></nav></div><div class="flex items-center gap-space-md"><div class="hidden md:flex items-center gap-space-xs px-space-sm py-space-2xs rounded-full bg-surface-container-low text-on-surface"><span id="header-sync-status" class="font-code-mono text-code-mono text-on-surface-variant" role="status">불러오는 중</span></div><button aria-label="테마 전환" class="p-space-xs rounded-xl text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors flex items-center justify-center" type="button" id="theme-toggle" onclick="toggleTheme()" aria-pressed="false"><span class="material-symbols-outlined" id="theme-icon">light_mode</span></button><div class="flex items-center gap-space-sm pl-space-xs"><div class="hidden lg:flex flex-col"></div></div></div></div><div class="flex items-center justify-between gap-space-md header-toolbar"><div class="flex items-center gap-space-lg overflow-x-auto"><div class="flex items-center gap-space-xs"><span class="font-label-caps text-label-caps text-on-surface-variant uppercase">조회 기준</span><div class="flex items-center p-0.5 bg-surface-container-low rounded-xl"><button class="px-space-sm py-space-2xs rounded-lg font-body-sm-medium text-body-sm-medium bg-surface-container-lowest text-on-surface shadow-[0_1px_4px_rgba(0,0,0,0.04)]" type="button" id="today-btn" onclick="selectToday()">오늘</button><button class="px-space-sm py-space-2xs rounded-lg font-body-sm-medium text-body-sm-medium text-on-surface-variant hover:text-on-surface flex items-center gap-1" type="button" id="date-open-btn" onclick="openDatePicker()"><span class="material-symbols-outlined text-xs">calendar_today</span>날짜 선택</button></div></div><div class="flex items-center gap-space-xs"><span class="font-label-caps text-label-caps text-on-surface-variant uppercase">시간대</span><div class="flex items-center p-0.5 bg-surface-container-low rounded-xl"><button class="px-space-sm py-space-2xs rounded-lg font-body-sm-medium text-body-sm-medium bg-surface-container-lowest text-on-surface shadow-[0_1px_4px_rgba(0,0,0,0.04)]" type="button" id="hours-all" onclick="setTimeRange('all')">24시간 전체</button><button class="px-space-sm py-space-2xs rounded-lg font-body-sm-medium text-body-sm-medium text-on-surface-variant hover:text-on-surface" type="button" id="hours-peak" onclick="setTimeRange('peak')" title="선택 날짜의 00~02시 및 19~23시 데이터만 표시합니다.">피크타임 (19~02시)</button></div></div></div><div class="flex items-center gap-space-xs flex-shrink-0"><button class="px-space-sm py-space-xs rounded-xl bg-surface-container-low text-on-surface font-body-sm-medium text-body-sm-medium hover:bg-surface-container hover:text-on-surface transition-colors flex items-center gap-space-xs" type="button" id="refresh-btn" onclick="refreshCurrentData()"><span class="material-symbols-outlined text-sm" id="sync-refresh-icon">sync</span><span class="">데이터 새로고침</span></button></div></div></div></header><main class="w-full  bg-surface" id="dashboard-content"><div class="flex flex-col w-full">
 <div class="w-full px-margin-screen py-space-md flex flex-col gap-space-md bg-surface">
 <div class="w-full flex flex-col lg:flex-row lg:items-center justify-between gap-space-md bg-surface-container-lowest p-space-md rounded-xl shadow-sm" id="gallery-summary">
@@ -364,6 +367,16 @@ button:focus-visible,a:focus-visible,input:focus-visible,tr:focus-visible,th:foc
 </div>
 </div>
 </div>
+<section id="crawler-runtime-panel" aria-labelledby="crawler-runtime-title">
+  <div class="crawler-runtime-heading"><div><h2 id="crawler-runtime-title">크롤러 상태</h2><p>조회 날짜와 관계없이 최신 수집 상태를 표시합니다.</p></div><div class="crawler-runtime-actions"><span id="crawler-phase" data-tone="unknown" role="status" aria-live="polite">연결 중</span><button id="crawler-refresh" type="button" onclick="refreshCrawlerStatus()">상태 새로고침</button></div></div>
+  <div class="crawler-runtime-grid">
+    <div><span>현재 작업</span><strong id="crawler-hour">—</strong></div>
+    <div><span>마지막 확정 시간대</span><strong id="crawler-completed">—</strong></div>
+    <div><span>남은 시간대</span><strong id="crawler-remaining">—</strong></div>
+    <div><span id="crawler-eta-label">따라잡기 예상</span><strong id="crawler-eta">표본 수집 중</strong></div>
+  </div>
+  <div class="crawler-runtime-meta"><p id="crawler-rate">최근 처리 속도 확인 중</p><p id="crawler-integrity">결과 검증: 기록 확인 중</p><p id="crawler-error">최근 오류: 확인 중</p><p id="crawler-updated">상태 정보 연결 중 · 1분 자동 갱신</p></div>
+</section>
 <div id="status-text" class="connection-status text-on-surface-variant" role="status" aria-live="polite">데이터를 불러오는 중입니다.</div><div class="w-full flex items-center justify-between border-b-0 pb-1">
 <div class="flex items-center gap-space-xs bg-surface-container-low p-1 rounded-xl" id="dashboard-view-tabs" role="tablist" aria-label="대시보드 보기" onkeydown="handleMainTabKey(event)">
 <button class="px-space-lg py-space-xs rounded-lg font-body-md-medium text-body-md-medium flex items-center gap-2 transition-all" id="tab-overview" onclick="switchMainTab('overview')" type="button" role="tab" aria-selected="true" aria-controls="overview-chart-panel user-workspace" tabindex="0">
@@ -553,7 +566,7 @@ button:focus-visible,a:focus-visible,input:focus-visible,tr:focus-visible,th:foc
 <div class="hidden flex-col gap-2 activity-pane" id="pane-user-posts" role="tabpanel" aria-labelledby="subtab-recent-posts" tabindex="0"><div id="recent-posts" class="activity-list" aria-live="polite"></div></div>
 <div class="hidden flex-col gap-2 activity-pane" id="pane-user-comments" role="tabpanel" aria-labelledby="subtab-recent-comments" tabindex="0"><div id="recent-comments" class="activity-list" aria-live="polite"></div></div>
 </div><a class="w-full py-2.5 rounded-lg bg-surface-container-low hover:bg-surface-container text-on-surface font-body-sm-medium text-body-sm-medium flex items-center justify-center gap-2 transition-colors" href="https://gall.dcinside.com/mgallery/board/lists/?id=projectmx" rel="noopener noreferrer" target="_blank">
-<span class="">디시인사이드 블루아카이브 갤러리 바로가기</span>
+<span class="">디시인사이드 블루아카 갤러리 바로가기</span>
 <span class="material-symbols-outlined text-sm">north_east</span>
 </a>
 </div>
@@ -589,7 +602,7 @@ let tableSort = {key:'total', direction:-1}, rankingMetric = 'total', adapterMis
 let totals = {post:0, comment:0, total:0}, bookmarks = [];
 let parquetModulePromise = null;
 const parquetCache = new Map(), RANKING_LIMIT = 20, USER_LIST_PAGE_SIZE = 20;
-console.info('[ProjectMX] dashboard 20260920-ranking-nav-1 · 전체 유저 20명씩');
+console.info('[ProjectMX] dashboard 20261013-crawler-status-1 · 전체 유저 20명씩');
 const seriesVisible = {posts:true, comments:true, users:true};
 const unadaptedFetch = window.fetch;
 const todayKst = kstToday();
@@ -623,6 +636,7 @@ function setLoading(value) {
 }
 function handleAdapterMissing() { adapterMissing=true; }
 function initializeDashboard() {
+    initializeCrawlerStatus();
     if(window.fetch===unadaptedFetch)adapterMissing=true;
     const date=dom('archive-date-input'); date.min=PROJECT_START_DATE;date.max=kstToday();date.value=kstToday();
     syncThemeButton(); switchMainTab('overview'); clearSelectedUser(); syncRangeButtons(); renderTable();
@@ -642,7 +656,7 @@ function changeAnalysisDate(value) {
     if(!validDate(value)){dom('archive-date-input').value=selectedDate||kstToday();setStatus(`${PROJECT_START_DATE}부터 오늘(KST)까지의 날짜를 선택해 주세요.`,'error');return;}
     return fetchDailyData(value);
 }
-function refreshCurrentData() { if(dailyLoading)return;return fetchDailyData(selectedDate||kstToday(),true); }
+function refreshCurrentData() { refreshCrawlerStatus(); if(dailyLoading)return;return fetchDailyData(selectedDate||kstToday(),true); }
 async function fetchDailyData(dateStr,forceRefresh=false) {
     if(!validDate(dateStr))return;
     if(dateStr!==selectedDate)selectedHour=null;
@@ -2013,7 +2027,7 @@ function toggleTheme() {const dark=document.documentElement.classList.toggle('da
         const body = item?.querySelector('.activity-item-content');
         if (!body) return { error: '게시글 또는 댓글의 디시콘 링크를 먼저 선택해 주세요.' };
         return {
-            version: '20260920-ranking-nav-1',
+            version: '20261013-crawler-status-1',
             ...activityMediaDiagnostics.get(body),
             rendered: Array.from(item.querySelectorAll('a[data-media-viewer]'), link => ({
                 placement: link.closest('.activity-media-links') ? 'extra' : 'inline',
@@ -2420,4 +2434,48 @@ function toggleTheme() {const dark=document.documentElement.classList.toggle('da
         renderCommentItems(sortNewestFirst(comments).slice(0, 10));
     }
 
+
+let crawlerStatusBusy = false;
+let crawlerStatusLast = null;
+function crawlerStatusTime(value) {
+  if (!value || !Number.isFinite(Date.parse(value)) || String(value).startsWith('0001-')) return '—';
+  return new Intl.DateTimeFormat('ko-KR',{timeZone:'Asia/Seoul',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false}).format(new Date(value));
+}
+function renderCrawlerStatus(data, now=Date.now()) {
+  const phases={synchronizing:'완료 기록 확인 중',collecting:'수집 중',rechecking:'실패 항목 재확인',finalizing:'검증·저장 중',waiting:'다음 시간대 대기',recovering:'자동 재개 대기',complete:'작업 완료',stopped:'실행 중단',failed:'오류로 종료'};
+  const age=now-Date.parse(data.updated_at), stale=age>180000||age< -60000;
+  const badge=dom('crawler-phase');badge.textContent=stale?'상태 갱신 확인 필요':phases[data.phase];badge.dataset.tone=stale?'unknown':(['failed','stopped'].includes(data.phase)?'danger':data.phase==='recovering'?'waiting':'ready');
+  textAt('crawler-hour',data.current_hour||'현재 작업 없음');textAt('crawler-completed',data.last_completed||'확인 중');
+  textAt('crawler-remaining',data.remaining===null?'확인 중':`${numberText(data.remaining)}개`);
+  textAt('crawler-eta-label',data.phase==='recovering'?'자동 재개 예정':'따라잡기 예상');
+  const eta=stale?'최신 상태 확인 필요':data.phase==='recovering'?crawlerStatusTime(data.next_retry_at):data.eta?`${crawlerStatusTime(data.eta)}${data.samples===1?' · 예비 예상':''}`:(data.eta_reason||'표본 수집 중');
+  textAt('crawler-eta',eta);
+  const average=data.samples>0?`최근 ${data.samples}개 시간대 · 평균 처리 ${Math.round(data.mean_work_seconds/60)}분 · 시간대 사이 대기 ${data.mean_gap_seconds}초`:'전체 시간대 처리 표본 수집 중';
+  textAt('crawler-rate',average);
+  textAt('crawler-integrity',data.integrity?`결과 검증: ${data.integrity.result==='passed'?'통과':'실패'} (${data.integrity.hour}, 글 ${numberText(data.integrity.posts)} · 댓글 ${numberText(data.integrity.comments)})`:'결과 검증: 아직 완료된 검증 없음');
+  textAt('crawler-error',data.last_error?`최근 오류: ${data.last_error.kind} · ${crawlerStatusTime(data.last_error.at)} (이번 실행 실패 요청 ${numberText(data.failed_requests)}회)`:'최근 오류: 이번 실행 기록 없음');
+  textAt('crawler-updated',`마지막 상태 갱신 ${crawlerStatusTime(data.updated_at)} · 1분 자동 갱신${stale?' · 현재 실행 상태를 확인할 수 없습니다.':''}`);
+}
+async function refreshCrawlerStatus() {
+  if (crawlerStatusBusy || document.hidden) return;
+  crawlerStatusBusy=true;const button=dom('crawler-refresh');button.disabled=true;
+  const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),15000);
+  try {
+    if (!window.PROJECTMX_DATA_API_BASE) throw new Error('API 연결 파일 확인 필요');
+    const response=await fetch(new URL('/api/crawler-status',window.PROJECTMX_DATA_API_BASE).href,{cache:'no-store',credentials:'omit',signal:controller.signal});
+    if (!response.ok) throw new Error(response.status===404?'크롤러와 상태 API 적용 후 표시됩니다.':'상태 정보를 가져오지 못했습니다.');
+    const data=await response.json();
+    if (data.version!==1 || data.gallery_id!==GALLERY_ID || !Number.isFinite(Date.parse(data.updated_at)) || !['synchronizing','collecting','rechecking','finalizing','waiting','recovering','complete','stopped','failed'].includes(data.phase)) throw new Error('상태 응답 형식 확인 필요');
+    crawlerStatusLast=data;renderCrawlerStatus(data);
+  } catch(error) {
+    if(crawlerStatusLast)renderCrawlerStatus(crawlerStatusLast);
+    dom('crawler-phase').textContent='연결 확인 필요';dom('crawler-phase').dataset.tone='unknown';
+    textAt('crawler-eta','상태 연결 후 확인 가능');
+    textAt('crawler-updated',`${error.name==='AbortError'?'상태 요청 시간 초과':error.message}${crawlerStatusLast?' · 표시된 값은 마지막 수신 기록입니다.':''}`);
+  } finally {clearTimeout(timeout);crawlerStatusBusy=false;button.disabled=false;}
+}
+function initializeCrawlerStatus() {
+  refreshCrawlerStatus();setInterval(refreshCrawlerStatus,60000);
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden)refreshCrawlerStatus();});
+}
 </script><script src="./dashboard_api_patch.js" onerror="handleAdapterMissing()"></script><script id="dashboard-startup">initializeDashboard();</script></body></html>
